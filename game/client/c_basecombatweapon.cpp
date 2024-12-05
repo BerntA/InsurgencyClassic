@@ -5,11 +5,9 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
-#include "history_resource.h"
 #include "iclientmode.h"
 #include "iinput.h"
 #include "weapon_selection.h"
-#include "hud_crosshair.h"
 #include "engine/ivmodelinfo.h"
 #include "tier0/vprof.h"
 #include "hltvcamera.h"

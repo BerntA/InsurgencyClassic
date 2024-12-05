@@ -145,19 +145,14 @@ public:
 //===================================================================================================================
 // Hud Element hiding flags
 #define	HIDEHUD_WEAPONSELECTION		( 1<<0 )	// Hide ammo count & weapon selection
-#define	HIDEHUD_FLASHLIGHT			( 1<<1 )
-#define	HIDEHUD_ALL					( 1<<2 )
-#define HIDEHUD_HEALTH				( 1<<3 )	// Hide health & armor / suit battery
-#define HIDEHUD_PLAYERDEAD			( 1<<4 )	// Hide when local player's dead
-#define HIDEHUD_MISCSTATUS			( 1<<5 )	// Hide miscellaneous status elements (trains, pickup history, death notices, etc)
-#define HIDEHUD_CHAT				( 1<<6 )	// Hide all communication elements (saytext, voice icon, etc)
-#define	HIDEHUD_CROSSHAIR			( 1<<7 )	// Hide crosshairs
-#define HIDEHUD_SCOREBOARD		    ( 1<<8 )	// Hide HUD when the scoreboard is visible.
-#define HIDEHUD_ZOMBIEMODE			( 1<<9 ) // Hide when we're a zombie...
-#define HIDEHUD_ROUNDSTARTING		( 1<<10 ) // Hide when we're waiting for round start / displaying scores.
-#define HIDEHUD_INWEPSELECTION		( 1<<11 ) // Hide when we're selecting weapons.
+#define	HIDEHUD_ALL					( 1<<1 )
+#define HIDEHUD_HEALTH				( 1<<2 )	// Hide health & armor / suit battery
+#define HIDEHUD_PLAYERDEAD			( 1<<3 )	// Hide when local player's dead
+#define HIDEHUD_MISCSTATUS			( 1<<4 )	// Hide miscellaneous status elements (trains, pickup history, death notices, etc)
+#define HIDEHUD_CHAT				( 1<<5 )	// Hide all communication elements (saytext, voice icon, etc)
+#define HIDEHUD_SCOREBOARD		    ( 1<<6 )	// Hide HUD when the scoreboard is visible.
 
-#define HIDEHUD_BITCOUNT			12
+#define HIDEHUD_BITCOUNT			7
 
 // BB2 
 #define MAX_TEAMMATE_DISTANCE 500.0f

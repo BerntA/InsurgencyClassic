@@ -22,7 +22,6 @@ void RegisterUserMessages(void)
 	usermessages->Register("HudMsg", -1);
 	usermessages->Register("ResetHUD", 1);		// called every respawn
 	usermessages->Register("GameTitle", 0);
-	usermessages->Register("ItemPickup", -1);
 	usermessages->Register("ShowMenu", -1);
 	usermessages->Register("Shake", 13);
 	usermessages->Register("Fade", 10);
@@ -32,7 +31,6 @@ void RegisterUserMessages(void)
 	usermessages->Register("VoiceMask", VOICE_MAX_PLAYERS_DW * 4 * 2 + 1);
 	usermessages->Register("RequestState", 0);
 	usermessages->Register("CloseCaption", -1); // Show a caption (by string id number)(duration in 10th of a second)
-	usermessages->Register("AmmoDenied", 2);
 
 	// BB2 : 
 	usermessages->Register("PlayerInit", -1); // Called when the client connects to a server.

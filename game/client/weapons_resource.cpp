@@ -7,7 +7,6 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
-#include "history_resource.h"
 #include <vgui_controls/Controls.h>
 #include <vgui/ISurface.h>
 #include "GameBase_Shared.h"
@@ -117,39 +116,34 @@ void WeaponsResource::LoadWeaponSprites( WEAPON_FILE_INFO_HANDLE hWeaponFileInfo
 	}
 
 	CHudTexture *p;
-	CHudHistoryResource *pHudHR = GET_HUDELEMENT( CHudHistoryResource );	
-	if( pHudHR )
+
+	p = FindHudTextureInDict(tempList, "weapon");
+	if (p)
 	{
-		p = FindHudTextureInDict( tempList, "weapon" );
-		if ( p )
+		pWeaponInfo->iconInactive = gHUD.AddUnsearchableHudIconToList(*p);
+		if (pWeaponInfo->iconInactive)
 		{
-			pWeaponInfo->iconInactive = gHUD.AddUnsearchableHudIconToList( *p );
-			if ( pWeaponInfo->iconInactive )
-			{
-				pWeaponInfo->iconInactive->Precache();
-				pHudHR->SetHistoryGap( pWeaponInfo->iconInactive->Height() );
-			}
+			pWeaponInfo->iconInactive->Precache();
 		}
+	}
 
-		p = FindHudTextureInDict( tempList, "weapon_s" );
-		if ( p )
+	p = FindHudTextureInDict(tempList, "weapon_s");
+	if (p)
+	{
+		pWeaponInfo->iconActive = gHUD.AddUnsearchableHudIconToList(*p);
+		if (pWeaponInfo->iconActive)
 		{
-			pWeaponInfo->iconActive = gHUD.AddUnsearchableHudIconToList( *p );
-			if ( pWeaponInfo->iconActive )
-			{
-				pWeaponInfo->iconActive->Precache();
-			}
+			pWeaponInfo->iconActive->Precache();
 		}
+	}
 
-		p = FindHudTextureInDict( tempList, "ammo" );
-		if ( p )
+	p = FindHudTextureInDict(tempList, "ammo");
+	if (p)
+	{
+		pWeaponInfo->iconAmmo = gHUD.AddUnsearchableHudIconToList(*p);
+		if (pWeaponInfo->iconAmmo)
 		{
-			pWeaponInfo->iconAmmo = gHUD.AddUnsearchableHudIconToList( *p );
-			if ( pWeaponInfo->iconAmmo )
-			{
-				pWeaponInfo->iconAmmo->Precache();
-				pHudHR->SetHistoryGap( pWeaponInfo->iconAmmo->Height() );
-			}
+			pWeaponInfo->iconAmmo->Precache();
 		}
 	}
 

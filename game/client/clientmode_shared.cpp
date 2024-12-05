@@ -69,7 +69,6 @@ class CHudVote;
 static vgui::HContext s_hVGuiContext = DEFAULT_VGUI_CONTEXT;
 
 ConVar cl_drawhud( "cl_drawhud", "1", FCVAR_CHEAT, "Enable the rendering of the hud" );
-ConVar hud_takesshots( "hud_takesshots", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Auto-save a scoreboard screenshot at the end of a map." );
 ConVar hud_freezecamhide( "hud_freezecamhide", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Hide the HUD during freeze-cam" );
 ConVar cl_show_num_particle_systems( "cl_show_num_particle_systems", "0", FCVAR_CLIENTDLL, "Display the number of active particle systems." );
 
@@ -234,15 +233,6 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 		keys->deleteThis();
 	}
 
-	// is the server telling us to show the scoreboard (at the end of a map)?
-	if ( Q_stricmp( panelname, "scores" ) == 0 )
-	{
-		if ( hud_takesshots.GetBool() == true )
-		{
-			gHUD.SetScreenShotTime( gpGlobals->curtime + 1.0 ); // take a screenshot in 1 second
-		}
-	}
-
 	// is the server trying to show an MOTD panel? Check that it's allowed right now.
 	ClientModeShared *mode = ( ClientModeShared * )GetClientModeNormal();
 	if ( Q_stricmp( panelname, PANEL_INFO ) == 0 && mode )
@@ -393,6 +383,9 @@ void ClientModeShared::Init()
 	HOOK_MESSAGE(Rumble);
 	HOOK_MESSAGE(SkillSoundCue);
 	HOOK_MESSAGE(Damage);
+
+	CLoadIMCHelper::CreateAllElements();
+	GetZoomTexture();
 }
 
 
@@ -524,7 +517,8 @@ void ClientModeShared::OverrideMouseInput( float *x, float *y )
 //-----------------------------------------------------------------------------
 bool ClientModeShared::ShouldDrawViewModel()
 {
-	return true;
+	C_BaseCombatWeapon* pWeapon = GetActiveWeapon();
+	return (pWeapon ? pWeapon->ShouldDrawViewModel() : false);
 }
 
 bool ClientModeShared::ShouldDrawDetailObjects( )
@@ -582,6 +576,8 @@ void ClientModeShared::AdjustEngineViewport( int& x, int& y, int& width, int& he
 //-----------------------------------------------------------------------------
 void ClientModeShared::PreRender( CViewSetup *pSetup )
 {
+	materials->BeginRenderTargetAllocation(); // INS warn?
+	GetZoomTexture();
 }
 
 //-----------------------------------------------------------------------------
@@ -591,6 +587,7 @@ void ClientModeShared::PostRender()
 {
 	// Let the particle manager simulate things that haven't been simulated.
 	ParticleMgr()->PostRender();
+	GetINSHUDHelper()->SendPostRender();
 }
 
 void ClientModeShared::PostRenderVGui()
@@ -642,6 +639,9 @@ void ClientModeShared::Update()
 void ClientModeShared::ProcessInput(bool bActive)
 {
 	gHUD.ProcessInput( bActive );
+
+	if (bActive)
+		GetINSHUDHelper()->ProcessInput();
 }
 
 //-----------------------------------------------------------------------------

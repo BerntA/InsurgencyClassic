@@ -13,7 +13,6 @@
 #include "iclientmode.h"
 #include "itextmessage.h"
 #include "vgui_basepanel.h"
-#include "hud_crosshair.h"
 #include <vgui/ISurface.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -74,16 +73,6 @@ void CHud::Think(void)
 	if ( pWeapon )
 	{
 		pWeapon->HandleInput();
-	}
-
-	if ( ( m_flScreenShotTime > 0 ) && ( m_flScreenShotTime < gpGlobals->curtime ) )
-	{
-		if ( !IsX360() )
-		{
-			engine->ClientCmd( "screenshot" );
-		}
-
-		m_flScreenShotTime = -1;
 	}
 }
 

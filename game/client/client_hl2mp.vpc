@@ -22,8 +22,7 @@ $Configuration
 $Project "client"
 {
 	$Folder	"Source Files"
-	{
-		$File	"hud_voicestatus.cpp"
+	{		
 		$File	"$SRCDIR\game\shared\predicted_viewmodel.cpp"
 		$File	"$SRCDIR\game\shared\predicted_viewmodel.h"
 

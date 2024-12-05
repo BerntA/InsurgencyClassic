@@ -3551,6 +3551,15 @@ void Panel::OnRequestFocus(VPANEL subFocus, VPANEL defaultPanel)
 	CallParentFunction(new KeyValues("OnRequestFocus", "subFocus", subFocus, "defaultPanel", defaultPanel));
 }
 
+void Panel::OnLevelInit(void)
+{
+	for (int i = 0; i < ipanel()->GetChildCount(GetVPanel()); i++)
+	{
+		VPANEL child = ipanel()->GetChild(GetVPanel(), i);
+		PostMessage(child, new KeyValues("OnLevelInit"));
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------

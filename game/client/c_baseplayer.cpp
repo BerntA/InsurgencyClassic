@@ -9,7 +9,6 @@
 #include "c_baseplayer.h"
 #include "flashlighteffect.h"
 #include "weapon_selection.h"
-#include "history_resource.h"
 #include "iinput.h"
 #include "input.h"
 #include "view.h"

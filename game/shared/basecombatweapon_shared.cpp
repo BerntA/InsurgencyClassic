@@ -179,26 +179,12 @@ int CBaseCombatWeapon::GiveAmmo(int count, bool bSuppressSound)
 	{
 		if (iAdd <= 0)
 		{
-			// we've been denied the pickup, display a hud icon to show that
-			CSingleUserRecipientFilter user(pPlayer);
-			user.MakeReliable();
-			UserMessageBegin(user, "AmmoDenied");
-			WRITE_SHORT(GetAmmoTypeID());
-			MessageEnd();
 		}
 		else
 		{
 			// Ammo pickup sound
 			if (!bSuppressSound)
 				pPlayer->EmitSound("BaseCombatCharacter.AmmoPickup");
-
-			// Show the pickup icon:
-			CSingleUserRecipientFilter user(pPlayer);
-			user.MakeReliable();
-			UserMessageBegin(user, "ItemPickup");
-			WRITE_STRING("AMMO");
-			WRITE_SHORT(GetAmmoTypeID());
-			MessageEnd();
 		}
 	}
 #endif

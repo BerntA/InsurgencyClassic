@@ -19,7 +19,6 @@
 #include <KeyValues.h>
 #include "ienginevgui.h"
 #include "c_playerresource.h"
-#include "ihudlcd.h"
 #include "vgui/IInput.h"
 #include "vgui/ILocalize.h"
 #include "multiplay_gamerules.h"
@@ -1436,15 +1435,6 @@ void CBaseHudChat::ChatPrintf( int iPlayerIndex, const char *fmt, ... )
 	{
 		if ( GetClientVoiceMgr() && GetClientVoiceMgr()->IsPlayerBlocked( iPlayerIndex ) )	
 			return;
-	}	
-
-	if ( *pmsg < 32 )
-	{
-		hudlcd->AddChatLine( pmsg + 1 );
-	}
-	else
-	{
-		hudlcd->AddChatLine( pmsg );
 	}
 
 	line->SetText( "" );

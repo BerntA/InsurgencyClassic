@@ -3071,11 +3071,6 @@ void CBasePlayer::PreThink(void)
 	ItemPreFrame( );
 	WaterMove();
 
-	if ( g_pGameRules && g_pGameRules->FAllowFlashlight() )
-		m_Local.m_iHideHUD &= ~HIDEHUD_FLASHLIGHT;
-	else
-		m_Local.m_iHideHUD |= HIDEHUD_FLASHLIGHT;
-
 	// checks if new client data (for HUD and view control) needs to be sent to the client
 	UpdateClientData();
 	
@@ -4413,22 +4408,6 @@ bool CBasePlayer::RemovePlayerItem( CBaseCombatWeapon *pItem )
 		Weapon_SetNext(NULL);
 
 	return Weapon_Detach( pItem );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : bDraw - 
-//-----------------------------------------------------------------------------
-void CBasePlayer::ShowCrosshair( bool bShow )
-{
-	if ( bShow )
-	{
-		m_Local.m_iHideHUD &= ~HIDEHUD_CROSSHAIR;
-	}
-	else
-	{
-		m_Local.m_iHideHUD |= HIDEHUD_CROSSHAIR;
-	}
 }
 
 //-----------------------------------------------------------------------------

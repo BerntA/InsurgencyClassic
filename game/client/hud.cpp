@@ -12,7 +12,7 @@
 //
 #include "cbase.h"
 #include "hud_macros.h"
-#include "history_resource.h"
+#include "hudelement.h"
 #include "iinput.h"
 #include "clientmode.h"
 #include "in_buttons.h"
@@ -21,14 +21,12 @@
 #include <KeyValues.h>
 #include "itextmessage.h"
 #include "mempool.h"
-#include <KeyValues.h>
 #include "filesystem.h"
 #include <vgui_controls/AnimationController.h>
-#include <vgui/ISurface.h>
-#include "hud_lcd.h"
 #include "hl2mp_gamerules.h"
 #include <math.h>
 #include "ScoreBoardPanel.h"
+#include "inshud.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -166,7 +164,6 @@ void FreeHudTextureList( CUtlDict< CHudTexture *, int >& list )
 // Globally-used fonts
 vgui::HFont g_hFontTrebuchet24 = vgui::INVALID_FONT;
 
-
 //=======================================================================================================================
 // Hud Element Visibility handling
 //=======================================================================================================================
@@ -177,8 +174,6 @@ typedef struct hudelement_hidden_s
 } hudelement_hidden_t;
 
 ConVar hidehud( "hidehud", "0", FCVAR_CHEAT );
-
-
 
 CHudTexture::CHudTexture()
 {
@@ -383,8 +378,6 @@ DECLARE_MESSAGE(gHUD, ResetHUD);
 CHud::CHud()
 {
 	SetDefLessFunc( m_RenderGroups );
-
-	m_flScreenShotTime = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -398,8 +391,6 @@ void CHud::Init( void )
 
 	// Create all the Hud elements
 	CHudElementHelper::CreateAllElements();
-
-	gLCD.Init();
 
 	// Initialize all created elements
 	for ( int i = 0; i < m_HudList.Size(); i++ )
@@ -454,7 +445,6 @@ void CHud::Init( void )
 	// check to see if we have sprites for this res; if not, step down
 	LoadHudTextures( textureList, "scripts/hud_textures", NULL );
 	LoadHudTextures( textureList, "scripts/mod_textures", NULL );
-	LoadHudTextures(textureList, "scripts/hud_crosshairs", NULL);
 
 	int c = textureList.Count();
 	for ( int index = 0; index < c; index++ )
@@ -492,8 +482,6 @@ void CHud::InitFonts()
 //-----------------------------------------------------------------------------
 void CHud::Shutdown( void )
 {
-	gLCD.Shutdown();
-
 	// Deleting hudlist items can result in them being removed from the same hudlist (m_bNeedsRemove).
 	//	So go through and kill the last item until the array is empty.
 	while ( m_HudList.Size() > 0 )
@@ -939,7 +927,6 @@ void CHud::RefreshHudTextures()
 	// check to see if we have sprites for this res; if not, step down
 	LoadHudTextures( textureList, "scripts/hud_textures", NULL );
 	LoadHudTextures( textureList, "scripts/mod_textures", NULL );
-	LoadHudTextures(textureList, "scripts/hud_crosshairs", NULL);
 
 	// fix up all the texture icons first
 	int c = textureList.Count();
@@ -1078,33 +1065,10 @@ bool CHud::IsHidden( int iHudFlags )
 		return true;
 
 	// Get current hidden flags
-	int iHideHud = pPlayer->m_Local.m_iHideHUD;
-	if ( hidehud.GetInt() )
-	{
-		iHideHud = hidehud.GetInt();
-	}
-
-	// Everything hidden?
-	if ( iHideHud & HIDEHUD_ALL )
+	if (hidehud.GetInt())
 		return true;
 
-	// Local player dead?
-	if ( ( iHudFlags & HIDEHUD_PLAYERDEAD ) && ( pPlayer->GetHealth() <= 0 && !pPlayer->IsAlive() ) )
-		return true;
-
-	if ( ( iHudFlags & HIDEHUD_ZOMBIEMODE ) && ( pPlayer->GetTeamNumber() == 3 ) )
-		return true;
-
-	if ((iHudFlags & HIDEHUD_INWEPSELECTION) && pPlayer->m_bIsSelectingWeapons)
-		return true;
-
-	if ((iHudFlags & HIDEHUD_SCOREBOARD) && gViewPortInterface && gViewPortInterface->GetActivePanel() && !strcmp(gViewPortInterface->GetActivePanel()->GetName(), PANEL_SCOREBOARD))
-		return true;
-
-	if ((iHudFlags & HIDEHUD_ROUNDSTARTING) && ((!HL2MPRules()->m_bRoundStarted && HL2MPRules()->ShouldHideHUDDuringRoundWait()) || HL2MPRules()->IsGameoverOrScoresVisible()))
-		return true;
-
-	return ( ( iHudFlags & iHideHud ) != 0);
+	return GetINSHUDHelper()->IsHUDElementHidden(iHudFlags);
 }
 
 //-----------------------------------------------------------------------------
@@ -1297,10 +1261,7 @@ void CHud::UpdateHud( bool bActive )
 {
 	// clear the weapon bits.
 	gHUD.m_iKeyBits &= (~(IN_WEAPON1|IN_WEAPON2));
-
 	g_pClientMode->Update();
-
-	gLCD.Update();
 }
 
 //-----------------------------------------------------------------------------
@@ -1317,3 +1278,20 @@ CON_COMMAND_F( testhudanim, "Test a hud element animation.\n\tArguments: <anim n
 	g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( args[1] );
 }
 
+void CreateTexCoord(TexCoord_t& TexCoord, wrect_s* pRC, int iTexWide, int iTexTall)
+{
+	TexCoord[0] = (float)(pRC->left + 0.5f) / (float)iTexWide;
+	TexCoord[1] = (float)(pRC->top + 0.5f) / (float)iTexTall;
+	TexCoord[2] = (float)(pRC->right - 0.5f) / (float)iTexWide;
+	TexCoord[3] = (float)(pRC->bottom - 0.5f) / (float)iTexTall;
+}
+
+void CreateTexCoord(TexCoord_t& TexCoord, int iXPos, int iYPos, int iWide, int iHeight, int iTexWide, int iTexTall)
+{
+	wrect_s rc;
+	rc.left = iXPos;
+	rc.top = iYPos;
+	rc.right = iXPos + iWide;
+	rc.bottom = iYPos + iHeight;
+	CreateTexCoord(TexCoord, &rc, iTexWide, iTexTall);
+}

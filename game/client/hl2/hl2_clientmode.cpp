@@ -47,6 +47,15 @@ void CHLModeManager::Init(void)
 {
 	g_pClientMode = GetClientModeNormal();
 	PanelMetaClassMgr()->LoadMetaClassDefinitionFile(SCREEN_FILE);
+
+	// init VGUI
+	GetINSVGUIHelper()->Init();
+
+	// init HUD
+	GetINSHUDHelper()->Init();
+
+	// hint hints
+	g_HintHelper.Init();
 }
 
 void CHLModeManager::SwitchMode(bool commander, bool force)
@@ -69,6 +78,7 @@ void CHLModeManager::LevelInit(const char *newmap)
 void CHLModeManager::LevelShutdown(void)
 {
 	g_pClientMode->LevelShutdown();
+	GetINSHUDHelper()->LevelShutdown();
 }
 
 static CHLModeManager g_HLModeManager;

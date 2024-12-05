@@ -83,7 +83,7 @@ CHudElement(pElementName), BaseClass(NULL, "HudDeathNotice")
 
 	m_iconD_skull = NULL;
 
-	SetHiddenBits(HIDEHUD_MISCSTATUS | HIDEHUD_ROUNDSTARTING | HIDEHUD_SCOREBOARD);
+	SetHiddenBits(HIDEHUD_MISCSTATUS | HIDEHUD_SCOREBOARD);
 }
 
 //-----------------------------------------------------------------------------

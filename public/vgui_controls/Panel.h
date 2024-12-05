@@ -488,6 +488,7 @@ public:
 	// this enables message mapping for this class - requires matching IMPLEMENT_PANELDESC() in the .cpp file
 	DECLARE_PANELMAP();
 
+	virtual void OnLevelInit(void);
 	virtual VPANEL GetCurrentKeyFocus();
 
 	// returns a pointer to the tooltip object associated with the panel

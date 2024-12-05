@@ -41,8 +41,6 @@ CPlayerMove *PlayerMove()
 	return &g_PlayerMove;
 }
 
-//
-
 static CHLMoveData g_HLMoveData;
 CMoveData *g_pMoveData = &g_HLMoveData;
 
@@ -50,15 +48,15 @@ IPredictionSystem *IPredictionSystem::g_pPredictionSystems = NULL;
 
 void CHLPlayerMove::SetupMove(CBasePlayer *player, CUserCmd *ucmd, IMoveHelper *pHelper, CMoveData *move)
 {
-	// Call the default SetupMove code.
-	BaseClass::SetupMove(player, ucmd, pHelper, move);
+	extern ConVar sv_turbophysics;
 
-	player->m_flForwardMove = ucmd->forwardmove;
-	player->m_flSideMove = ucmd->sidemove;
+	if (sv_turbophysics.GetBool())
+		player->AvoidPhysicsProps(ucmd);
+
+	BaseClass::SetupMove(player, ucmd, pHelper, move);
 }
 
 void CHLPlayerMove::FinishMove(CBasePlayer *player, CUserCmd *ucmd, CMoveData *move)
 {
-	// Call the default FinishMove code.
 	BaseClass::FinishMove(player, ucmd, move);
 }

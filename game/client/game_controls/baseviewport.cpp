@@ -247,6 +247,8 @@ void CBaseViewport::CreateDefaultPanels( void )
 	AddNewPanel(CreatePanelByName(PANEL_ENDVOTE), "PANEL_ENDVOTE");
 	AddNewPanel(CreatePanelByName(PANEL_KEYPAD), "PANEL_KEYPAD");
 #endif
+
+	CINSViewportHelper::CreateAllElements(this);
 }
 
 void CBaseViewport::UpdateAllPanels( void )
@@ -449,17 +451,45 @@ IViewPortPanel* CBaseViewport::GetActivePanel( void )
 	return m_pActivePanel;
 }
 
-void CBaseViewport::RemoveAllPanels( void)
+void CBaseViewport::RemoveAllPanels(void)
 {
 	g_lastPanel = NULL;
-	for ( int i=0; i < m_Panels.Count(); i++ )
+	for (int i = 0; i < m_Panels.Count(); i++)
 	{
 		vgui::VPANEL vPanel = m_Panels[i]->GetVPanel();
-		vgui::ipanel()->DeletePanel( vPanel );
+		vgui::ipanel()->DeletePanel(vPanel);
 	}
 	m_Panels.Purge();
 	m_pActivePanel = NULL;
 	m_pLastActivePanel = NULL;
+}
+
+void CBaseViewport::HideAllPanels(void)
+{
+	for (int i = 0; i < m_Panels.Count(); i++)
+	{
+		IViewPortPanel* pPanel = m_Panels[i];
+		if (pPanel)
+			gViewPortInterface->ShowPanel(pPanel, false);
+	}
+}
+
+void CBaseViewport::ResetAllPanels(void)
+{
+	for (int i = 0; i < m_Panels.Count(); i++)
+	{
+		IViewPortPanel* pViewPanel = m_Panels[i];
+		if (!pViewPanel)
+			continue;
+
+		pViewPanel->Reset();
+
+		Panel* pPanel = dynamic_cast<Panel*>(pViewPanel);
+		if (!pPanel)
+			continue;
+
+		pPanel->OnLevelInit();
+	}
 }
 
 CBaseViewport::~CBaseViewport()
@@ -688,4 +718,23 @@ void CBaseViewport::Paint()
 		vgui::surface()->DrawLine( size, 0, size, size );
 		vgui::surface()->DrawLine( 0, size, size, size );
 	}
+}
+
+CON_COMMAND(changeteam, "Change your Team")
+{
+	if (!GetINSVGUIHelper()->CanShowTeamPanel())
+		return;
+	gViewPortInterface->ShowPanel(PANEL_CHANGETEAM, true);
+}
+
+CON_COMMAND(changesquad, "Change your Squad")
+{
+	if (!GetINSVGUIHelper()->CanShowSquadPanel())
+		return;
+	gViewPortInterface->ShowPanel(PANEL_SQUADSELECT, true);
+}
+
+CON_COMMAND(deathinfo, "Show Last Deathinfo")
+{
+	GetINSVGUIHelper()->ShowDeathPanel();
 }

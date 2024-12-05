@@ -185,6 +185,8 @@ public:
 	virtual void			SetWeaponIdleTime( float time );
 	virtual float			GetWeaponIdleTime( void );
 
+	virtual bool			ShouldDrawViewModel(void) { return true; }
+
 	// Weapon selection
 	virtual bool			HasAnyAmmo( void );							// Returns true is weapon has ammo
 	void					GiveDefaultAmmo( void );

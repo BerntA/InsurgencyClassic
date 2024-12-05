@@ -128,11 +128,6 @@ void CHL2_Player::PreThink(void)
 	WaterMove();
 	VPROF_SCOPE_END();
 
-	if ( g_pGameRules && g_pGameRules->FAllowFlashlight() )	
-		m_Local.m_iHideHUD &= ~HIDEHUD_FLASHLIGHT;	
-	else	
-		m_Local.m_iHideHUD |= HIDEHUD_FLASHLIGHT;	
-
 	// checks if new client data (for HUD and view control) needs to be sent to the client
 	VPROF_SCOPE_BEGIN( "CHL2_Player::PreThink-UpdateClientData" );
 	UpdateClientData();
