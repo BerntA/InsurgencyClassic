@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -12,8 +12,7 @@
 
 #include "interface.h"
 #include "soundflags.h"
-#include "video/ivideoservices.h"
-#include "ispatialpartition.h"
+#include "avi/iavi.h"
 
 class CViewSetup;
 class IToolSystem;
@@ -22,8 +21,6 @@ class ITraceFilter;
 class CBaseTrace;
 struct dlight_t;
 struct Ray_t;
-struct AudioState_t;
-
 
 typedef bool (*FnQuitHandler)( void *pvUserData );
 
@@ -35,6 +32,10 @@ typedef bool (*FnQuitHandler)( void *pvUserData );
 class IEngineToolFramework : public IBaseInterface
 {
 public:
+	// Take over input
+	virtual void		ShowCursor( bool show ) = 0;
+	virtual bool		IsCursorVisible() const = 0;
+
 	// Input system overrides TBD
 	// Something like this
 	//virtual void		AddMessageHandler( int wm_message, bool (*pfnCallback)( int wm_message, int wParam, int lParam ) ) = 0;
@@ -49,13 +50,9 @@ public:
 
 	virtual const IToolSystem *GetToolSystem( int index ) const = 0;
 	virtual IToolSystem *GetTopmostTool() = 0;
-
-	// Take over input
-	virtual void		ShowCursor( bool show ) = 0;
-	virtual bool		IsCursorVisible() const = 0;
 };
 
-#define VENGINETOOLFRAMEWORK_INTERFACE_VERSION	"VENGINETOOLFRAMEWORK003"
+#define VENGINETOOLFRAMEWORK_INTERFACE_VERSION	"VENGINETOOLFRAMEWORK002"
 
 struct model_t;
 struct studiohdr_t;
@@ -68,37 +65,6 @@ class IEngineTool : public IEngineToolFramework
 public:
 	virtual void		GetServerFactory( CreateInterfaceFn& factory ) = 0;
 	virtual void		GetClientFactory( CreateInterfaceFn& factory ) = 0;
-
-	virtual float		GetSoundDuration( const char *pszName ) = 0;
-	virtual bool		IsSoundStillPlaying( int guid ) = 0;
-	// Returns the guid of the sound
-	virtual int			StartSound( 
-		int iUserData,
-		bool staticsound,
-		int iEntIndex, 
-		int iChannel, 
-		const char *pSample, 
-		float flVolume, 
-		soundlevel_t iSoundlevel, 
-		const Vector& origin,
-		const Vector& direction,
-		int iFlags = 0, 
-		int iPitch = PITCH_NORM, 
-		bool bUpdatePositions = true, 
-		float delay = 0.0f, 
-		int speakerentity = -1 ) = 0;
-
-	virtual void		StopSoundByGuid( int guid ) = 0;
-
-	// Returns how long the sound is
-	virtual float		GetSoundDuration( int guid ) = 0;
-
-	// Returns if the sound is looping
-	virtual bool		IsLoopingSound( int guid ) = 0;
-	virtual void		ReloadSound( const char *pSample ) = 0;
-	virtual void		StopAllSounds( ) = 0;
-	virtual float		GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList ) = 0;
-	virtual void		SetAudioState( const AudioState_t &audioState ) = 0;
 
 	// Issue a console command
 	virtual void		Command( char const *cmd ) = 0;
@@ -159,13 +125,18 @@ public:
 	// Get the .mdl file used by entity (if it's a cbaseanimating)
 	virtual studiohdr_t *GetStudioModel( HTOOLHANDLE hEntity ) = 0;
 
+	// During ConCommand processing functions, use this function to get the total # of tokens passed to the command parser
+	virtual int			Cmd_Argc( void ) = 0;	
+	// During ConCommand processing, this API is used to access each argument passed to the parser
+	virtual const char	*Cmd_Argv( int arg ) = 0;
+
 	// SINGLE PLAYER/LISTEN SERVER ONLY (just matching the client .dll api for this)
 	// Prints the formatted string to the notification area of the screen ( down the right hand edge
 	//  numbered lines starting at position 0
-	virtual void		Con_NPrintf( int pos, PRINTF_FORMAT_STRING const char *fmt, ... ) = 0;
+	virtual void		Con_NPrintf( int pos, const char *fmt, ... ) = 0;
 	// SINGLE PLAYER/LISTEN SERVER ONLY(just matching the client .dll api for this)
 	// Similar to Con_NPrintf, but allows specifying custom text color and duration information
-	virtual void		Con_NXPrintf( const struct con_nprint_s *info, PRINTF_FORMAT_STRING const char *fmt, ... ) = 0;
+	virtual void		Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... ) = 0;
 
 	// Get the current game directory (hl2, tf2, hl1, cstrike, etc.)
 	virtual void        GetGameDir( char *szGetGameDir, int maxlength ) = 0;
@@ -175,14 +146,33 @@ public:
 
 	// GetRootPanel(VPANEL)
 
+	// Returns the guid of the sound
+	virtual int			StartSound( 
+		int iUserData,
+		bool staticsound,
+		int iEntIndex, 
+		int iChannel, 
+		const char *pSample, 
+		float flVolume, 
+		soundlevel_t iSoundlevel, 
+		const Vector& origin,
+		const Vector& direction,
+		int iFlags = 0, 
+		int iPitch = PITCH_NORM, 
+		bool bUpdatePositions = true, 
+		float delay = 0.0f, 
+		int speakerentity = -1 ) = 0;
+
+	virtual void		StopSoundByGuid( int guid ) = 0;
+
+	// Returns how long the sound is
+	virtual float		GetSoundDuration( int guid ) = 0;
+
 	// Sets the location of the main view
 	virtual void		SetMainView( const Vector &vecOrigin, const QAngle &angles ) = 0;
 
 	// Gets the player view
 	virtual bool		GetPlayerView( CViewSetup &playerView, int x, int y, int w, int h ) = 0;
-
-	// From a location on the screen, figure out the vector into the world
-	virtual void		CreatePickingRay( const CViewSetup &viewSetup, int x, int y, Vector& org, Vector& forward ) = 0;
 
 	// precache methods
 	virtual bool		PrecacheSound( const char *pName, bool bPreload = false ) = 0;
@@ -199,35 +189,32 @@ public:
 	virtual void		StartMovieRecording( KeyValues *pMovieParams ) = 0;
 	virtual void		EndMovieRecording() = 0;
 	virtual void		CancelMovieRecording() = 0;
-	virtual IVideoRecorder *GetActiveVideoRecorder() = 0;
+	virtual AVIHandle_t GetRecordingAVIHandle() = 0;
 
 	virtual void		StartRecordingVoiceToFile( char const *filename, char const *pPathID = 0 ) = 0;
 	virtual void		StopRecordingVoiceToFile() = 0;
 	virtual bool		IsVoiceRecording() = 0;
 
+	// Returns if the sound is looping
+	virtual bool		IsLoopingSound( int guid ) = 0;
+
 	// A version that simply accepts a ray (can work as a traceline or tracehull)
-	virtual void		TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, CBaseTrace *pTrace ) = 0; // client version
-	virtual void		TraceRayServer( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, CBaseTrace *pTrace ) = 0;
+	virtual void		TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, CBaseTrace *pTrace ) = 0;
 
 	virtual bool		IsConsoleVisible() = 0;
+
+	virtual void		SetHearingOrigin( const Vector &origin, const QAngle &angles ) = 0;
 
 	virtual int			GetPointContents( const Vector &vecPosition ) = 0;
 
 	virtual int			GetActiveDLights( dlight_t *pList[MAX_DLIGHTS] ) = 0;
+
 	virtual int			GetLightingConditions( const Vector &vecPosition, Vector *pColors, int nMaxLocalLights, LightDesc_t *pLocalLights ) = 0;
 
-	virtual void		GetWorldToScreenMatrixForView( const CViewSetup &view, VMatrix *pVMatrix ) = 0;
-
-	// Collision support
-	virtual SpatialPartitionHandle_t CreatePartitionHandle( IHandleEntity *pEntity,
-		SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs ) = 0;
-	virtual void DestroyPartitionHandle( SpatialPartitionHandle_t hPartition ) = 0;
-	virtual void InstallPartitionQueryCallback( IPartitionQueryCallback *pQuery ) = 0;
-	virtual void RemovePartitionQueryCallback( IPartitionQueryCallback *pQuery ) = 0;
-	virtual void ElementMoved( SpatialPartitionHandle_t handle, 
-		const Vector& mins, const Vector& maxs ) = 0;
+	virtual void		ReloadSound( const char *pSample ) = 0;
+	virtual void		StopAllSounds( ) = 0;
 };
 
-#define VENGINETOOL_INTERFACE_VERSION	"VENGINETOOL003"
+#define VENGINETOOL_INTERFACE_VERSION	"VENGINETOOL001"
 
 #endif // IENGINETOOL_H

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -20,7 +20,7 @@ typedef void (*ResizeUtlVectorFn)( void *pVoid, int offsetToUtlVector, int len )
 template< class T >
 void UtlVector_InitializeAllocatedElements( T *pBase, int count )
 {
-	memset( reinterpret_cast<void*>( pBase ), 0, count * sizeof( T ) );
+	memset( pBase, 0, count * sizeof( T ) );
 }
 
 template< class T, class A >
@@ -34,30 +34,23 @@ public:
 			pVec->AddMultipleToTail( len - pVec->Count() );
 		else if ( pVec->Count() > len )
 			pVec->RemoveMultiple( len, pVec->Count()-len );
-
-		// Ensure capacity
-		pVec->EnsureCapacity( len );
-
-		int nNumAllocated = pVec->NumAllocated();
-
-		// This is important to do because EnsureCapacity doesn't actually call the constructors
-		// on the elements, but we need them to be initialized, otherwise it'll have out-of-range
-		// values which will piss off the datatable encoder.
-		UtlVector_InitializeAllocatedElements( pVec->Base() + pVec->Count(), nNumAllocated - pVec->Count() );
 	}
 
 	static void EnsureCapacity( void *pStruct, int offsetToUtlVector, int len )
 	{
 		CUtlVector<T,A> *pVec = (CUtlVector<T,A>*)((char*)pStruct + offsetToUtlVector);
-
-		pVec->EnsureCapacity( len );
 		
-		int nNumAllocated = pVec->NumAllocated();
+		int oldNumAllocated = pVec->Count();
 
-		// This is important to do because EnsureCapacity doesn't actually call the constructors
-		// on the elements, but we need them to be initialized, otherwise it'll have out-of-range
-		// values which will piss off the datatable encoder.
-		UtlVector_InitializeAllocatedElements( pVec->Base() + pVec->Count(), nNumAllocated - pVec->Count() );
+		if ( oldNumAllocated < len )
+		{
+			pVec->EnsureCapacity( len );
+			
+			// This is important to do because EnsureCapacity doesn't actually call the constructors
+			// on the elements, but we need them to be initialized, otherwise it'll have out-of-range
+			// values which will piss off the datatable encoder.
+			UtlVector_InitializeAllocatedElements( pVec->Base() + oldNumAllocated, len - oldNumAllocated );
+		}
 	}
 };
 
@@ -75,11 +68,11 @@ inline EnsureCapacityFn GetEnsureCapacityTemplate( CUtlVector<T,A> &vec )
 
 
 // Format and allocate a string.
-char* AllocateStringHelper( PRINTF_FORMAT_STRING const char *pFormat, ... );
+char* AllocateStringHelper( const char *pFormat, ... );
 
 // Allocates a string for a data table name. Data table names must be unique, so this will
 // assert if you try to allocate a duplicate.
-char* AllocateUniqueDataTableName( bool bSendTable, PRINTF_FORMAT_STRING const char *pFormat, ... );
+char* AllocateUniqueDataTableName( bool bSendTable, const char *pFormat, ... );
 
 
 #endif // DT_UTLVECTOR_COMMON_H

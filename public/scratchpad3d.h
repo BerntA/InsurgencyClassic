@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -14,7 +14,7 @@
 
 #include <stdio.h>
 #include "iscratchpad3d.h"
-#include "mathlib/vmatrix.h"
+#include "vmatrix.h"
 #include "filesystem.h"
 
 class CFileRead;

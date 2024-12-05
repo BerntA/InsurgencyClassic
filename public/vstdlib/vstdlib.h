@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -30,4 +30,5 @@
 #define VSTDLIB_GLOBAL		DLL_GLOBAL_IMPORT
 #endif
  
+
 #endif // VSTDLIB_H

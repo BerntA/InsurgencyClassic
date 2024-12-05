@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: This module defines the IVoiceServer interface, which is used by
 //			game code to control which clients are listening to which other
@@ -14,7 +14,7 @@
 #include "interface.h"
 
 
-#define INTERFACEVERSION_VOICESERVER	"VoiceServer002"
+#define INTERFACEVERSION_VOICESERVER	"VoiceServer001"
 
 
 abstract_class IVoiceServer
@@ -26,7 +26,6 @@ public:
 	// Pass in client indices (which are their ent indices - 1).
 	virtual bool	GetClientListening(int iReceiver, int iSender) = 0;
 	virtual bool	SetClientListening(int iReceiver, int iSender, bool bListen) = 0;
-	virtual bool	SetClientProximity(int iReceiver, int iSender, bool bUseProximity) = 0;
 };
 
 

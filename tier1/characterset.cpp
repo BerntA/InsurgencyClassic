@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -34,7 +34,7 @@ void CharacterSetBuild( characterset_t *pSetBuffer, const char *pszSetString )
 
 	while ( pszSetString[i] )
 	{
-		pSetBuffer->set[ (unsigned)pszSetString[i] ] = 1;
+		pSetBuffer->set[ pszSetString[i] ] = 1;
 		i++;
 	}
 

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -41,7 +41,6 @@ public:
 	
 	virtual float GetPushMassLimit() = 0;
 	virtual float GetPushSpeedLimit() = 0;
-	virtual bool WasFrozen() = 0;
 };
 
 #endif // PLAYER_CONTROLLER_H

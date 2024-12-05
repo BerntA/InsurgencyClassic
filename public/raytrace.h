@@ -1,20 +1,18 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
 // $Id:$
 
 #ifndef RAYTRACE_H
 #define RAYTRACE_H
 
 #include <tier0/platform.h>
-#include <mathlib/vector.h>
+#include <vector.h>
 #include <mathlib/ssemath.h>
 #include <mathlib/lightdesc.h>
 #include <assert.h>
 #include <tier1/utlvector.h>
-#include <mathlib/mathlib.h>
+#include <mathlib.h>
 #include <bspfile.h>
 
 // fast SSE-ONLY ray tracing module. Based upon various "real time ray tracing" research.
-//#define DEBUG_RAYTRACE 1
 
 class FourRays
 {
@@ -46,76 +44,23 @@ public:
 /// ProjectedEdgeEquations hold the coordinates of the 3 vertices, for facilitating bounding box
 /// checks needed while building the tree. afterwards, they are changed into the projected ege
 /// equations for intersection purposes.
-enum triangleflags
-{
-	FCACHETRI_TRANSPARENT = 0x01,
-	FCACHETRI_NEGATIVE_NORMAL = 0x02,
-};
-
-
-struct TriIntersectData_t
+struct CacheOptimizedTriangle
 {
 	// this structure is 16longs=64 bytes for cache line packing.
-	float m_flNx, m_flNy, m_flNz;							// plane equation
-	float m_flD;
+	Vector N;												// plane equation
+	float D;
+	int32 triangleid;										// id of the triangle.
 
-	int32 m_nTriangleID;									// id of the triangle.
-
-	float m_ProjectedEdgeEquations[6];						// A,B,C for each edge equation.  a
+	Vector ProjectedEdgeEquations[3];						// A,B,C for each edge equation.  a
 															// point is inside the triangle if
 															// a*c1+b*c2+c is negative for all 3
 															// edges.
 
-	uint8 m_nCoordSelect0,m_nCoordSelect1;					// the triangle is projected onto a 2d
+	int32 CoordSelect0,CoordSelect1;						// the triangle is projected onto a 2d
 	                                                        // plane for edge testing. These are
 	                                                        // the indices (0..2) of the
 	                                                        // coordinates preserved in the
 	                                                        // projection
-
-	uint8 m_nFlags;											// triangle flags
-	uint8 m_unused0;										// no longer used
-};
-
-
-struct TriGeometryData_t
-{
-	int32 m_nTriangleID;									// id of the triangle.
-
-	float m_VertexCoordData[9];								// can't use a vector in a union
-
-	uint8 m_nFlags;											// triangle flags
-	signed char m_nTmpData0;								// used by kd-tree builder
-	signed char m_nTmpData1;								// used by kd-tree builder
-
-
-	// accessors to get around union annoyance
-	FORCEINLINE Vector &Vertex(int idx)
-	{
-		return * ( reinterpret_cast<Vector *> (  m_VertexCoordData+3*idx ) );
-	}
-
-};
-
-
-struct CacheOptimizedTriangle
-{
-
-	union
-	{
-		TriIntersectData_t m_IntersectData;
-		TriGeometryData_t m_GeometryData;
-	} m_Data;
-
-	// accessors to get around union annoyance
-	FORCEINLINE Vector &Vertex(int idx)
-	{
-		return * ( reinterpret_cast<Vector *> (m_Data.m_GeometryData.m_VertexCoordData+3*idx ) );
-	}
-
-	FORCEINLINE const Vector &Vertex(int idx) const
-	{
-		return * ( reinterpret_cast<const Vector *> (m_Data.m_GeometryData.m_VertexCoordData+3*idx ) );
-	}
 
 	void ChangeIntoIntersectionFormat(void);				// change information storage format for
 	                                                        // computing intersections.
@@ -140,18 +85,12 @@ struct CacheOptimizedKDNode
 	// A) the right child is always stored after the left child, which means we only need one
 	// pointer
 	// B) The type of node (KDNODE_xx) is stored in the lower 2 bits of the pointer.
-	// C) for leaf nodes, we store the number of triangles in the leaf in the same place as the floating
-	//    point splitting parameter is stored in a non-leaf node
 
 	int32 Children;											// child idx, or'ed with flags above
+
 	float SplittingPlaneValue;								// for non-leaf nodes, the nodes on the
 	                                                        // "high" side of the splitting plane
 	                                                        // are on the right
-
-#ifdef DEBUG_RAYTRACE
-	Vector vecMins;
-	Vector vecMaxs;
-#endif
 
 	inline int NodeType(void) const
 
@@ -204,8 +143,8 @@ struct RayTracingSingleResult
 struct RayTracingResult
 {
 	FourVectors surface_normal;								// surface normal at intersection
-	ALIGN16 int32 HitIds[4] ALIGN16_POST;								// -1=no hit. otherwise, triangle index
-	fltx4 HitDistance;										// distance to intersection
+	__declspec(align(16)) int32 HitIds[4];					// -1=no hit. otherwise, triangle index
+	__m128 HitDistance;										// distance to intersection
 };
 
 
@@ -218,8 +157,6 @@ public:
 
 
 #define RTE_FLAGS_FAST_TREE_GENERATION 1
-#define RTE_FLAGS_DONT_STORE_TRIANGLE_COLORS 2				// saves memory if not needed
-#define RTE_FLAGS_DONT_STORE_TRIANGLE_MATERIALS 4
 
 enum RayTraceLightingMode_t {
 	DIRECT_LIGHTING,										// just dot product lighting
@@ -243,47 +180,27 @@ public:
 	}
 };
 
-// When transparent triangles are in the list, the caller can provide a callback that will get called at each triangle
-// allowing the callback to stop processing if desired.
-// UNDONE: This is not currently SIMD - it really only supports single rays
-// Also for efficiency FourRays really needs some kind of active mask for the cases where rays get unbundled
-class ITransparentTriangleCallback
-{
-public:
-	virtual bool VisitTriangle_ShouldContinue( const TriIntersectData_t &triangle, const FourRays &rays, fltx4 *hitMask, fltx4 *b0, fltx4 *b1, fltx4 *b2, int32 hitID ) = 0;
-};
 
 class RayTracingEnvironment
 {
 public:
 	uint32 Flags;											// RTE_FLAGS_xxx above
-	Vector m_MinBound;
-	Vector m_MaxBound;
-
 	FourVectors BackgroundColor;							//< color where no intersection
 	CUtlVector<CacheOptimizedKDNode> OptimizedKDTree;		//< the packed kdtree. root is 0
-	CUtlBlockVector<CacheOptimizedTriangle> OptimizedTriangleList; //< the packed triangles
+	CUtlVector<CacheOptimizedTriangle> OptimizedTriangleList; //< the packed triangles
 	CUtlVector<int32> TriangleIndexList;					//< the list of triangle indices.
 	CUtlVector<LightDesc_t> LightList;						//< the list of lights
 	CUtlVector<Vector> TriangleColors;						//< color of tries
-	CUtlVector<int32> TriangleMaterials;					//< material index of tries
 
 public:
-	RayTracingEnvironment() : OptimizedTriangleList( 1024 )
+	RayTracingEnvironment(void)
 	{
 		BackgroundColor.DuplicateVector(Vector(1,0,0));		// red
 		Flags=0;
 	}
-
-
 	// call AddTriangle to set up the world
 	void AddTriangle(int32 id, const Vector &v1, const Vector &v2, const Vector &v3,
 					 const Vector &color);
-
-	// Adds a triangle with flags & material
-	void AddTriangle(int32 id, const Vector &v1, const Vector &v2, const Vector &v3,
-								const Vector &color, uint16 flags, int32 materialIndex);
-
 
 	void AddQuad(int32 id, const Vector &v1, const Vector &v2, const Vector &v3,
 				 const Vector &v4,							// specify vertices in cw or ccw order
@@ -301,14 +218,14 @@ public:
 	// lowest level intersection routine - fire 4 rays through the scene. all 4 rays must pass the
 	// Check() function, and t extents must be initialized. skipid can be set to exclude a
 	// particular id (such as the origin surface). This function finds the closest intersection.
-	void Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 TMax,int DirectionSignMask,
+	void Trace4Rays(const FourRays &rays, __m128 TMin, __m128 TMax,int DirectionSignMask,
 					RayTracingResult *rslt_out,
-					int32 skip_id=-1, ITransparentTriangleCallback *pCallback = NULL);
+					int32 skip_id=-1);
 
 	// higher level intersection routine that handles computing the mask and handling rays which do not match in direciton sign
-	void Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 TMax,
+	void Trace4Rays(const FourRays &rays, __m128 TMin, __m128 TMax,
 					RayTracingResult *rslt_out,
-					int32 skip_id=-1, ITransparentTriangleCallback *pCallback = NULL);
+					int32 skip_id=-1);
 
 	// compute virtual light sources to model inter-reflection
 	void ComputeVirtualLightSources(void);
@@ -335,7 +252,7 @@ public:
 	void AddToRayStream(RayStream &s,
 						Vector const &start,Vector const &end,RayTracingSingleResult *rslt_out);
 
-	inline void FlushStreamEntry(RayStream &s,int msk);
+	inline void RayTracingEnvironment::FlushStreamEntry(RayStream &s,int msk);
 
 	/// call this when you are done. handles all cleanup. After this is called, all rslt ptrs
 	/// previously passed to AddToRaySteam will have been filled in.
@@ -365,23 +282,6 @@ public:
 
 	void AddBSPFace(int id,dface_t const &face);
 
-	// MakeRoomForTriangles - a hint telling it how many triangles we are going to add so that
-	// the utl vectors used can be pre-allocated
-	void MakeRoomForTriangles( int ntriangles );
-
-	const CacheOptimizedTriangle &GetTriangle( int32 triID )
-	{
-		return OptimizedTriangleList[triID];
-	}
-
-	int32 GetTriangleMaterial( int32 triID )
-	{
-		return TriangleMaterials[triID];
-	}
-	const Vector &GetTriangleColor( int triID )
-	{
-		return TriangleColors[triID];
-	}
 
 };
 

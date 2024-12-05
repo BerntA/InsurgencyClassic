@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -13,7 +13,7 @@
 #include "tier1/utlsymbol.h"
 #include "tier1/utlvector.h"
 #include "tier1/utlstring.h"
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 
 
 //-----------------------------------------------------------------------------
@@ -39,7 +39,6 @@ struct P4File_t
 	CUtlSymbol m_sDepotFile;	// the name in the depot
 	CUtlSymbol m_sClientFile;	// the name on the client in Perforce syntax
 	CUtlSymbol m_sLocalFile;	// the name on the client in local syntax
-	CUtlSymbol m_sFileType;		// the type according to the server, see p4 help filetypes
 	int m_iHeadRevision;		// head revision number
 	int m_iHaveRevision;		// the revision the clientspec has synced locally
 	bool m_bDir;				// directory
@@ -79,7 +78,7 @@ struct P4Client_t
 //-----------------------------------------------------------------------------
 // Purpose: Interface to accessing P4 commands
 //-----------------------------------------------------------------------------
-#define P4_INTERFACE_VERSION		"VP4002"
+#define P4_INTERFACE_VERSION		"VP4001"
 
 abstract_class IP4  : public IAppSystem
 {
@@ -99,7 +98,7 @@ public:
 	virtual void GetLocalFilePath(char *localFilePath, const char *filespec, int size) = 0;
 
 	// retreives the list of files in a path
-	virtual CUtlVector<P4File_t> &GetFileList( const char *path ) = 0;
+	virtual CUtlVector<P4File_t> &GetFileList(const char *path) = 0;
 
 	// returns the list of files opened for edit/integrate/delete 
 	virtual void GetOpenedFileList( CUtlVector<P4File_t> &fileList ) = 0;
@@ -115,26 +114,23 @@ public:
 	// changes the clientspec to remove the specified path (cloaking)
 	virtual void RemovePathFromActiveClientspec( const char *path ) = 0;
 
-	// sets the name of the changelist to open files under, NULL for "Default" changelist
-	virtual void SetOpenFileChangeList(const char *pChangeListName) = 0;
-
 	// file manipulation
-	virtual bool OpenFileForAdd( const char *pFullPath ) = 0;
-	virtual bool OpenFileForEdit( const char *pFullPath ) = 0;
-	virtual bool OpenFileForDelete( const char *pFullPath ) = 0;
+	virtual void OpenFileForAdd( const char *pFullPath ) = 0;
+	virtual void OpenFileForEdit( const char *pFullPath ) = 0;
+	virtual void OpenFileForDelete( const char *pFullPath ) = 0;
 
 	// submit/revert
-	virtual bool SubmitFile( const char *pFullPath, const char *pDescription ) = 0;
-	virtual bool RevertFile( const char *pFullPath ) = 0;
+	virtual void SubmitFile( const char *pFullPath, const char *pDescription ) = 0;
+	virtual void RevertFile( const char *pFullPath ) = 0;
 
 	// file checkin/checkout for multiple files
-	virtual bool OpenFilesForAdd( int nCount, const char **ppFullPathList ) = 0;
-	virtual bool OpenFilesForEdit( int nCount, const char **ppFullPathList ) = 0;
-	virtual bool OpenFilesForDelete( int nCount, const char **ppFullPathList ) = 0;
+	virtual void OpenFilesForAdd( int nCount, const char **ppFullPathList ) = 0;
+	virtual void OpenFilesForEdit( int nCount, const char **ppFullPathList ) = 0;
+	virtual void OpenFilesForDelete( int nCount, const char **ppFullPathList ) = 0;
 
 	// submit/revert for multiple files
-	virtual bool SubmitFiles( int nCount, const char **ppFullPathList, const char *pDescription ) = 0;
-	virtual bool RevertFiles( int nCount, const char **ppFullPathList ) = 0;
+	virtual void SubmitFiles( int nCount, const char **ppFullPathList, const char *pDescription ) = 0;
+	virtual void RevertFiles( int nCount, const char **ppFullPathList ) = 0;
 
 	// Is this file in perforce?
 	virtual bool IsFileInPerforce( const char *pFullPath ) = 0;
@@ -171,21 +167,6 @@ public:
 
 	// have we connected? if not, nothing works
 	virtual bool IsConnectedToServer( bool bRetry = true ) = 0;
-
-	// Returns file information for a single file
-	virtual bool GetFileInfo( const char *pFullPath, P4File_t *pFileInfo ) = 0;
-
-	// Reopens a file for edit or add with the specified filetype. To see the valid strings for 
-	// filetypes, see p4 help fileinfo. Perforce has to know about files before the filetype can
-	// be changed (so for new files, they must be added first, then the filetype modified).
-	virtual bool SetFileType( const char *pFullPath, const char *pFileType ) = 0;
-
-	// retreives the list of files in a path, using a known client spec
-	virtual CUtlVector<P4File_t> &GetFileListUsingClientSpec( const char *pPath, const char *pClientSpec ) = 0;
-
-	// retrieves the last error from the last op (which is likely to span multiple lines)
-	// this is only valid after OpenFile[s]For{Add,Edit,Delete} or {Submit,Revert}File[s]
-	virtual const char *GetLastError() = 0;
 };
 
 

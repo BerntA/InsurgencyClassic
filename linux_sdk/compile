@@ -1,0 +1,77 @@
+#!/bin/sh
+DEBUG=
+CLEAN=
+VCPM=
+REVCPM=
+BUILD=1
+CONF=
+EXPORT="make -j -l 10 -f /dev/stdin"
+
+while test $# -gt 0; do
+	case "$1" in
+		"-output")
+			shift
+			cat /dev/stdin>$1
+			exit ;;
+		"-debug")
+			DEBUG=1
+			shift ;;
+		"-clean")
+			CLEAN=1
+			BUILD=
+			shift ;;
+		"-vcpm")
+			CLEAN=1
+			VCPM=1
+			shift ;;
+		"-revcpm")
+			REVCPM=1
+			BUILD=
+			shift ;;
+		"-build")
+			BUILD=1
+			shift ;;
+		"-nobuild")
+			BUILD=
+			shift ;;
+		"-export")
+			shift
+			EXPORT="./compile -output $1"
+			shift ;;
+		*)
+			CONF=Makeconf.$1
+			shift ;;
+	esac
+done
+
+if [ -z $CONF ] || [ ! -f $CONF ]; then
+	echo Must supply a valid Makeconf file
+	exit
+fi
+
+if [ $CLEAN ]; then
+	echo Cleaning...
+	( cat Makefile.conf Makefile.default $CONF && echo include Makefile.\$\(CONFIG\) ) | $EXPORT clean
+fi
+
+if [ $REVCPM ]; then
+	echo Building VCPM...
+	cat Makefile.conf Makefile.default Makefile.vcpm | $EXPORT makevcpm
+fi
+
+if [ $VCPM ]; then
+	echo Convert VCProject...
+	cd `cat Makefile.conf|sed -n /BUILD_DIR=/s/BUILD_DIR=//p`
+	./vcpm `cat $CONF|sed -n /PROJ=/s/PROJ=//p`
+fi
+
+if [ $BUILD ]; then
+	CONFIG=`cat $CONF|sed -n /CONFIG=/s/CONFIG=//p`
+	if [ $DEBUG ]; then
+		echo Building \(debug\)...
+		( cat Makefile.conf Makefile.default $CONF && echo -e CFLAGS:=\$\(CFLAGS\) -g\\nLDFLAGS:=\$\(LDFLAGS\) \$\(LIBS\)\\nDO_CC=\$\(CPLUS\) -w \$\(INCLUDES\) \$\(CFLAGS\) -o \$@ -c \$\<\\n && cat Makefile.$CONFIG ) | $EXPORT makenormal
+	else
+		echo Building \(release\)...
+		( cat Makefile.conf Makefile.default $CONF && echo -e CFLAGS:=\$\(CFLAGS\) -O3\\nLDFLAGS:=\$\(LDFLAGS\) \$\(LIBS\) -s\\nDO_CC=\$\(CPLUS\) -w \$\(INCLUDES\) \$\(CFLAGS\) -o \$@ -c \$\<\\n && cat Makefile.$CONFIG  ) | $EXPORT makenormal
+	fi
+fi

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -32,25 +32,23 @@ namespace OptimizedModel
 
 struct BoneStateChangeHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int hardwareID;
 	int newBoneID;
 };
 
 struct Vertex_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	// these index into the mesh's vert[origMeshVertID]'s bones
 	unsigned char boneWeightIndex[MAX_NUM_BONES_PER_VERT];
 	unsigned char numBones;
 
-	unsigned short origMeshVertID;
+	short origMeshVertID;
 
 	// for sw skinned verts, these are indices into the global list of bones
 	// for hw skinned verts, these are hardware bone indices
 	char boneID[MAX_NUM_BONES_PER_VERT];
 };
-
+	
 enum StripHeaderFlags_t {
 	STRIP_IS_TRILIST	= 0x01,
 	STRIP_IS_TRISTRIP	= 0x02
@@ -60,7 +58,6 @@ enum StripHeaderFlags_t {
 // (and potentially tristrips if we remove some degenerates.)
 struct StripHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	// indexOffset offsets into the mesh's index array.
 	int numIndices;
 	int indexOffset;
@@ -84,12 +81,10 @@ struct StripHeader_t
 	};
 };
 
-enum StripGroupFlags_t 
-{
+enum StripGroupFlags_t {
 	STRIPGROUP_IS_FLEXED		= 0x01,
 	STRIPGROUP_IS_HWSKINNED		= 0x02,
-	STRIPGROUP_IS_DELTA_FLEXED	= 0x04,
-	STRIPGROUP_SUPPRESS_HW_MORPH = 0x08,	// NOTE: This is a temporary flag used at run time.
+	STRIPGROUP_IS_DELTA_FLEXED	= 0x04
 };
 
 // a locking group
@@ -97,7 +92,6 @@ enum StripGroupFlags_t
 // a single index buffer
 struct StripGroupHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	// These are the arrays of all verts and indices for this mesh.  strips index into this.
 	int numVerts;
 	int vertOffset;
@@ -139,7 +133,6 @@ enum MeshFlags_t {
 // A mesh has a material associated with it.
 struct MeshHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int numStripGroups;
 	int stripGroupHeaderOffset;
 	inline StripGroupHeader_t *pStripGroup( int i ) const 
@@ -152,7 +145,6 @@ struct MeshHeader_t
 
 struct ModelLODHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int numMeshes;
 	int meshOffset;
 	float switchPoint;
@@ -167,7 +159,6 @@ struct ModelLODHeader_t
 // There are a bunch of model LODs stored inside potentially due to the qc $lod command
 struct ModelHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int numLODs; // garymcthack - this is also specified in FileHeader_t
 	int lodOffset;
 	inline ModelLODHeader_t *pLOD( int i ) const 
@@ -179,7 +170,6 @@ struct ModelHeader_t
 
 struct BodyPartHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int numModels;
 	int modelOffset;
 	inline ModelHeader_t *pModel( int i ) const 
@@ -191,7 +181,6 @@ struct BodyPartHeader_t
 
 struct MaterialReplacementHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	short materialID;
 	int replacementMaterialNameOffset;
 	inline const char *pMaterialReplacementName( void )
@@ -203,7 +192,6 @@ struct MaterialReplacementHeader_t
 
 struct MaterialReplacementListHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int numReplacements;
 	int replacementOffset;
 	inline MaterialReplacementHeader_t *pMaterialReplacement( int i ) const
@@ -215,7 +203,6 @@ struct MaterialReplacementListHeader_t
 
 struct FileHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
 	// file version as defined by OPTIMIZED_MODEL_FILE_VERSION
 	int version;
 
@@ -226,7 +213,7 @@ struct FileHeader_t
 	int maxBonesPerVert;
 
 	// must match checkSum in the .mdl
-	int checkSum;
+	long checkSum;
 	
 	int numLODs; // garymcthack - this is also specified in ModelHeader_t and should match
 

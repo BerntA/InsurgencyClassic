@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,7 +13,7 @@
 
 #include <windows.h>
 #include "ISQLDBReplyTarget.h"
-#include "utlvector.h"
+#include "UtlVector.h"
 #include "UtlLinkedList.h"
 
 class ISQLDBCommand;

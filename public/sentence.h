@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,17 +10,13 @@
 #pragma once
 #endif
 
-// X360 optimizes out the extra memory needed by the editors in these types
-#ifndef _X360
+// XBOX optimizes out the extra memory needed by the editors in these types
+#ifndef _XBOX
 #define PHONEME_EDITOR 1
 #endif
-
 #include "utlvector.h"
 
 class CUtlBuffer;
-
-#define CACHED_SENTENCE_VERSION			1
-#define CACHED_SENTENCE_VERSION_ALIGNED	4
 
 //-----------------------------------------------------------------------------
 // Purpose: A sample point
@@ -187,7 +183,7 @@ class CSentence
 public:
 	static char const	*NameForLanguage( int language );
 	static int			LanguageForName( char const *name );
-	static void 		ColorForLanguage( int language, unsigned char& r, unsigned char& g, unsigned char& b );
+	static void 	ColorForLanguage( int language, unsigned char& r, unsigned char& g, unsigned char& b );
 
 	// Construction
 					CSentence( void );
@@ -210,7 +206,7 @@ public:
 	void			MakeRuntimeOnly();
 
 	// This is a compressed save of just the data needed to drive phonemes in the engine (no word / sentence text, etc )
-	void			CacheSaveToBuffer( CUtlBuffer& buf, int version );
+	void			CacheSaveToBuffer( CUtlBuffer& buf );
 	void			CacheRestoreFromBuffer( CUtlBuffer& buf );
 
 	// Add word/phoneme to sentence
@@ -256,10 +252,6 @@ public:
 	void			ClearRuntimePhonemes();
 	void			AddRuntimePhoneme( const CPhonemeTag *src );
 
-	void			CreateEventWordDistribution( char const *pszText, float flSentenceDuration );
-	static int		CountWords( char const *pszText );
-	static bool		ShouldSplitWord( char in );
-
 public:
 #if PHONEME_EDITOR
 	char			*m_szText;
@@ -298,5 +290,4 @@ private:
 //#ifdef _WIN32
 //#pragma pack ()
 //#endif
-
 #endif // SENTENCE_H

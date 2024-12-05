@@ -1,0 +1,44 @@
+#include "common_ps_fxc.h"
+
+sampler texStage0 : register( s0 ); // Texture
+HALF4 flHazeLevel  : register( c0 ); // handle here.  In pixel shader.
+HALF4 flCenterBias : register( c1 );
+HALF4 flBlurBias   : register( c2 );
+
+// -- Texcoord is only needed input -- //
+struct PS_INPUT
+{
+   HALF2  texCoord0 : TEXCOORD0;
+   HALF2  texCoord1 : TEXCOORD1;
+   HALF2  texCoord2 : TEXCOORD2;
+   HALF2  texCoord3 : TEXCOORD3;
+};
+// ------------------------------ //
+// -- Pain Shader              -- //
+// ------------------------------ //
+HALF4 main( PS_INPUT i ) : COLOR
+{
+   // ------------------------- //
+   // -- Temporary Variables -- //
+   // ------------------------- //
+   HALF4 o_color;
+
+   // ------------------------- //
+   // -- Variable Blur       -- //
+   // ------------------------- //
+   o_color  = flCenterBias * tex2D( texStage0, saturate( i.texCoord0 ) );
+   o_color += flBlurBias * tex2D( texStage0, saturate( i.texCoord1 ) );
+   o_color += flBlurBias * tex2D( texStage0, saturate( i.texCoord2 ) );
+   o_color += flBlurBias * tex2D( texStage0, saturate( i.texCoord3 ) );
+
+   // ------------------------- //
+   // -- Variable Red Haze   -- //
+   // ------------------------- //
+   o_color += flHazeLevel;
+   o_color.a = flHazeLevel.a;
+
+   // ------------------------- //
+   // -- Return output color -- //
+   // ------------------------- //
+   return o_color;
+}

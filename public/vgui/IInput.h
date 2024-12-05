@@ -1,9 +1,9 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 // $NoKeywords: $
-//===========================================================================//
+//=============================================================================//
 
 #ifndef VGUI_IINPUT_H
 #define VGUI_IINPUT_H
@@ -12,14 +12,14 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
-#include "tier1/interface.h"
-#include "vgui/MouseCode.h"
-#include "vgui/KeyCode.h"
+#include <vgui/vgui.h>
+#include "interface.h"
 
 namespace vgui
 {
 
+enum MouseCode;
+enum KeyCode;
 class Cursor;
 typedef unsigned long HCursor;
 
@@ -39,10 +39,6 @@ typedef unsigned long HCursor;
 #define VGUI_CS_INSERTCHAR                   0x2000
 #define VGUI_CS_NOMOVECARET                  0x4000
 
-#define MESSAGE_CURSOR_POS -1
-#define MESSAGE_CURRENT_KEYFOCUS -2
-
-
 class IInput : public IBaseInterface
 {
 public:
@@ -50,11 +46,10 @@ public:
 	virtual void SetMouseCapture(VPANEL panel) = 0;
 
 	// returns the string name of a scan code
-	virtual void GetKeyCodeText(KeyCode code, OUT_Z_BYTECAP(buflen) char *buf, int buflen) = 0;
+	virtual void GetKeyCodeText(KeyCode code, char *buf, int buflen) = 0;
 
 	// focus
 	virtual VPANEL GetFocus() = 0;
-	virtual VPANEL GetCalculatedFocus() = 0;// to handle cases where the focus changes inside a frame.
 	virtual VPANEL GetMouseOver() = 0;		// returns the panel the mouse is currently over, ignoring mouse capture
 
 	// mouse state
@@ -93,9 +88,9 @@ public:
 	virtual int  GetEnglishIMEHandle() = 0;
 
 	// Returns the Language Bar label (Chinese, Korean, Japanese, Russion, Thai, etc.)
-	virtual void GetIMELanguageName( OUT_Z_BYTECAP(unicodeBufferSizeInBytes) wchar_t *buf, int unicodeBufferSizeInBytes ) = 0;
+	virtual void GetIMELanguageName( wchar_t *buf, int unicodeBufferSizeInBytes ) = 0;
 	// Returns the short code for the language (EN, CH, KO, JP, RU, TH, etc. ).
-	virtual void GetIMELanguageShortCode( OUT_Z_BYTECAP(unicodeBufferSizeInBytes) wchar_t *buf, int unicodeBufferSizeInBytes ) = 0;
+	virtual void GetIMELanguageShortCode( wchar_t *buf, int unicodeBufferSizeInBytes ) = 0;
 
 	struct LanguageItem
 	{
@@ -139,7 +134,7 @@ public:
 	virtual void OnIMERecomputeModes() = 0;
 
 	virtual int  GetCandidateListCount() = 0;
-	virtual void GetCandidate( int num, OUT_Z_BYTECAP(destSizeBytes) wchar_t *dest, int destSizeBytes ) = 0;
+	virtual void GetCandidate( int num, wchar_t *dest, int destSizeBytes ) = 0;
 	virtual int  GetCandidateListSelectedItem() = 0;
 	virtual int  GetCandidateListPageSize() = 0;
 	virtual int  GetCandidateListPageStart() = 0;

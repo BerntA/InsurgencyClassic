@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,11 +12,11 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
-#include <vgui/Dar.h>
-#include <vgui_controls/Panel.h>
-#include <vgui_controls/EditablePanel.h>
-#include <vgui_controls/FocusNavGroup.h>
+#include <vgui/vgui.h>
+#include <vgui/dar.h>
+#include <vgui_controls/panel.h>
+#include <vgui_controls/editablepanel.h>
+#include <vgui_controls/focusnavgroup.h>
 
 namespace vgui
 {
@@ -32,8 +32,8 @@ class Frame : public EditablePanel
 	DECLARE_CLASS_SIMPLE( Frame, EditablePanel );
 
 public:
-	Frame(Panel *parent, const char *panelName, bool showTaskbarIcon = true, bool bPopup = true );
-	virtual ~Frame();
+	Frame(Panel *parent, const char *panelName, bool showTaskbarIcon = true);
+	~Frame();
 
 	// Set the text in the title bar.  Set surfaceTitle=true if you want this to be the taskbar text as well.
 	virtual void SetTitle(const char *title, bool surfaceTitle);
@@ -92,11 +92,12 @@ public:
 	// Set the system menu 
 	virtual void SetSysMenu(Menu *menu);
 
-	// Set the system menu images
-	void SetImages( const char *pEnabledImage, const char *pDisabledImage = NULL );
-
 	// set whether the title bar should be rendered
 	virtual void SetTitleBarVisible( bool state );
+
+	// Pongles [
+	virtual void SetUseFading( bool state );
+	// Pongles ]
 
 	// When moving via caption, don't let any part of window go outside parent's bounds
 	virtual void SetClipToParent( bool state );
@@ -117,23 +118,13 @@ public:
 	*/
 
 	// Load the control settings 
-	virtual void LoadControlSettings( const char *dialogResourceName, const char *pathID = NULL, KeyValues *pPreloadedKeyValues = NULL, KeyValues *pConditions = NULL );
+	virtual void LoadControlSettings(const char *dialogResourceName, const char *pathID = NULL);
 
 	void SetChainKeysToParent( bool state );
 	bool CanChainKeysToParent() const;
 
 	// Shows the dialog in a modal fashion
 	virtual void DoModal();
-
-	void PlaceUnderCursor( );
-
-	// Disables the fade-in/out-effect even if configured in the scheme settings
-	void DisableFadeEffect( void );
-
-	// Temporarily enables or disables the fade effect rather than zeroing the fade times as done in DisableFadeEffect
-	void SetFadeEffectDisableOverride( bool disabled );
-
-	void DisableAllFadeEffects();
 
 protected:
 	// Respond to mouse presses
@@ -202,59 +193,51 @@ private:
 	void FinishClose();
 	void OnFrameFocusChanged(bool bHasFocus);
 
-	Color		_titleBarBgColor;
-	Color		_titleBarDisabledBgColor;
-	Color		_titleBarFgColor;
-	Color		_titleBarDisabledFgColor;
-	Color		m_InFocusBgColor;
-	Color		m_OutOfFocusBgColor;
-	TextImage	*_title;
-
-#if !defined( _X360 )
-	Panel		*_topGrip;
-	Panel		*_bottomGrip;
-	Panel		*_leftGrip;
-	Panel		*_rightGrip;
-	Panel		*_topLeftGrip;
-	Panel		*_topRightGrip;
-	Panel		*_bottomLeftGrip;
-	Panel		*_bottomRightGrip;
-	Panel		*_captionGrip;
+	Color _titleBarBgColor;
+	Color _titleBarDisabledBgColor;
+	Color _titleBarFgColor;
+	Color _titleBarDisabledFgColor;
+	Color m_InFocusBgColor;
+	Color m_OutOfFocusBgColor;
+	TextImage *_title;
+	Panel * _topGrip;
+	Panel *_bottomGrip;
+	Panel *_leftGrip;
+	Panel *_rightGrip;
+	Panel *_topLeftGrip;
+	Panel *_topRightGrip;
+	Panel *_bottomLeftGrip;
+	Panel *_bottomRightGrip;
+	Panel *_captionGrip;
 	FrameButton *_minimizeButton;
 	FrameButton	*_maximizeButton;
 	FrameButton *_minimizeToSysTrayButton;
 	FrameButton	*_closeButton;
 	FrameSystemButton *_menuButton;
-	Menu		*_sysMenu;
-#endif
-
-	float	m_flTransitionEffectTime;
-	float	 m_flFocusTransitionEffectTime;
-	int		m_iClientInsetX;
-	int		m_iClientInsetY;
-	int		m_iTitleTextInsetX;
-	int		m_nGripperWidth;
+	Frame *_resizeable;
+	bool _sizeable;
+	bool _moveable;
+	bool m_bHasFocus;
+	bool _flashWindow;
+	bool _nextFlashState;
+	bool _drawTitleBar;
+	bool m_bPreviouslyVisible;
+	bool m_bFadingOut;
+	bool m_bDeleteSelfOnClose;
+	float m_flTransitionEffectTime;
+	float m_flFocusTransitionEffectTime;
+	int m_iClientInsetX, m_iClientInsetY;
+	int m_iTitleTextInsetX;
+	Menu *_sysMenu;
+	bool m_bClipToParent;
+	bool m_bSmallCaption;
+	int m_nGripperWidth;
+	bool	m_bChainKeysToParent;
+	bool	m_bPrimed;
 	VPANEL	m_hPreviousModal;
-	HFont	m_hCustomTitleFont;
-
-	bool	_sizeable : 1;
-	bool	_moveable : 1;
-	bool	 m_bHasFocus : 1;
-	bool	_flashWindow : 1;
-	bool	_nextFlashState : 1;
-	bool	_drawTitleBar : 1;
-	bool	m_bPreviouslyVisible : 1;
-	bool	m_bFadingOut : 1;
-	bool	m_bDeleteSelfOnClose : 1;
-	bool	m_bDisableFadeEffect : 1;
-	bool	m_bClipToParent : 1;
-	bool	m_bSmallCaption : 1;
-	bool	m_bChainKeysToParent : 1;
-	bool	m_bPrimed : 1;
-	bool	m_iClientInsetXOverridden : 1;
-										 
-	CPanelAnimationVarAliasType( int, m_iTitleTextInsetXOverride, "titletextinsetX", "0", "proportional_int" );
-	CPanelAnimationVar( int, m_iTitleTextInsetYOverride, "titletextinsetY", "0" );
+	// Pongles [
+	bool _useFading;
+	// Pongles ]
 };
 
 } // namespace vgui

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 2005-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: A higher level link library for general use in the game and tools.
 //
@@ -14,13 +14,15 @@
 
 #include "appframework/IAppSystem.h"
 #include "tier1/convar.h"
+#include "icvar.h"
 
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 class ICvar;
-class IProcessUtils;
+class IDataModel;
+class IDmElementFramework;
 
 
 //-----------------------------------------------------------------------------
@@ -29,11 +31,10 @@ class IProcessUtils;
 // It is hoped that setting this, and using this library will be the common mechanism for
 // allowing link libraries to access tier1 library interfaces
 //-----------------------------------------------------------------------------
-
-// These are marked DLL_EXPORT for Linux.
-DLL_EXPORT ICvar *cvar;
+extern ICvar *cvar;
 extern ICvar *g_pCVar;
-extern IProcessUtils *g_pProcessUtils;
+extern IDataModel *g_pDataModel;
+extern IDmElementFramework *g_pDmElementFramework;
 
 
 //-----------------------------------------------------------------------------
@@ -48,7 +49,7 @@ void DisconnectTier1Libraries();
 // Helper empty implementation of an IAppSystem for tier2 libraries
 //-----------------------------------------------------------------------------
 template< class IInterface, int ConVarFlag = 0 > 
-class CTier1AppSystem : public CTier0AppSystem< IInterface >
+class CTier1AppSystem : public CTier0AppSystem< IInterface >, public IConCommandBaseAccessor
 {
 	typedef CTier0AppSystem< IInterface > BaseClass;
 
@@ -62,16 +63,21 @@ public:
 		if ( !BaseClass::Connect( factory ) )
 			return false;
 
-		if ( BaseClass::IsPrimaryAppSystem() )
+		if ( IsPrimaryAppSystem() )
 		{
 			ConnectTier1Libraries( &factory, 1 );
+			if ( ConVarFlag && !g_pCVar )
+			{
+				Warning( "The convar system is needed to run!\n" );
+				return false;
+			}
 		}
 		return true;
 	}
 
 	virtual void Disconnect() 
 	{
-		if ( BaseClass::IsPrimaryAppSystem() )
+		if ( IsPrimaryAppSystem() )
 		{
 			DisconnectTier1Libraries();
 		}
@@ -84,20 +90,37 @@ public:
 		if ( nRetVal != INIT_OK )
 			return nRetVal;
 
-		if ( g_pCVar && BaseClass::IsPrimaryAppSystem() )
+		if ( g_pCVar && ConVarFlag && IsPrimaryAppSystem() )
 		{
-			ConVar_Register( ConVarFlag );
+			ConCommandBaseMgr::OneTimeInit( this );
 		}
 		return INIT_OK;
 	}
 
 	virtual void Shutdown()
 	{
-		if ( g_pCVar && BaseClass::IsPrimaryAppSystem() )
+		if ( g_pCVar && ConVarFlag && IsPrimaryAppSystem() )
 		{
-			ConVar_Unregister( );
+			g_pCVar->UnlinkVariables( ConVarFlag );
 		}
 		BaseClass::Shutdown( );
+	}
+
+	virtual bool RegisterConCommandBase( ConCommandBase *pCommand )
+	{
+		// Mark for easy removal
+		pCommand->AddFlags( ConVarFlag );
+		pCommand->SetNext( 0 );
+
+		// Link to engine's list instead
+		g_pCVar->RegisterConCommandBase( pCommand );
+
+//		char const *pValue = m_pCVar->GetCommandLineValue( pCommand->GetName() );
+//		if( pValue && !pCommand->IsCommand() )
+//		{
+//			( ( ConVar * )pCommand )->SetValue( pValue );
+//		}
+		return true;
 	}
 };
 

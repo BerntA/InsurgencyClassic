@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -10,10 +10,9 @@
 #pragma once
 #endif
 
-#include "datamap.h"
 #include "checksum_crc.h"
 
-#define MAX_BLOCK_BITS	13
+#define MAX_BLOCK_BITS	12
 
 #define MAX_BLOCK_SIZE (1<<MAX_BLOCK_BITS )
 
@@ -23,7 +22,6 @@
 #pragma pack(1)
 struct CompiledCaptionHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC()
 	int				magic;
 	int				version;
 	int				numblocks;
@@ -34,7 +32,6 @@ struct CompiledCaptionHeader_t
 
 struct CaptionLookup_t
 {
-	DECLARE_BYTESWAP_DATADESC()
 	unsigned int	hash;
 	int				blockNum;
 	unsigned short	offset;
@@ -69,9 +66,5 @@ struct CaptionBlock_t
 {
 	byte	data[ MAX_BLOCK_SIZE ];
 };
-
-// For swapping compiled caption files
-bool	SwapClosecaptionFile( void *pData );
-int		UpdateOrCreateCaptionFile( const char *pSourceName, char *pTargetName, int targetLen, bool bForce = false );
 
 #endif // CAPTIONCOMPILER_H

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -27,8 +27,6 @@ public:
 class IAudioStream
 {
 public:
-	virtual ~IAudioStream() {}
-
 	// Decode another bufferSize output bytes from the stream
 	// returns number of bytes decoded
 	virtual int	Decode( void *pBuffer, unsigned int bufferSize ) = 0;
@@ -54,8 +52,6 @@ public:
 class IVAudio
 {
 public:
-	virtual ~IVAudio() {}
-
 	virtual IAudioStream	*CreateMP3StreamDecoder( IAudioStreamEvent *pEventHandler ) = 0;
 	virtual void			DestroyMP3StreamDecoder( IAudioStream *pDecoder ) = 0;
 };

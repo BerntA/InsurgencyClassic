@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,7 +12,7 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
+#include <vgui/vgui.h>
 
 namespace vgui
 {
@@ -29,7 +29,6 @@ public:
 
 	Panel *Get();
 	Panel *Set( Panel *pPanel );
-	Panel *Set( HPanel hPanel );
 
 	operator Panel *()						{ return Get(); }
 	Panel * operator ->()					{ return Get(); }
@@ -72,7 +71,6 @@ class DHANDLE : public PHandle
 public:
 	PanelType *Get()					{ return (PanelType *)PHandle::Get(); }
 	PanelType *Set( PanelType *pPanel )	{ return (PanelType *)PHandle::Set(pPanel); }
-	PanelType *Set( HPanel hPanel )		{ return (PanelType *)PHandle::Set(hPanel); }
 
 	operator PanelType *()						{ return (PanelType *)PHandle::Get(); }
 	PanelType * operator ->()					{ return (PanelType *)PHandle::Get(); }

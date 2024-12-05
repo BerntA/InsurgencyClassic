@@ -1,8 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// $Id$
 
 #include <halton.h>
 

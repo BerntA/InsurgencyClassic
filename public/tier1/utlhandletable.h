@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2004, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -42,16 +42,13 @@ public:
 	// Set/get handle values
 	void SetHandle( UtlHandle_t h, T *pData );
 	T *GetHandle( UtlHandle_t h ) const;
-	T *GetHandle( UtlHandle_t h, bool checkValidity ) const;
 
 	// Is a handle valid?
 	bool IsHandleValid( UtlHandle_t h ) const;
 
 	// Iterate over handles; they may not be valid
-	unsigned int GetValidHandleCount() const;
 	unsigned int GetHandleCount() const;
 	UtlHandle_t GetHandleFromIndex( int i ) const;
-	int GetIndexFromHandle( UtlHandle_t h ) const;
 
 	void MarkHandleInvalid( UtlHandle_t h );
 	void MarkHandleValid( UtlHandle_t h );
@@ -59,11 +56,7 @@ public:
 private:
 	struct HandleType_t
 	{
-		HandleType_t( unsigned int i, unsigned int s ) : nIndex( i ), nSerial( s )
-		{
-			Assert( i < ( 1 << HandleBits ) );
-			Assert( s < ( 1 << ( 31 - HandleBits ) ) );
-		}
+		HandleType_t( unsigned int i, unsigned int s ) : nIndex( i ), nSerial( s ) {}
 		unsigned int nIndex  : HandleBits;
 		unsigned int nSerial : 31 - HandleBits;
 	};
@@ -81,7 +74,6 @@ private:
 	static UtlHandle_t CreateHandle( unsigned int nSerial, unsigned int nIndex );
 	const EntryType_t *GetEntry( UtlHandle_t handle, bool checkValidity ) const;
 
-	unsigned int m_nValidHandles;
 	CUtlVector< EntryType_t > m_list;
 	CUtlQueue< int > m_unused;
 };
@@ -91,7 +83,7 @@ private:
 // Constructor, destructor
 //-----------------------------------------------------------------------------
 template< class T, int HandleBits >
-CUtlHandleTable<T, HandleBits>::CUtlHandleTable() : m_nValidHandles( 0 )
+CUtlHandleTable<T, HandleBits>::CUtlHandleTable()
 {
 }
 
@@ -108,8 +100,6 @@ UtlHandle_t CUtlHandleTable<T, HandleBits>::AddHandle()
 	entry.nInvalid = 0;
 	entry.m_pData = NULL;
 
-	++m_nValidHandles;
-
 	return CreateHandle( entry.m_nSerial, nIndex );
 }
 
@@ -123,21 +113,8 @@ void CUtlHandleTable<T, HandleBits>::RemoveHandle( UtlHandle_t handle )
 
 	EntryType_t &entry = m_list[ nIndex ];
 	++entry.m_nSerial; // mark old serial# invalid
-	if ( !entry.nInvalid )
-	{
-		entry.nInvalid = 1;
-		--m_nValidHandles;
-	}
-	entry.m_pData = NULL;
 
-
-	// If a handle has been used this many times, then we need to take it out of service, otherwise if the 
-	//  serial # wraps around we'll possibly revalidate old handles and they'll start to point at the wrong objects.  Unlikely, but possible.
-	bool bStopUsing = ( entry.m_nSerial >= ( (1 << ( 31 - HandleBits ) ) - 1 ) );
-	if ( !bStopUsing )
-	{
-		m_unused.Insert( nIndex );
-	}
+	m_unused.Insert( nIndex ); // AddToTail
 }
 
 
@@ -153,11 +130,7 @@ void CUtlHandleTable<T, HandleBits>::SetHandle( UtlHandle_t handle, T *pData )
 		return;
 
 	// Validate the handle
-	if ( entry->nInvalid )
-	{
-		++m_nValidHandles;
-		entry->nInvalid = 0;
-	}
+	entry->nInvalid = 0;
 	entry->m_pData = pData;
 }
 
@@ -165,13 +138,6 @@ template< class T, int HandleBits >
 T *CUtlHandleTable<T, HandleBits>::GetHandle( UtlHandle_t handle ) const
 {
 	const EntryType_t *entry = GetEntry( handle, true );
-	return entry ? entry->m_pData : NULL;
-}
-
-template< class T, int HandleBits >
-T *CUtlHandleTable<T, HandleBits>::GetHandle( UtlHandle_t handle, bool checkValidity ) const
-{
-	const EntryType_t *entry = GetEntry( handle, checkValidity );
 	return entry ? entry->m_pData : NULL;
 }
 
@@ -186,7 +152,7 @@ bool CUtlHandleTable<T, HandleBits>::IsHandleValid( UtlHandle_t handle ) const
 		return false;
 
 	unsigned int nIndex = GetListIndex( handle );
-	AssertOnce( nIndex < ( unsigned int )m_list.Count() );
+	Assert( nIndex < ( unsigned int )m_list.Count() );
 	if ( nIndex >= ( unsigned int )m_list.Count() )
 		return false;
 
@@ -205,12 +171,6 @@ bool CUtlHandleTable<T, HandleBits>::IsHandleValid( UtlHandle_t handle ) const
 // Current max handle
 //-----------------------------------------------------------------------------
 template< class T, int HandleBits >
-unsigned int CUtlHandleTable<T, HandleBits>::GetValidHandleCount() const
-{
-	return m_nValidHandles;
-}
-
-template< class T, int HandleBits >
 unsigned int CUtlHandleTable<T, HandleBits>::GetHandleCount() const
 {
 	return m_list.Count();
@@ -222,15 +182,6 @@ UtlHandle_t CUtlHandleTable<T, HandleBits>::GetHandleFromIndex( int i ) const
 	if ( m_list[i].m_pData )
 		return CreateHandle( m_list[i].m_nSerial, i );
 	return UTLHANDLE_INVALID;
-}
-
-template< class T, int HandleBits >
-int CUtlHandleTable<T, HandleBits>::GetIndexFromHandle( UtlHandle_t h ) const
-{
-	if ( h == UTLHANDLE_INVALID )
-		return -1;
-
-	return GetListIndex( h );
 }
 
 
@@ -278,7 +229,7 @@ const typename CUtlHandleTable<T, HandleBits>::EntryType_t *CUtlHandleTable<T, H
 
 	if ( checkValidity &&
 		( 1 == entry.nInvalid ) )
-		return NULL;
+		return false;
 
 	return &entry;
 }
@@ -298,11 +249,7 @@ void CUtlHandleTable<T, HandleBits>::MarkHandleInvalid( UtlHandle_t handle )
 	if ( entry.m_nSerial != GetSerialNumber( handle ) )
 		return;
 
-	if ( !entry.nInvalid )
-	{
-		--m_nValidHandles;
-		entry.nInvalid = 1;
-	}
+	entry.nInvalid = 1;
 }
 
 template< class T, int HandleBits >
@@ -320,11 +267,7 @@ void CUtlHandleTable<T, HandleBits>::MarkHandleValid( UtlHandle_t handle )
 	if ( entry.m_nSerial != GetSerialNumber( handle ) )
 		return;
 
-	if ( entry.nInvalid )
-	{
-		++m_nValidHandles;
-		entry.nInvalid = 0;
-	}
+	entry.nInvalid = 0;
 }
 
 

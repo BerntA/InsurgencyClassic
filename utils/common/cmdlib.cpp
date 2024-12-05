@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -8,22 +8,18 @@
 // -----------------------
 // cmdlib.c
 // -----------------------
-#include "tier0/platform.h"
-#ifdef IS_WINDOWS_PC
+
 #include <windows.h>
-#endif
 #include "cmdlib.h"
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "tier1/strtools.h"
-#ifdef _WIN32
+#include "vstdlib/strtools.h"
 #include <conio.h>
-#endif
 #include "utlvector.h"
 #include "filesystem_helpers.h"
 #include "utllinkedlist.h"
-#include "tier0/icommandline.h"
-#include "KeyValues.h"
+#include "vstdlib/icommandline.h"
+#include "keyvalues.h"
 #include "filesystem_tools.h"
 
 #if defined( MPI )
@@ -38,9 +34,6 @@
 #include <direct.h>
 #endif
 
-#if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
-#endif
 
 // set these before calling CheckParm
 int myargc;
@@ -59,7 +52,10 @@ CUtlLinkedList<SpewHookFn, unsigned short> g_ExtraSpewHooks;
 bool g_bStopOnExit = false;
 void (*g_ExtraSpewHook)(const char*) = NULL;
 
+
 #if defined( _WIN32 ) || defined( WIN32 )
+
+
 
 void CmdLib_FPrintf( FileHandle_t hFile, const char *pFormat, ... )
 {
@@ -95,6 +91,7 @@ void CmdLib_FPrintf( FileHandle_t hFile, const char *pFormat, ... )
 	va_end( marker );
 }
 
+
 char* CmdLib_FGets( char *pOut, int outSize, FileHandle_t hFile )
 {
 	int iCur=0;
@@ -126,9 +123,9 @@ char* CmdLib_FGets( char *pOut, int outSize, FileHandle_t hFile )
 	return pOut;
 }
 
-#if !defined( _X360 )
+
 #include <wincon.h>
-#endif
+
 
 // This pauses before exiting if they use -StopOnExit. Useful for debugging.
 class CExitStopper
@@ -145,13 +142,15 @@ public:
 } g_ExitStopper;
 
 
+
+
 static unsigned short g_InitialColor = 0xFFFF;
 static unsigned short g_LastColor = 0xFFFF;
 static unsigned short g_BadColor = 0xFFFF;
 static WORD g_BackgroundFlags = 0xFFFF;
+
 static void GetInitialColors( )
 {
-#if !defined( _X360 )
 	// Get the old background attributes.
 	CONSOLE_SCREEN_BUFFER_INFO oldInfo;
 	GetConsoleScreenBufferInfo( GetStdHandle( STD_OUTPUT_HANDLE ), &oldInfo );
@@ -167,13 +166,11 @@ static void GetInitialColors( )
 		g_BadColor |= FOREGROUND_BLUE;
 	if (g_BackgroundFlags & BACKGROUND_INTENSITY)
 		g_BadColor |= FOREGROUND_INTENSITY;
-#endif
 }
 
-WORD SetConsoleTextColor( int red, int green, int blue, int intensity )
+static WORD SetConsoleTextColor( int red, int green, int blue, int intensity )
 {
 	WORD ret = g_LastColor;
-#if !defined( _X360 )
 	
 	g_LastColor = 0;
 	if( red )	g_LastColor |= FOREGROUND_RED;
@@ -186,16 +183,14 @@ WORD SetConsoleTextColor( int red, int green, int blue, int intensity )
 		g_LastColor = g_InitialColor;
 
 	SetConsoleTextAttribute( GetStdHandle( STD_OUTPUT_HANDLE ), g_LastColor | g_BackgroundFlags );
-#endif
 	return ret;
 }
 
-void RestoreConsoleTextColor( WORD color )
+
+static void RestoreConsoleTextColor( WORD color )
 {
-#if !defined( _X360 )
 	SetConsoleTextAttribute( GetStdHandle( STD_OUTPUT_HANDLE ), color | g_BackgroundFlags );
 	g_LastColor = color;
-#endif
 }
 
 
@@ -234,16 +229,7 @@ SpewRetval_t CmdLib_SpewOutputFunc( SpewType_t type, char const *pMsg )
 	{
 		if (( type == SPEW_MESSAGE ) || (type == SPEW_LOG ))
 		{
-			Color c = *GetSpewOutputColor();
-			if ( c.r() != 255 || c.g() != 255 || c.b() != 255 )
-			{
-				// custom color
-				old = SetConsoleTextColor( c.r(), c.g(), c.b(), c.a() );
-			}
-			else
-			{
-				old = SetConsoleTextColor( 1, 1, 1, 0 );
-			}
+			old = SetConsoleTextColor( 1, 1, 1, 0 );
 			retVal = SPEW_CONTINUE;
 		}
 		else if( type == SPEW_WARNING )
@@ -257,26 +243,10 @@ SpewRetval_t CmdLib_SpewOutputFunc( SpewType_t type, char const *pMsg )
 			retVal = SPEW_DEBUGGER;
 
 #ifdef MPI
-			// VMPI workers don't want to bring up dialogs and suchlike.
-			// They need to have a special function installed to handle
-			// the exceptions and write the minidumps.
-			// Install the function after VMPI_Init with a call:
-			// SetupToolsMinidumpHandler( VMPI_ExceptionFilter );
-			if ( g_bUseMPI && !g_bMPIMaster && !Plat_IsInDebugSession() )
+			// VMPI workers don't want to bring up dialogs and suchlike.			
+			if ( g_bUseMPI && !g_bMPIMaster )
 			{
-				// Generating an exception and letting the
-				// installed handler handle it
-				::RaiseException
-					(
-					0,							// dwExceptionCode
-					EXCEPTION_NONCONTINUABLE,	// dwExceptionFlags
-					0,							// nNumberOfArguments,
-					NULL						// const ULONG_PTR* lpArguments
-					);
-
-					// Never get here (non-continuable exception)
-				
-				VMPI_HandleCrash( pMsg, NULL, true );
+				VMPI_HandleCrash( pMsg, true );
 				exit( 0 );
 			}
 #endif
@@ -341,25 +311,24 @@ void InstallExtraSpewHook( SpewHookFn pFn )
 	g_ExtraSpewHooks.AddToTail( pFn );
 }
 
-#if 0
+
 void CmdLib_AllocError( unsigned long size )
 {
 	Error( "Error trying to allocate %d bytes.\n", size );
 }
-
 
 int CmdLib_NewHandler( size_t size )
 {
 	CmdLib_AllocError( size );
 	return 0;
 }
-#endif
 
 void InstallAllocationFunctions()
 {
-//	_set_new_mode( 1 ); // so if malloc() fails, we exit.
-//	_set_new_handler( CmdLib_NewHandler );
+	_set_new_mode( 1 ); // so if malloc() fails, we exit.
+	_set_new_handler( CmdLib_NewHandler );
 }
+
 
 void SetSpewFunctionLogFile( char const *pFilename )
 {
@@ -433,7 +402,7 @@ Mimic unix command line expansion
 #define	MAX_EX_ARGC	1024
 int		ex_argc;
 char	*ex_argv[MAX_EX_ARGC];
-#if defined( _WIN32 ) && !defined( _X360 )
+#ifdef _WIN32
 #include "io.h"
 void ExpandWildcards (int *argc, char ***argv)
 {
@@ -482,7 +451,7 @@ void ExpandWildcards (int *argc, char ***argv)
 
 // only printf if in verbose mode
 qboolean verbose = false;
-void qprintf (const char *format, ...)
+void qprintf (char *format, ...)
 {
 	if (!verbose)
 		return;
@@ -513,7 +482,7 @@ static void CmdLib_getwd( char *out, int outSize )
 	_getcwd( out, outSize );
 	Q_strncat( out, "\\", outSize, COPY_ALL_CHARACTERS );
 #else
-	getcwd(out, outSize);
+	getwd(out);
 	strcat(out, "/");
 #endif
 	Q_FixSlashes( out );
@@ -566,7 +535,7 @@ void GetHourMinuteSecondsString( int nInputSeconds, char *pOut, int outLen )
 	int nHours = nMinutes / 60;
 	nMinutes -= nHours * 60;
 
-	const char *extra[2] = { "", "s" };
+	char *extra[2] = { "", "s" };
 	
 	if ( nHours > 0 )
 		Q_snprintf( pOut, outLen, "%d hour%s, %d minute%s, %d second%s", nHours, extra[nHours != 1], nMinutes, extra[nMinutes != 1], nSeconds, extra[nSeconds != 1] );
@@ -683,7 +652,7 @@ int Q_filelength (FileHandle_t f)
 }
 
 
-FileHandle_t SafeOpenWrite ( const char *filename )
+FileHandle_t SafeOpenWrite (char *filename)
 {
 	FileHandle_t f = g_pFileSystem->Open(filename, "wb");
 
@@ -746,35 +715,7 @@ const char *CmdLib_GetBasePath( int i )
 	return g_pBasePaths[i];
 }
 
-
-//-----------------------------------------------------------------------------
-// Like ExpandPath but expands the path for each base path like SafeOpenRead
-//-----------------------------------------------------------------------------
-int CmdLib_ExpandWithBasePaths( CUtlVector< CUtlString > &expandedPathList, const char *pszPath )
-{
-	int nPathLength = 0;
-
-	pszPath = ExpandPath( const_cast< char * >( pszPath ) );	// Kind of redundant but it's how CmdLib_HasBasePath needs things
-
-	if ( CmdLib_HasBasePath( pszPath, nPathLength ) )
-	{
-		pszPath = pszPath + nPathLength;
-		for ( int i = 0; i < CmdLib_GetNumBasePaths(); ++i )
-		{
-			CUtlString &expandedPath = expandedPathList[ expandedPathList.AddToTail( CmdLib_GetBasePath( i ) ) ];
-			expandedPath += pszPath;
-		}
-	}
-	else
-	{
-		expandedPathList.AddToTail( pszPath );
-	}
-
-	return expandedPathList.Count();
-}
-
-
-FileHandle_t SafeOpenRead( const char *filename )
+FileHandle_t SafeOpenRead( char *filename )
 {
 	int pathLength;
 	FileHandle_t f = 0;
@@ -825,7 +766,7 @@ void SafeWrite ( FileHandle_t f, void *buffer, int count)
 FileExists
 ==============
 */
-qboolean	FileExists ( const char *filename )
+qboolean	FileExists (char *filename)
 {
 	FileHandle_t hFile = g_pFileSystem->Open( filename, "rb" );
 	if ( hFile == FILESYSTEM_INVALID_HANDLE )
@@ -844,7 +785,7 @@ qboolean	FileExists ( const char *filename )
 LoadFile
 ==============
 */
-int    LoadFile ( const char *filename, void **bufferptr )
+int    LoadFile (char *filename, void **bufferptr)
 {
 	int    length = 0;
 	void    *buffer;
@@ -873,7 +814,7 @@ int    LoadFile ( const char *filename, void **bufferptr )
 SaveFile
 ==============
 */
-void    SaveFile ( const char *filename, void *buffer, int count )
+void    SaveFile (char *filename, void *buffer, int count)
 {
 	FileHandle_t f = SafeOpenWrite (filename);
 	SafeWrite (f, buffer, count);

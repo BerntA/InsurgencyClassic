@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -20,7 +20,7 @@
 
 // Eventually, ALL of these should be protected, but one man can only accomplish so much in
 // one day AND work on features too!
-#if defined( PROTECTED_STRINGS_ENABLE ) && !defined(DISABLE_PROTECTED_STRINGS)
+#if defined( PROTECTED_STRINGS_ENABLE )
 
 	#if defined( printf )
 		#undef printf
@@ -130,7 +130,20 @@
 #endif
 
 
-#if defined( PROTECTED_THINGS_ENABLE ) && !defined( _X360 ) && !defined(DISABLE_PROTECTED_THINGS)
+#if defined( PROTECT_FILEIO_FUNCTIONS )
+	#if defined( fopen )
+		#undef fopen
+	#endif
+	#define fopen				fopen_USE_FILESYSTEM_INSTEAD
+
+	#if defined( _wfopen )
+		#undef _wfopen
+	#endif
+	#define _wfopen				_wfopen_USE_FILESYSTEM_INSTEAD
+#endif	
+
+
+#if defined( PROTECTED_THINGS_ENABLE )
 
 	#if defined( GetTickCount )
 		#undef GetTickCount
@@ -138,10 +151,14 @@
 	#define GetTickCount		GetTickCount__USE_VCR_MODE
 	
 	
+#ifndef _XBOX
 	#if defined( timeGetTime )
 		#undef timeGetTime
 	#endif
 	#define timeGetTime			timeGetTime__USE_VCR_MODE
+#endif
+
+
 	#if defined( clock )
 		#undef clock
 	#endif
@@ -260,10 +277,12 @@
 	#endif
 	#define WaitForSingleObject	WaitForSingleObject__USE_VCR_MODE
 
+#ifndef _XBOX
 	#if defined( EnterCriticalSection )
 		#undef EnterCriticalSection
 	#endif
 	#define EnterCriticalSection EnterCriticalSection__USE_VCR_MODE
+#endif
 
 #endif
 

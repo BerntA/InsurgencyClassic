@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:		A registry of strings and associated ints
 //
@@ -64,7 +64,9 @@ int	CStringRegistry::GetStringID( const char *stringText )
 //-----------------------------------------------------------------------------
 char const *CStringRegistry::GetStringText( int stringID )
 {
-	for( unsigned short index = m_pStringList->First() ; index != m_pStringList->InvalidIndex(); index = m_pStringList->Next( index ) )
+	int count = m_pStringList->Count();
+
+	for( unsigned short index = 0 ; index < count ; index++ )
 	{
 		if ( (*m_pStringList)[index] == stringID )
 		{

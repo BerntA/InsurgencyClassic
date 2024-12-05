@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Memory allocation!
 //
@@ -13,11 +13,6 @@
 #endif
 
 #include <stddef.h>
-#ifdef LINUX
-#undef offsetof
-#define offsetof(s,m)	(size_t)&(((s *)0)->m)
-#endif
-
 #include "tier0/platform.h"
 
 #if !defined(STATIC_TIER0) && !defined(_STATIC_LINKED)

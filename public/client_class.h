@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -49,7 +49,7 @@ typedef IClientNetworkable*	(*CreateEventFn)();
 class ClientClass
 {
 public:
-	ClientClass( const char *pNetworkName, CreateClientClassFn createFn, CreateEventFn createEventFn, RecvTable *pRecvTable )
+	ClientClass( char *pNetworkName, CreateClientClassFn createFn, CreateEventFn createEventFn, RecvTable *pRecvTable )
 	{
 		m_pNetworkName	= pNetworkName;
 		m_pCreateFn		= createFn;
@@ -69,7 +69,7 @@ public:
 public:
 	CreateClientClassFn		m_pCreateFn;
 	CreateEventFn			m_pCreateEventFn;	// Only called for event objects.
-	const char				*m_pNetworkName;
+	char					*m_pNetworkName;
 	RecvTable				*m_pRecvTable;
 	ClientClass				*m_pNext;
 	int						m_ClassID;	// Managed by the engine.
@@ -77,6 +77,7 @@ public:
 
 #define DECLARE_CLIENTCLASS() \
 	virtual int YouForgotToImplementOrDeclareClientClass();\
+	virtual char const* GetClassName();\
 	virtual ClientClass* GetClientClass();\
 	static RecvTable *m_pClassRecvTable; \
 	DECLARE_CLIENTCLASS_NOBASE()
@@ -131,8 +132,8 @@ public:
 // is responsible for freeing itself.
 #define IMPLEMENT_CLIENTCLASS_EVENT(clientClassName, dataTable, serverClassName)\
 	INTERNAL_IMPLEMENT_CLIENTCLASS_PROLOGUE(clientClassName, dataTable, serverClassName)\
-	static clientClassName __g_##clientClassName; \
-	static IClientNetworkable* _##clientClassName##_CreateObject() {return &__g_##clientClassName;}\
+	static clientClassName __g_##clientClassName##; \
+	static IClientNetworkable* _##clientClassName##_CreateObject() {return &__g_##clientClassName##;}\
 	ClientClass __g_##clientClassName##ClientClass(#serverClassName, \
 													NULL,\
 													_##clientClassName##_CreateObject, \
@@ -174,6 +175,7 @@ public:
 	namespace dataTable {extern RecvTable g_RecvTable;}\
 	extern ClientClass __g_##clientClassName##ClientClass;\
 	RecvTable*		clientClassName::m_pClassRecvTable = &dataTable::g_RecvTable;\
+	char const*		clientClassName::GetClassName() {return #clientClassName;}\
 	int				clientClassName::YouForgotToImplementOrDeclareClientClass() {return 0;}\
 	ClientClass*	clientClassName::GetClientClass() {return &__g_##clientClassName##ClientClass;}
 

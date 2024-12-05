@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
 //
 // The copyright to the contents herein is the property of Valve, L.L.C.
 // The contents may be used and/or copied only with the written permission of
@@ -19,7 +19,7 @@
 #pragma once
 #endif
 
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 
 
 //-----------------------------------------------------------------------------
@@ -27,19 +27,10 @@
 //-----------------------------------------------------------------------------
 class IDmSerializers : public IAppSystem
 {
+public:
 };
 
-
-//-----------------------------------------------------------------------------
-// Used only by applications to hook in DmSerializers
-//-----------------------------------------------------------------------------
 #define DMSERIALIZERS_INTERFACE_VERSION		"VDmSerializers001"
-
-
-//-----------------------------------------------------------------------------
-// Singleton
-//-----------------------------------------------------------------------------
-extern IDmSerializers *g_pDmSerializers;
 
 
 #endif // DMSERIALIZERS_H

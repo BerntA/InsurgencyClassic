@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -24,8 +24,8 @@
 // Purpose: interface for map overview panel
 //-----------------------------------------------------------------------------
 
-#include "mathlib/vector.h"
-#include "mathlib/vector2d.h"
+#include <vector.h>
+#include <vector2d.h>
 
 class IMapOverview // : public IBaseInterface
 {

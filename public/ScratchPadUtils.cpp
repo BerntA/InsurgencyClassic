@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -9,8 +9,8 @@
 #if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
 
 #include "iscratchpad3d.h"
-#include "mathlib/mathlib.h"
-#include "ScratchPadUtils.h"
+#include "mathlib.h"
+#include "scratchpadutils.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -16,7 +16,7 @@
 #pragma once
 #endif
 
-#include "mathlib/vector.h"
+#include "vector.h"
 
 class  OverlayText_t
 {

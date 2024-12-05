@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -13,9 +13,9 @@
 #endif
 
 #include "tier1/interface.h"
-#include <vgui/VGUI.h>
+#include <vgui/vgui.h>
 
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 
 class KeyValues;
 
@@ -40,6 +40,12 @@ typedef unsigned long HPanel;
 class IVGui : public IAppSystem
 {
 public:
+	// must be called first - provides interfaces for vgui to access
+	virtual bool Init( CreateInterfaceFn *factoryList, int numFactories ) = 0;
+
+	// call to free memory on shutdown
+	virtual void Shutdown() = 0;
+
 	// activates vgui message pump
 	virtual void Start() = 0;
 
@@ -60,8 +66,8 @@ public:
 	virtual void FreePanel(VPANEL panel) = 0;
 	
 	// debugging prints
-	virtual void DPrintf(PRINTF_FORMAT_STRING const char *format, ...) = 0;
-	virtual void DPrintf2(PRINTF_FORMAT_STRING const char *format, ...) = 0;
+	virtual void DPrintf(const char *format, ...) = 0;
+	virtual void DPrintf2(const char *format, ...) = 0;
 	virtual void SpewAllActivePanelNames() = 0;
 	
 	// safe-pointer handle methods
@@ -95,16 +101,9 @@ public:
 
 	// data accessor for above
 	virtual bool GetShouldVGuiControlSleep() = 0;
-
-	// enables VR mode
-	virtual void SetVRMode( bool bVRMode ) = 0;
-	virtual bool GetVRMode() = 0;
-
-	// add a tick signal like above, but to the head of the list of tick signals
-	virtual void AddTickSignalToHead( VPANEL panel, int intervalMilliseconds = 0 ) = 0;
 };
 
-#define VGUI_IVGUI_INTERFACE_VERSION "VGUI_ivgui008"
+#define VGUI_IVGUI_INTERFACE_VERSION "VGUI_ivgui007"
 
 };
 

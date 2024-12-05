@@ -95,25 +95,7 @@
 // zip.cpp. The repackaging was done by Lucian Wischik to simplify its
 // use in Windows/C++.
 
-#if !defined( DWORD )
-#ifdef _WIN32
-typedef unsigned long DWORD;
-#else
-typedef unsigned int DWORD;
-#endif
-#endif
-
-#if !defined( TCHAR )
-typedef char TCHAR;
-#endif
-
 #ifndef XUNZIP_H
-#if !defined(DECLARE_HANDLE)
-#if !defined(HANDLE)
-typedef void * HANDLE;
-#endif
-#define DECLARE_HANDLE(name) typedef struct name##__ { int unused; } *name
-#endif
 DECLARE_HANDLE(HZIP);		// An HZIP identifies a zip file that is being created
 #endif
 

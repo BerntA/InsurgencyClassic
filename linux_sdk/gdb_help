@@ -1,0 +1,14 @@
+b <file:line>|<function>	breakpoint
+i b				show breakpoints
+dis <b>				disable breakpoint
+en <b>				enable breakpoint
+d <b>				delete breakpoint
+
+p <var>				print var
+pt <type>			print type
+
+n				step over
+s				step into
+
+bt				print call stack
+l				print code around EIP

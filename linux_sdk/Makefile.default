@@ -1,0 +1,34 @@
+SHLIBEXT=so
+ARCH=i486
+
+linktest: copytarget
+	@if [ $(LINKTEST) ]; then echo "[0;31mTesting server binary symbols[0m"; fi
+	@rm -f obj/__linux_link_test.c
+	@rm -f obj/__linux_link_test.o
+	@echo "int main(void){return 0;}">obj/__linux_link_test.c
+	@if [ $(LINKTEST) ]; then echo $(CLINK) -Wl,-rpath,. -o obj/__linux_link_test.o -ldl $(LIBS) $(TARGET) obj/__linux_link_test.c; $(CLINK) -Wl,-rpath,. -o obj/__linux_link_test.o -ldl $(LIBS) $(TARGET) obj/__linux_link_test.c; fi
+	@rm -f obj/__linux_link_test.c
+	@rm -f obj/__linux_link_test.o
+
+copytarget: alldep
+	@if [ $(NAME)_$(ARCH).$(SHLIBEXT) != $(TARGET) ];then mv $(NAME)_$(ARCH).$(SHLIBEXT) $(TARGET);fi
+
+buildstart:
+	@if [ ! -d $(BUILD_DIR) ];then mkdir $(BUILD_DIR);fi
+	@cd $(BUILD_DIR)
+
+gamelibs: buildstart
+	@if [ ! -f "tier0_i486.so" ]; then ln -s $(GAME_DIR)/bin/tier0_i486.so .; fi
+	@if [ ! -f "vstdlib_i486.so" ]; then ln -s $(GAME_DIR)/bin/vstdlib_i486.so .; fi
+
+clean2:
+	rm -rf obj/$(NAME)_$(ARCH)
+	rm -f $(NAME)_$(ARCH).$(SHLIBEXT)
+
+alldep: gamelibs all
+
+clean: buildstart clean2 pchclean
+
+makevcpm: cleanvcpm alldep
+
+makenormal: linktest

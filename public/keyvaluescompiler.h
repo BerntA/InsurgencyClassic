@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -10,7 +10,6 @@
 #pragma once
 #endif
 
-#include "tier0/platform.h"
 #include "tier1/utlbuffer.h"
 #include "tier1/utlsymbol.h"
 #include "tier1/utldict.h"
@@ -121,7 +120,7 @@ public:
 
 	bool ReadStringTable( int numStrings, CUtlBuffer& buf );
 	
-	inline int Count() const
+	inline int CRunTimeKeyValuesStringTable::Count() const
 	{
 		return m_Strings.Count();
 	}

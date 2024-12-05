@@ -1,0 +1,40 @@
+/*
+   Nightvision Shader - (Pixel Shader 2.0)
+   Should work fine with a standard vertex shader.
+   It doesn't need anything but the Texture Coordinates.
+   (And two textures.)
+      --xENO
+      
+   $Header $
+*/
+
+#include "common_ps_fxc.h"
+
+sampler texScreen : register( s0 );
+sampler texRandom : register( s1 );
+
+struct PS_INPUT
+{
+   HALF2 texCoord0  : TEXCOORD0;
+   HALF2 blurCoord0 : TEXCOORD1;
+   HALF2 blurCoord1 : TEXCOORD2;
+   HALF2 blurCoord2 : TEXCOORD3;
+};
+
+HALF4 main( PS_INPUT i ) : COLOR
+{
+   HALF4 outColor = 0.0;
+   HALF outLevel = 0.60 * tex2D( texScreen, i.texCoord0 );
+   
+
+
+   outLevel += 0.25 * ( pow( 3.0 * tex2D( texScreen, i.blurCoord0 ), 2.0) / 9.0 );
+   outLevel += 0.25 * ( pow( 3.0 * tex2D( texScreen, i.blurCoord1 ), 2.0) / 9.0 );
+   outLevel += 0.25 * ( pow( 3.0 * tex2D( texScreen, i.blurCoord2 ), 2.0) / 9.0 );
+
+   outLevel *= 4.0 + ( 0.5 * tex2D( texRandom, i.texCoord0 ) );
+   outColor.y = min( outLevel, 1.0 );
+   outColor.x = outColor.z = outLevel - outColor.y;   
+   
+   return outColor;
+}

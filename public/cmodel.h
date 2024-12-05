@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -29,7 +29,7 @@ COLLISION DETECTION
 */
 
 #include "bspflags.h"
-//#include "mathlib/vector.h"
+//#include "vector.h"
 
 // gi.BoxEdicts() can return a list of either solid or trigger entities
 // FIXME: eliminate AREA_ distinction?
@@ -60,10 +60,10 @@ struct csurface_t
 
 struct Ray_t
 {
-	VectorAligned  m_Start;	// starting point, centered within the extents
-	VectorAligned  m_Delta;	// direction + length of the ray
-	VectorAligned  m_StartOffset;	// Add this to m_Start to get the actual ray start
-	VectorAligned  m_Extents;	// Describes an axis aligned box extruded along a ray
+	Vector  m_Start;	// starting point, centered within the extents
+	Vector  m_Delta;	// direction + length of the ray
+	Vector  m_StartOffset;	// Add this to m_Start to get the actual ray start
+	Vector  m_Extents;	// Describes an axis aligned box extruded along a ray
 	bool	m_IsRay;	// are the extents zero?
 	bool	m_IsSwept;	// is delta != 0?
 
@@ -98,24 +98,6 @@ struct Ray_t
 		m_StartOffset *= 0.5f;
 		VectorAdd( start, m_StartOffset, m_Start );
 		m_StartOffset *= -1.0f;
-	}
-
-	// compute inverse delta
-	Vector InvDelta() const
-	{
-		Vector vecInvDelta;
-		for ( int iAxis = 0; iAxis < 3; ++iAxis )
-		{
-			if ( m_Delta[iAxis] != 0.0f )
-			{
-				vecInvDelta[iAxis] = 1.0f / m_Delta[iAxis];
-			}
-			else
-			{
-				vecInvDelta[iAxis] = FLT_MAX;
-			}
-		}
-		return vecInvDelta;
 	}
 
 private:

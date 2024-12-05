@@ -1,11 +1,11 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 //=============================================================================//
 
-#include <vgui/ISystem.h>
-#include <vgui_controls/Controls.h>
+#include <vgui/isystem.h>
+#include <vgui_controls/controls.h>
 
 #define STEAM_OFFLINE_MODE "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\Offline"
 #define STEAM_AFS_MODE "HKEY_CURRENT_USER\\Software\\Valve\\Steam\\OfflineAFS"

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -10,11 +10,11 @@
 #pragma once
 #endif
 
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 #include "materialsystem/imaterialproxy.h"
 #include "toolframework/itoolentity.h"
-#include "mathlib/vector.h"
-#include "Color.h"
+#include "vector.h"
+#include "color.h"
 #include "toolframework/itoolentity.h" // HTOOLHANDLE defn
 
 //-----------------------------------------------------------------------------
@@ -31,24 +31,11 @@ class CBoneList;
 //-----------------------------------------------------------------------------
 struct BaseEntityRecordingState_t
 {
-	BaseEntityRecordingState_t() :	
-		m_flTime( 0.0f ),
-		m_pModelName( 0 ),
-		m_nOwner( -1 ),
-		m_nEffects( 0 ),
-		m_bVisible( false ),
-		m_bRecordFinalVisibleSample( false )
-	{
-		m_vecRenderOrigin.Init();
-		m_vecRenderAngles.Init();
-	}
-
 	float m_flTime;
 	const char *m_pModelName;
 	int m_nOwner;
 	int m_nEffects;
-	bool m_bVisible : 1;
-	bool m_bRecordFinalVisibleSample : 1;
+	bool m_bVisible;
 	Vector m_vecRenderOrigin;
 	QAngle m_vecRenderAngles;
 };
@@ -60,7 +47,6 @@ struct SpriteRecordingState_t
 	int m_nRenderMode;
 	bool m_nRenderFX;
 	Color m_Color;
-	float m_flProxyRadius;
 };
 
 struct BaseAnimatingRecordingState_t
@@ -80,84 +66,9 @@ struct BaseFlexRecordingState_t
 
 struct CameraRecordingState_t
 {
-	bool m_bThirdPerson;
 	float m_flFOV;
 	Vector m_vecEyePosition;
 	QAngle m_vecEyeAngles;
-};
-
-struct MonitorRecordingState_t
-{
-	bool	m_bActive;
-	float	m_flFOV;
-	bool	m_bFogEnabled;
-	float	m_flFogStart;
-	float	m_flFogEnd;
-	Color	m_FogColor;
-};
-
-struct EntityTeleportedRecordingState_t
-{
-	Vector m_vecTo;
-	QAngle m_qaTo;
-	bool m_bTeleported;
-	bool m_bViewOverride;
-	matrix3x4_t m_teleportMatrix;
-};
-
-struct PortalRecordingState_t
-{
-	int				m_nPortalId;
-	int				m_nLinkedPortalId;
-	float			m_fStaticAmount;
-	float			m_fSecondaryStaticAmount;
-	float			m_fOpenAmount;
-	bool			m_bIsPortal2; //for any set of portals, one must be portal 1, and the other portal 2. Uses different render targets
-};
-
-struct ParticleSystemCreatedState_t
-{
-	int				m_nParticleSystemId;
-	const char *	m_pName;
-	float			m_flTime;
-	int				m_nOwner;
-};
-
-struct ParticleSystemDestroyedState_t
-{
-	int				m_nParticleSystemId;
-	float			m_flTime;
-};
-
-struct ParticleSystemStopEmissionState_t
-{
-	int				m_nParticleSystemId;
-	float			m_flTime;
-	bool			m_bInfiniteOnly;
-};
-
-struct ParticleSystemSetControlPointObjectState_t
-{
-	int				m_nParticleSystemId;
-	float			m_flTime;
-	int				m_nControlPoint;
-	int				m_nObject;
-};
-
-struct ParticleSystemSetControlPointPositionState_t
-{
-	int				m_nParticleSystemId;
-	float			m_flTime;
-	int				m_nControlPoint;
-	Vector			m_vecPosition;
-};
-
-struct ParticleSystemSetControlPointOrientationState_t
-{
-	int				m_nParticleSystemId;
-	float			m_flTime;
-	int				m_nControlPoint;
-	Quaternion		m_qOrientation;
 };
 
 
@@ -209,8 +120,6 @@ public:  // Server Hooks
 	virtual void	ServerFrameUpdatePostEntityThinkAllTools() = 0;
 	virtual void	ServerPreClientUpdateAllTools() = 0;
 
-	virtual void	ServerPreSetupVisibilityAllTools() = 0;
-
 public:  // Other Hooks
 	// If any tool returns false, the engine will not actually quit
 	// FIXME:  Not implemented yet
@@ -256,8 +165,10 @@ public:  // general framework hooks
 	virtual IToolSystem *GetTopmostTool() = 0;
 };
 
+#ifndef _XBOX
 // Expose to rest of engine as a singleton
 extern IToolFrameworkInternal *toolframework;
+#endif
 
 // Exposed to launcher to automatically add AppSystemGroup hooks
 #define VTOOLFRAMEWORK_INTERFACE_VERSION  "VTOOLFRAMEWORKVERSION002"

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+
+<job>
+  <runtime>
+    <description>A replacement for build_&gt;name&lt;_shaders that autodetects the
+    install directory.</description>
+    <unnamed name="shaderlist" helpstring="The name of the list file containing the filenames of the shader source-code." required="true" />
+    <unnamed name="modname" helpstring="The mod directory name." required="true" />
+    <example>build-shaders.wsf ins_shaders Insurgency</example>
+  </runtime>
+  <!-- Script Constants: -->
+  <object id="fsObject" progid="Scripting.FileSystemObject" />
+  <object id="wshShell" progid="WScript.Shell" />
+  <resource id="reg value">HKCU\Software\Valve\Steam\SourceModInstallPath</resource>
+  <!-- Script code: -->
+  <script langage="JScript">
+  <![CDATA[
+
+// Make sure a list file and mod name are specified.
+if( WScript.Arguments.Unnamed.Length < 2 )
+{
+  WScript.Arguments.ShowUsage( );
+  WScript.Quit( 1 );
+}
+
+// Build variables from input.
+var strModdir   = fsObject.BuildPath(
+                    wshShell.RegRead( getResource( "reg value" ) ),
+                    WScript.Arguments.Unnamed.Item( 1 ) );
+var strListname = WScript.Arguments.Unnamed.Item( 0 );
+var strListfile = strListname + ".txt";
+
+// Confirm list file exists.
+if( !fsObject.FileExists( strListfile ) ) {
+  WScript.Echo( "List file " + strListfile + " does not exist." );
+  WScript.Quit( 1 );
+}
+
+// Confirm batch file exists.
+if( !fsObject.FileExists( "..\\..\\materialsystem\\stdshaders\\buildshaders.bat" ) ) {
+  WScript.Echo( "Error: Shader build script does not exist." );
+  WScript.Quit( 1 );
+}
+
+// Generate execution string
+var strExec = "..\\..\\materialsystem\\stdshaders\\buildshaders.bat";
+strExec    += " " + strListname + " ";
+strExec    += "-game " + strModdir + " ";
+strExec    += "-source ..\\..";
+
+var oExec   = wshShell.Exec( strExec );
+
+while( oExec.Status == 0 ) {
+     WScript.Sleep( 1 );
+}
+
+oExec.StdOut.ReadAll();
+
+  ]]>
+  </script>
+</job>

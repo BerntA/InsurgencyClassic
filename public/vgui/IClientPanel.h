@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,7 +12,7 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
+#include <vgui/vgui.h>
 
 #ifdef GetClassName
 #undef GetClassName
@@ -85,7 +85,9 @@ public:
 	// returns the name of the module this panel is part of
 	virtual const char *GetModuleName() = 0;
 
-	virtual void OnTick() = 0;
+#ifdef _XBOX
+	virtual int GetAlpha() = 0;
+#endif
 };
 
 } // namespace vgui

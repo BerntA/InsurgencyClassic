@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -19,7 +19,7 @@
 #endif
 
 
-#include "mathlib/mathlib.h"
+#include "mathlib.h"
 
 // Note: These flags need to match the bspfile.h DISPTRI_TAG_* flags.
 #define DISPSURF_FLAG_SURFACE		(1<<0)

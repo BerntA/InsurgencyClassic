@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,8 +12,8 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
-#include <vgui_controls/PHandle.h>
+#include <vgui/vgui.h>
+#include <vgui_controls/phandle.h>
 
 namespace vgui
 {

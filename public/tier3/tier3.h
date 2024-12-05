@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 2005-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: A higher level link library for general use in the game and tools.
 //
@@ -22,21 +22,13 @@ class IStudioRender;
 class IMatSystemSurface;
 class IDataCache;
 class IMDLCache;
-class IVideoServices;
-class IDmeMakefileUtils;
-class IPhysicsCollision;
-class ISoundEmitterSystemBase;
-class IVTex;
+class IAvi;
 
 namespace vgui
 {
 	class ISurface;
 	class IVGui;
-	class IInput;
 	class IPanel;
-	class ILocalize;
-	class ISchemeManager;
-	class ISystem;
 }
 
 
@@ -47,23 +39,13 @@ namespace vgui
 // allowing link libraries to access tier3 library interfaces
 //-----------------------------------------------------------------------------
 extern IStudioRender *g_pStudioRender;
-extern IStudioRender *studiorender;
 extern IMatSystemSurface *g_pMatSystemSurface;
 extern vgui::ISurface *g_pVGuiSurface;
-extern vgui::IInput *g_pVGuiInput;
 extern vgui::IVGui *g_pVGui;
 extern vgui::IPanel *g_pVGuiPanel;
-extern vgui::ILocalize *g_pVGuiLocalize;
-extern vgui::ISchemeManager *g_pVGuiSchemeManager;
-extern vgui::ISystem *g_pVGuiSystem;
 extern IDataCache *g_pDataCache;	// FIXME: Should IDataCache be in tier2?
 extern IMDLCache *g_pMDLCache;
-extern IMDLCache *mdlcache;
-extern IVideoServices *g_pVideo;
-extern IDmeMakefileUtils *g_pDmeMakefileUtils;
-extern IPhysicsCollision *g_pPhysicsCollision;
-extern ISoundEmitterSystemBase *g_pSoundEmitterSystem;
-extern IVTex *g_pVTex;
+extern IAvi *g_pAVI;
 
 
 //-----------------------------------------------------------------------------
@@ -92,7 +74,7 @@ public:
 		if ( !BaseClass::Connect( factory ) )
 			return false;
 
-		if ( BaseClass::IsPrimaryAppSystem() )
+		if ( IsPrimaryAppSystem() )
 		{
 			ConnectTier3Libraries( &factory, 1 );
 		}
@@ -101,7 +83,7 @@ public:
 
 	virtual void Disconnect() 
 	{
-		if ( BaseClass::IsPrimaryAppSystem() )
+		if ( IsPrimaryAppSystem() )
 		{
 			DisconnectTier3Libraries();
 		}

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,14 +12,14 @@
 #pragma once
 #endif
 
-#include "tier1/utlvector.h"
-#include "tier1/utlsymbol.h"
-#include <vgui/VGUI.h>
-#include <vgui/Dar.h>
-#include <vgui/Cursor.h>
-#include <vgui/IScheme.h>
-#include <vgui_controls/Controls.h>
-#include <vgui_controls/PHandle.h>
+#include "utlvector.h"
+#include "utlsymbol.h"
+#include <vgui/vgui.h>
+#include <vgui/dar.h>
+#include <vgui/cursor.h>
+#include <vgui/ischeme.h>
+#include <vgui_controls/controls.h>
+#include <vgui_controls/phandle.h>
 #include "tier1/utlhandletable.h"
 
 class KeyValues;
@@ -49,7 +49,7 @@ public:
 	virtual Panel *GetCurrentPanel();
 
 	// Load the control settings from file
-	virtual void LoadControlSettings(const char *controlResourceName, const char *pathID = NULL, KeyValues *pPreloadedKeyValues = NULL, KeyValues *pConditions = NULL);
+	virtual void LoadControlSettings(const char *controlResourceName, const char *pathID = NULL, KeyValues *pPreloadedKeyValues = NULL);
 
 	// Reload the control settings from file
 	void ReloadControlSettings();
@@ -122,9 +122,6 @@ public:
 
 	// dialog variables
 	KeyValues *GetDialogVariables();
-
-	// conditional keys for selectively reading keyvalues
-	void ProcessConditionalKeys( KeyValues *pDat, KeyValues *pConditions );
 
 protected:
 	virtual bool CursorMoved(int x, int y, Panel *panel);

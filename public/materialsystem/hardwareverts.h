@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Hardware Verts
 //
@@ -18,8 +18,6 @@
 #pragma once
 #endif
 
-#include "datamap.h"
-
 // valve hardware vertexes
 #define VHV_VERSION	2
 
@@ -30,8 +28,6 @@ namespace HardwareVerts
 
 struct MeshHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
-
 	// this mesh is part of this lod
 	unsigned int m_nLod;
 
@@ -46,8 +42,6 @@ struct MeshHeader_t
 
 struct FileHeader_t
 {
-	DECLARE_BYTESWAP_DATADESC();
-
 	// file version as defined by VHV_VERSION
 	int m_nVersion;
 
@@ -55,7 +49,7 @@ struct FileHeader_t
 	unsigned int m_nChecksum;
 
 	// a vertex consists of these components
-	uint32 m_nVertexFlags;
+	VertexFormatFlags_t m_nVertexFlags;
 
 	// the byte size of a single vertex
 	// this won't be adequate, need some concept of byte format i.e. rgbexp32 vs rgba8888

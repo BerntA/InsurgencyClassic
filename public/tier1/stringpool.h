@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
@@ -32,7 +32,7 @@ public:
 	void FreeAll();
 
 	// searches for a string already in the pool
-	const char * Find( const char *pszValue );
+	const char * CStringPool::Find( const char *pszValue );
 
 protected:
 	typedef CUtlRBTree<const char *, unsigned short> CStrSet;
@@ -52,40 +52,44 @@ class CCountedStringPool
 {
 public: // HACK, hash_item_t structure should not be public.
 
+#pragma pack(1)
 	struct hash_item_t
 	{
-		char*			pString;
-		unsigned short	nNextElement;
-		unsigned char	nReferenceCount;
-		unsigned char	pad;
+		char* pString;
+		unsigned short nNextElement;
+		unsigned char  nReferenceCount;
 	};
+#pragma pack()
 
 	enum
 	{
 		INVALID_ELEMENT = 0,
-		MAX_REFERENCE   = 0xFF,
+		MAX_REFERENCE = 0xFF,
 		HASH_TABLE_SIZE = 1024
 	};
 
 	CUtlVector<unsigned short>	m_HashTable;	// Points to each element
 	CUtlVector<hash_item_t>		m_Elements;
-	unsigned short				m_FreeListStart;
+	unsigned short m_FreeListStart;
 
 public:
 	CCountedStringPool();
 	virtual ~CCountedStringPool();
 
-	void			FreeAll();
+	void FreeAll();
 
-	char			*FindString( const char* pIntrinsic ); 
-	char			*ReferenceString( const char* pIntrinsic );
-	void			DereferenceString( const char* pIntrinsic );
+	char* FindString( const char* pIntrinsic ); 
+	char* ReferenceString( const char* pIntrinsic );
+	void  DereferenceString( const char* pIntrinsic );
 
 	// These are only reliable if there are less than 64k strings in your string pool
-	unsigned short	FindStringHandle( const char* pIntrinsic ); 
-	unsigned short	ReferenceStringHandle( const char* pIntrinsic );
-	char			*HandleToString( unsigned short handle );
-	void			SpewStrings();
+	unsigned short FindStringHandle( const char* pIntrinsic ); 
+	unsigned short ReferenceStringHandle( const char* pIntrinsic );
+	char*		   HandleToString( unsigned short handle );
+
+
 };
+
+extern CCountedStringPool g_CountedStringPool;
 
 #endif // STRINGPOOL_H

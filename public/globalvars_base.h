@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -23,17 +23,17 @@ public:
 	CGlobalVarsBase( bool bIsClient );
 	
 	// This can be used to filter debug output or to catch the client or server in the act.
+	// ONLY valid during debugging.
+#ifdef _DEBUG
 	bool IsClient() const;
-
-	// for encoding m_flSimulationTime, m_flAnimTime
-	int GetNetworkBase( int nTick, int nEntity );
+#endif
+	
 
 public:
 	
-	// Absolute time (per frame still - Use Plat_FloatTime() for a high precision real time 
-	//  perf clock, but not that it doesn't obey host_timescale/host_framerate)
+	// Absolute time (per frame still)
 	float			realtime;
-	// Absolute frame counter
+	// Absolute frmae counter
 	int				framecount;
 	// Non-paused frametime
 	float			absoluteframetime;
@@ -49,7 +49,7 @@ public:
 	//     [server_current_Tick * tick_interval]
 	//
 	//   - While rendering, this is the exact client clock 
-	//     [client_current_tick * tick_interval + interpolation_amount]
+	//     [(client_current_tick + interpolation_amount) * tick_interval]
 	//
 	//   - During prediction, this is based on the client's current tick:
 	//     [client_current_tick * tick_interval]
@@ -57,7 +57,7 @@ public:
 	
 	// Time spent on last server or client frame (has nothing to do with think intervals)
 	float			frametime;
-	// current maxplayers setting
+	// current maxplayers
 	int				maxClients;
 
 	// Simulation ticks
@@ -68,42 +68,29 @@ public:
 
 	// interpolation amount ( client-only ) based on fraction of next tick which has elapsed
 	float			interpolation_amount;
-	int				simTicksThisFrame;
-
-	int				network_protocol;
 
 	// current saverestore data
 	CSaveRestoreData *pSaveData;
 
-private:
-	// Set to true in client code.
-	bool			m_bClient;
 
-	// 100 (i.e., tickcount is rounded down to this base and then the "delta" from this base is networked
-	int				nTimestampNetworkingBase;   
-	// 32 (entindex() % nTimestampRandomizeWindow ) is subtracted from gpGlobals->tickcount to set the networking basis, prevents
-	//  all of the entities from forcing a new PackedEntity on the same tick (i.e., prevents them from getting lockstepped on this)
-	int				nTimestampRandomizeWindow;  
-	
+private:
+	// Set to true in client code. This can only be used for debugging code.
+	bool			m_bClient;
 };
 
-inline int CGlobalVarsBase::GetNetworkBase( int nTick, int nEntity )
+
+inline CGlobalVarsBase::CGlobalVarsBase( bool bIsClient )
 {
-	int nEntityMod = nEntity % nTimestampRandomizeWindow;
-	int nBaseTick = nTimestampNetworkingBase * (int)( ( nTick - nEntityMod ) / nTimestampNetworkingBase );
-	return nBaseTick;
+	m_bClient = bIsClient;
 }
 
-inline CGlobalVarsBase::CGlobalVarsBase( bool bIsClient ) :
-	m_bClient( bIsClient ),
-	nTimestampNetworkingBase( 100 ),
-	nTimestampRandomizeWindow( 32 )
-{
-}
 
-inline bool CGlobalVarsBase::IsClient() const
-{
-	return m_bClient;
-}
+#ifdef _DEBUG
+	inline bool CGlobalVarsBase::IsClient() const
+	{
+		return m_bClient;
+	}
+#endif
+
 
 #endif // GLOBALVARS_BASE_H

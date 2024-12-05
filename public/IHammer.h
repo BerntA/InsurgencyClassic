@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: The application object.
 //
@@ -7,7 +7,7 @@
 #ifndef IHAMMER_H
 #define IHAMMER_H
 
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 
 typedef struct tagMSG MSG;
 
@@ -49,8 +49,6 @@ public:
 
 	// Returns the full path to the mod and the game to initially start up
 	virtual const char *GetDefaultModFullPath() = 0;
-
-	virtual int MainLoop() = 0;
 };	
 
 #endif // IHAMMER_H

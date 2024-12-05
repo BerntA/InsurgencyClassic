@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
 //
 // The copyright to the contents herein is the property of Valve, L.L.C.
 // The contents may be used and/or copied only with the written permission of
@@ -18,7 +18,7 @@
 #pragma once
 #endif
 
-#include "mathlib/vector.h"
+#include "vector.h"
 #include <float.h>
 #include "tier0/dbg.h"
 #include "materialsystem/imaterial.h"
@@ -29,32 +29,11 @@
 //-----------------------------------------------------------------------------
 struct MorphVertexInfo_t
 {
-	int m_nVertexId;		// What vertex is this going to affect?
+	int m_nSourceVertexId;	// What vertex is this going to affect?
 	int m_nMorphTargetId;	// What morph did it come from?
 	Vector m_PositionDelta;	// Positional morph delta
 	Vector m_NormalDelta;	// Normal morph delta
 	float m_flWrinkleDelta;	// Wrinkle morph delta
-	float m_flSpeed;
-	float m_flSide;
-};
-
-
-//-----------------------------------------------------------------------------
-// Morph weight data
-//-----------------------------------------------------------------------------
-enum MorphWeightType_t
-{
-	MORPH_WEIGHT = 0,
-	MORPH_WEIGHT_LAGGED,
-	MORPH_WEIGHT_STEREO,
-	MORPH_WEIGHT_STEREO_LAGGED,
-
-	MORPH_WEIGHT_COUNT,
-};
-
-struct MorphWeight_t
-{
-	float m_pWeight[MORPH_WEIGHT_COUNT];
 };
 
 
@@ -65,7 +44,8 @@ abstract_class IMorph
 {
 public:
 	// Locks the morph, destroys any existing contents
-	virtual void Lock( float flFloatToFixedScale = 1.0f ) = 0;
+	// Pass in the vertex count of the mesh whose vertices are to be morphed
+	virtual void Lock( int nTotalMeshVertexCount ) = 0;
 
 	// Adds a morph
 	virtual void AddMorph( const MorphVertexInfo_t &info ) = 0;
@@ -85,7 +65,7 @@ public:
 	~CMorphBuilder();
 
 	// Start building the morph
-	void Begin( IMorph *pMorph, float flFloatToFixedScale = 1.0f );
+	void Begin( IMorph *pMorph, int nTotalMeshVertexCount );
 
 	// End building the morph
 	void End();
@@ -98,13 +78,7 @@ public:
 	void NormalDelta3f( float dx, float dy, float dz );
 	void NormalDelta3( const Vector &vec );
 
-	void WrinkleDelta1f( float flWrinkle );
-
-	// Both are 0-1 values indicating which morph target to use (for stereo morph targets)
-	// and how much to blend between using lagged weights vs actual weights
-	// Speed: 0 - use lagged, 1 - use actual
-	void Speed1f( float flSpeed );
-	void Side1f( float flSide );
+	void WrinkleDeltaf( float flWrinkle );
 
 	void AdvanceMorph( int nSourceVertex, int nMorphTargetId );
 
@@ -132,18 +106,16 @@ inline CMorphBuilder::~CMorphBuilder()
 //-----------------------------------------------------------------------------
 // Start building the morph
 //-----------------------------------------------------------------------------
-inline void CMorphBuilder::Begin( IMorph *pMorph, float flFloatToFixedScale )
+inline void CMorphBuilder::Begin( IMorph *pMorph, int nTotalMeshVertexCount )
 {
 	Assert( pMorph && !m_pMorph );
 	m_pMorph = pMorph;
-	m_pMorph->Lock( flFloatToFixedScale );
+	m_pMorph->Lock( nTotalMeshVertexCount );
 
 #ifdef _DEBUG
 	m_Info.m_PositionDelta.Init( VEC_T_NAN, VEC_T_NAN, VEC_T_NAN );
 	m_Info.m_NormalDelta.Init( VEC_T_NAN, VEC_T_NAN, VEC_T_NAN );
 	m_Info.m_flWrinkleDelta = VEC_T_NAN;
-	m_Info.m_flSpeed = VEC_T_NAN;
-	m_Info.m_flSide = VEC_T_NAN;
 #endif
 }
 
@@ -203,26 +175,10 @@ inline void CMorphBuilder::NormalDelta3( const Vector &vec )
 //-----------------------------------------------------------------------------
 // Set wrinkle delta
 //-----------------------------------------------------------------------------
-inline void CMorphBuilder::WrinkleDelta1f( float flWrinkle )
+inline void CMorphBuilder::WrinkleDeltaf( float flWrinkle )
 {
 	Assert( m_pMorph );
 	m_Info.m_flWrinkleDelta = flWrinkle;
-}
-
-
-//-----------------------------------------------------------------------------
-// Set speed,side data
-//-----------------------------------------------------------------------------
-inline void CMorphBuilder::Speed1f( float flSpeed )
-{
-	Assert( m_pMorph );
-	m_Info.m_flSpeed = flSpeed;
-}
-
-inline void CMorphBuilder::Side1f( float flSide )
-{
-	Assert( m_pMorph );
-	m_Info.m_flSide = flSide;
 }
 
 
@@ -233,7 +189,7 @@ inline void CMorphBuilder::AdvanceMorph( int nSourceVertex, int nMorphTargetId )
 {
 	Assert( m_pMorph );
 
-	m_Info.m_nVertexId = nSourceVertex;
+	m_Info.m_nSourceVertexId = nSourceVertex;
 	m_Info.m_nMorphTargetId = nMorphTargetId;
 
 	m_pMorph->AddMorph( m_Info );
@@ -242,8 +198,6 @@ inline void CMorphBuilder::AdvanceMorph( int nSourceVertex, int nMorphTargetId )
 	m_Info.m_PositionDelta.Init( VEC_T_NAN, VEC_T_NAN, VEC_T_NAN );
 	m_Info.m_NormalDelta.Init( VEC_T_NAN, VEC_T_NAN, VEC_T_NAN );
 	m_Info.m_flWrinkleDelta = VEC_T_NAN;
-	m_Info.m_flSpeed = VEC_T_NAN;
-	m_Info.m_flSide = VEC_T_NAN;
 #endif
 }
 

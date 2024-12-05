@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -9,16 +9,16 @@
 
 // C callable material system interface for the utils.
 
-#include "materialsystem/imaterialsystem.h"
-#include "materialsystem/imaterial.h"
-#include "materialsystem/imaterialvar.h"
+#include <windows.h>
+#include "materialsystem/IMaterialSystem.h"
+#include "materialsystem/IMaterial.h"
+#include "materialsystem/IMaterialVar.h"
 #include <cmdlib.h>
 #include "utilmatlib.h"
 #include "tier0/dbg.h"
-#include <windows.h>
-#include "filesystem.h"
-#include "materialsystem/materialsystem_config.h"
-#include "mathlib/Mathlib.h"
+#include "FileSystem.h"
+#include "materialsystem/MaterialSystem_Config.h"
+#include "Mathlib.h"
 
 void LoadMaterialSystemInterface( CreateInterfaceFn fileSystemFactory )
 {
@@ -52,11 +52,6 @@ void LoadMaterialSystemInterface( CreateInterfaceFn fileSystemFactory )
 	{
 		Error( "Could not start the empty shader (shaderapiempty.dll)!" );
 	}
-
-	// loads game shader dlls from game directory
-	// i.e. allows you to use custom lightmapped shaders in hammer
-	// the respective call to ModShutdown() has been left out on purpose because it makes vbsp crash
-	g_pMaterialSystem->ModInit();
 }
 
 void InitMaterialSystem( const char *materialBaseDirPath, CreateInterfaceFn fileSystemFactory )

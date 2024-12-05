@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,14 +12,11 @@
 
 #include "interface.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#endif
-
-#if !defined( _X360 )
+#ifndef _XBOX
 #include <windows.h>
-#endif
-#if defined( _X360 )
+#else
+#include "xbox/xbox_platform.h"
 #include "xbox/xbox_win32stubs.h"
 #endif
 

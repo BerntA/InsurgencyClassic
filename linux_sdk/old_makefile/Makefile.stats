@@ -1,0 +1,25 @@
+#
+# wrapper Makefile for auto-generated make files
+#
+#
+
+DEBUG=
+
+#############################################################################
+# PROJECT MAKEFILES
+#############################################################################
+MAKE_FILE=Makefile.$(STATS_CONFIG)
+NAME=$(STATSNAME)
+LDFLAGS=$(LDFLAGS) ../stats/ZThread/libZThread.so ../stats/SocketW/libSocketW.so
+include $(MAKE_FILE)
+
+#############################################################################
+# The compiler command lne for each src code file to compile
+#############################################################################
+DO_CC=$(CPLUS) -w $(INCLUDES) $(CFLAGS) -U__WIN32__ -o $@ -c $<
+
+
+clean:
+	rm -rf obj/$(NAME)
+	rm -f $(NAME)_$(ARCH).$(SHLIBEXT)
+	rm -f Makefile.ins_statsman*

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,8 +12,8 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
-#include <vgui_controls/Frame.h>
+#include <vgui/vgui.h>
+#include <vgui_controls/frame.h>
 
 namespace vgui
 {
@@ -75,8 +75,6 @@ private:
 	Button *_okButton;
 	Button *_cancelButton;
 	Button *_applyButton;
-
-	CPanelAnimationVar( int, m_iSheetInsetBottom, "sheetinset_bottom", "32" );
 };
 
 }; // vgui

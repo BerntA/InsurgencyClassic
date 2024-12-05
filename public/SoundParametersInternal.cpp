@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,7 +10,7 @@
 
 #if !defined(_STATIC_LINKED) || defined(SOUNDEMITTERSYSTEM_DLL)
 
-#include "SoundEmitterSystem/isoundemittersystembase.h"
+#include "soundemittersystem/isoundemittersystembase.h"
 #include "interval.h"
 #include "soundchars.h"
 
@@ -33,7 +33,6 @@ static SoundChannels g_pChannelNames[] =
 	{ CHAN_BODY, "CHAN_BODY" },
 	{ CHAN_STREAM, "CHAN_STREAM" },
 	{ CHAN_STATIC, "CHAN_STATIC" },
-	{ CHAN_VOICE2, "CHAN_VOICE2" },
 };
 
 struct VolumeLevel
@@ -346,30 +345,23 @@ CSoundParametersInternal::CSoundParametersInternal( const CSoundParametersIntern
 {
 	m_pSoundNames = NULL;
 	m_pConvertedNames = NULL;
-	m_nSoundNames = 0;
-	m_nConvertedNames = 0;
 	CopyFrom( src );
 }
 
 CSoundParametersInternal::~CSoundParametersInternal()
 {
 	if ( m_nSoundNames > 1 )
-		free(m_pSoundNames );
+		delete m_pSoundNames;
 	if ( m_nConvertedNames > 1 )
-		free( m_pConvertedNames);
-
-	m_pConvertedNames = NULL;
-	m_pSoundNames = NULL;
-	m_nSoundNames = 0;
-	m_nConvertedNames = 0;
+		delete m_pConvertedNames;
 }
 
 void CSoundParametersInternal::CopyFrom( const CSoundParametersInternal& src )
 {
 	if ( m_nSoundNames > 1 )
-		free(m_pSoundNames);
+		delete m_pSoundNames;
 	if ( m_nConvertedNames > 1 )
-		free(m_pConvertedNames);
+		delete m_pConvertedNames;
 
 	channel = src.channel;
 	volume = src.volume;
@@ -383,7 +375,7 @@ void CSoundParametersInternal::CopyFrom( const CSoundParametersInternal& src )
 	{
 		if ( m_nSoundNames > 1 )
 		{
-			m_pSoundNames = (SoundFile*)malloc( sizeof(SoundFile)*m_nSoundNames);
+			m_pSoundNames = new SoundFile[m_nSoundNames];
 			memcpy( m_pSoundNames, src.m_pSoundNames, m_nSoundNames * sizeof(SoundFile) );
 		}
 		else
@@ -401,7 +393,7 @@ void CSoundParametersInternal::CopyFrom( const CSoundParametersInternal& src )
 	{
 		if ( m_nConvertedNames > 1 )
 		{
-			m_pConvertedNames = (SoundFile*)malloc( sizeof(SoundFile)*m_nConvertedNames);
+			m_pConvertedNames = new SoundFile[m_nConvertedNames];
 			memcpy( m_pConvertedNames, src.m_pConvertedNames, m_nConvertedNames * sizeof(SoundFile) );
 		}
 		else

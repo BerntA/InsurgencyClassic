@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,8 +13,8 @@
 #endif
 
 #include <utlvector.h>
-#include <vgui/VGUI.h>
-#include <vgui/IImage.h>
+#include <vgui/vgui.h>
+#include <vgui/iimage.h>
 
 namespace vgui
 {

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -91,10 +91,10 @@ private:
 	CUtlLinkedList< HandleInfo_t, unsigned short >		m_Handles;
 
 	// Maintains the list of all handles in a particular leaf
-	CUtlLinkedList< BSPTreeDataHandle_t, unsigned short, true >	m_LeafElements;
+	CUtlLinkedList< BSPTreeDataHandle_t, unsigned short >	m_LeafElements;
 
 	// Maintains the list of all leaves a particular handle spans
-	CUtlLinkedList< HandleInLeaf_t, unsigned short, true >	m_HandleLeafList;
+	CUtlLinkedList< HandleInLeaf_t, unsigned short >	m_HandleLeafList;
 
 	// Interface to BSP tree
 	ISpatialQuery*	m_pBSPTree;
@@ -304,7 +304,7 @@ int CBSPTreeData::CountElementsInLeaf( int leaf )
 //-----------------------------------------------------------------------------
 bool CBSPTreeData::EnumerateElementsInLeaf( int leaf, IBSPTreeDataEnumerator* pEnum, int context )
 {
-#ifdef DBGFLAG_ASSERT
+#ifdef _DEBUG
 	// The enumeration method better damn well not change this list...
 	int nCount = CountElementsInLeaf(leaf);
 #endif

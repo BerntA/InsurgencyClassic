@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,7 +12,7 @@ class CUtlMsgBuffer;
 class CServerSession;
 
 #include "interface.h"
-#include "Friends/AddOns/AddOnTypes.h"
+#include "friends/addons/addontypes.h"
 
 class IFriendsNET : public IBaseInterface
 {

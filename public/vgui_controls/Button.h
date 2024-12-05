@@ -1,9 +1,9 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 // $NoKeywords: $
-//===========================================================================//
+//=============================================================================//
 
 #ifndef BUTTON_H
 #define BUTTON_H
@@ -12,14 +12,15 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
-#include <vgui/Dar.h>
-#include <Color.h>
-#include <vgui_controls/Label.h>
-#include "vgui/MouseCode.h"
+#include <vgui/vgui.h>
+#include <vgui/dar.h>
+#include <color.h>
+#include <vgui_controls/label.h>
 
 namespace vgui
 {
+
+enum MouseCode;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -52,9 +53,6 @@ public:
 	virtual void SetSelected(bool state);
 	// Check selected state
 	virtual bool IsSelected( void );
-
-	virtual void SetBlink(bool state);
-	virtual bool IsBlinking( void );
 
 	//Set whether or not the button captures all mouse input when depressed.
 	virtual void SetUseCaptureMouse( bool state );
@@ -107,29 +105,13 @@ public:
 	virtual void SetDefaultColor(Color fgColor, Color bgColor);
 	// Set armed button colors
 	virtual void SetArmedColor(Color fgColor, Color bgColor);
-	// Set selected button colors
-	virtual void SetSelectedColor(Color fgColor, Color bgColor);
 	// Set depressed button colors
 	virtual void SetDepressedColor(Color fgColor, Color bgColor);
-	// Set blink button color
-	virtual void SetBlinkColor(Color fgColor);
 
 	// Get button foreground color
 	virtual Color GetButtonFgColor();
 	// Get button background color
 	virtual Color GetButtonBgColor();
-
-	Color		  GetButtonDefaultFgColor() { return _defaultFgColor; }
-	Color		  GetButtonDefaultBgColor() { return _defaultBgColor; }
-
-	Color		  GetButtonArmedFgColor() { return _armedFgColor; }
-	Color		  GetButtonArmedBgColor() { return _armedBgColor; }
-
-	Color		  GetButtonSelectedFgColor() { return _selectedFgColor; }
-	Color		  GetButtonSelectedBgColor() { return _selectedBgColor; }
-
-	Color		  GetButtonDepressedFgColor() { return _depressedFgColor; }
-	Color		  GetButtonDepressedBgColor() { return _depressedBgColor; }
 
 	// Set default button border attributes.
 	virtual void SetDefaultBorder(IBorder *border);
@@ -143,6 +125,13 @@ public:
 	virtual void SetCommand( const char *command );
 	// Set the message to send when the button is pressed
 	virtual void SetCommand( KeyValues *message );
+
+	// Pongles [
+	virtual void SetCursorEnterMessage( const char *command );
+	virtual void SetCursorEnterMessage( KeyValues *message );
+	virtual void SetCursorExitMessage( const char *command );
+	virtual void SetCursorExitMessage( KeyValues *message );
+	// Pongles ]
 
 	// sound handling
 	void SetArmedSound(const char *sound);
@@ -163,12 +152,9 @@ public:
 	bool IsDrawingFocusBox();
 	void DrawFocusBox( bool bEnable );
 
-	bool ShouldPaint(){ return _paint; }
-	void SetShouldPaint( bool paint ){ _paint = paint; }
-
-	virtual void ApplySettings( KeyValues *inResourceData );
-	virtual void NavigateTo();
-	virtual void NavigateFrom();
+	// Pongles [
+	void SetUseBgColor(bool state) { SetPaintBackgroundEnabled(state); };
+	// Pongles ]
 
 protected:
 	virtual void DrawFocusBorder(int tx0, int ty0, int tx1, int ty1);
@@ -189,12 +175,10 @@ protected:
 
 	// Get control settings for editing
 	virtual void GetSettings( KeyValues *outResourceData );
+	virtual void ApplySettings( KeyValues *inResourceData );
 	virtual const char *GetDescription( void );
 
-	KeyValues *GetActionMessage();
-	void PlayButtonReleasedSound();
-
-protected:
+private:
 	enum ButtonFlags_t
 	{
 		ARMED					= 0x0001,
@@ -206,13 +190,16 @@ protected:
 		DEFAULT_BUTTON			= 0x0040,
 		SELECTED				= 0x0080,
 		DRAW_FOCUS_BOX			= 0x0100,
-		BLINK					= 0x0200,
 		ALL_FLAGS				= 0xFFFF,
 	};
 
 	CUtlFlags< unsigned short > _buttonFlags;	// see ButtonFlags_t
 	int                _mouseClickMask;
 	KeyValues		  *_actionMessage;
+	// Pongles [
+	KeyValues		  *_cursorEnterMessage;
+	KeyValues		  *_cursorExitMessage;
+	// Pongles ]
 	ActivationType_t   _activationType;
 
 	IBorder			  *_defaultBorder;
@@ -221,16 +208,11 @@ protected:
 
 	Color			   _defaultFgColor, _defaultBgColor;
 	Color			   _armedFgColor, _armedBgColor;
-	Color			   _selectedFgColor, _selectedBgColor;
 	Color              _depressedFgColor, _depressedBgColor;
 	Color              _keyboardFocusColor;
-	Color			   _blinkFgColor;
-
-	bool				_paint;
 
 	unsigned short	   m_sArmedSoundName, m_sDepressedSoundName, m_sReleasedSoundName;
 	bool m_bSelectionStateSaved;
-	bool m_bStaySelectedOnClick;
 };
 
 } // namespace vgui

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//======== (C) Copyright 1999, 2000 Valve, L.L.C. All rights reserved. ========
 //
 // The copyright to the contents herein is the property of Valve, L.L.C.
 // The contents may be used and/or copied only with the written permission of
@@ -23,7 +23,7 @@
 #include "tier1/interface.h"
 #include "tier1/utlvector.h"
 #include "tier1/utldict.h"
-#include "IAppSystem.h"
+#include "iappsystem.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -115,11 +115,6 @@ public:
 	// Then modules are shut down, disconnected, and unloaded
 	int Run( );
 
-	// Use this version in cases where you can't control the main loop and
-	// expect to be ticked
-	virtual int Startup();
-	virtual void Shutdown();
-
 	// Returns the stage at which the app system group ran into an error
 	AppSystemGroupStage_t GetErrorStage() const;
 
@@ -132,7 +127,6 @@ protected:
 
 	// Method to add various global singleton systems 
 	IAppSystem *AddSystem( AppModule_t module, const char *pInterfaceName );
-	void AddSystem( IAppSystem *pAppSystem, const char *pInterfaceName );
 
 	// Simpler method of doing the LoadModule/AddSystem thing.
 	// Make sure the last AppSystemInfo has a NULL module name
@@ -145,9 +139,6 @@ protected:
 	static CreateInterfaceFn GetFactory();
 
 private:
-	int OnStartup();
-	void OnShutdown();
-
 	void UnloadAllModules( );
 	void RemoveAllSystems();
 
@@ -164,8 +155,6 @@ private:
 
 	// Loads a module the standard way
 	virtual CSysModule *LoadModuleDLL( const char *pDLLName );
-
-	void	ReportStartupFailure( int nErrorStage, int nSysIndex );
 
 	struct Module_t
 	{
@@ -196,18 +185,10 @@ public:
 	// Used by CSteamApplication to set up necessary pointers if we can't do it in the constructor
 	void Setup( IFileSystem *pFileSystem, CAppSystemGroup *pParentAppSystem );
 
-protected:
-	// Sets up the search paths
-	bool SetupSearchPaths( const char *pStartingDir, bool bOnlyUseStartingDir, bool bIsTool );
-
-	// Returns the game info path. Only works if you've called SetupSearchPaths first
-	const char *GetGameInfoPath() const;
-
 private:
 	virtual CSysModule *LoadModuleDLL( const char *pDLLName );
 
 	IFileSystem *m_pFileSystem;
-	char m_pGameInfoPath[ MAX_PATH ];
 };
 
 
@@ -223,41 +204,6 @@ public:
 	virtual void PostShutdown() {}
 	virtual void Destroy() {}
 };
-
-
-//-----------------------------------------------------------------------------
-// Special helper for game info directory suggestion
-//-----------------------------------------------------------------------------
-
-class CFSSteamSetupInfo;	// Forward declaration
-
-//
-// SuggestGameInfoDirFn_t
-//		Game info suggestion function.
-//		Provided by the application to possibly detect the suggested game info
-//		directory and initialize all the game-info-related systems appropriately.
-// Parameters:
-//		pFsSteamSetupInfo		steam file system setup information if available.
-//		pchPathBuffer			buffer to hold game info directory path on return.
-//		nBufferLength			length of the provided buffer to hold game info directory path.
-//		pbBubbleDirectories		should contain "true" on return to bubble the directories up searching for game info file.
-// Return values:
-//		Returns "true" if the game info directory path suggestion is available and
-//		was successfully copied into the provided buffer.
-//		Returns "false" otherwise, interpreted that no suggestion will be used.
-//
-typedef bool ( * SuggestGameInfoDirFn_t ) ( CFSSteamSetupInfo const *pFsSteamSetupInfo, char *pchPathBuffer, int nBufferLength, bool *pbBubbleDirectories );
-
-//
-// SetSuggestGameInfoDirFn
-//		Installs the supplied game info directory suggestion function.
-// Parameters:
-//		pfnNewFn				the new game info directory suggestion function.
-// Returns:
-//		The previously installed suggestion function or NULL if none was installed before.
-//		This function never fails.
-//
-SuggestGameInfoDirFn_t SetSuggestGameInfoDirFn( SuggestGameInfoDirFn_t pfnNewFn );
 
 
 #endif // APPSYSTEMGROUP_H

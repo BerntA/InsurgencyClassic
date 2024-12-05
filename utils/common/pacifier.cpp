@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,9 +12,7 @@
 
 
 static int g_LastPacifierDrawn = -1;
-static bool g_bPacifierSuppressed = false;
 
-#define clamp(a,b,c) ( (a) > (c) ? (c) : ( (a) < (b) ? (b) : (a) ) )
 
 void StartPacifier( char const *pPrefix )
 {
@@ -28,7 +26,7 @@ void UpdatePacifier( float flPercent )
 	int iCur = (int)(flPercent * 40.0f);
 	iCur = clamp( iCur, g_LastPacifierDrawn, 40 );
 	
-	if( iCur != g_LastPacifierDrawn && !g_bPacifierSuppressed )
+	if( iCur != g_LastPacifierDrawn )
 	{
 		for( int i=g_LastPacifierDrawn+1; i <= iCur; i++ )
 		{
@@ -53,11 +51,6 @@ void EndPacifier( bool bCarriageReturn )
 {
 	UpdatePacifier(1);
 	
-	if( bCarriageReturn && !g_bPacifierSuppressed )
+	if( bCarriageReturn )
 		Msg("\n");
-}
-
-void SuppressPacifier( bool bSuppress )
-{
-	g_bPacifierSuppressed = bSuppress;
 }

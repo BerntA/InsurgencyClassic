@@ -1,14 +1,14 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
 // $NoKeywords: $
-//===========================================================================//
+//=============================================================================//
 
 #include "convar.h"
 #include "tier0/dbg.h"
 #include "stringpool.h"
-#include "tier1/strtools.h"
+#include "vstdlib/strtools.h"
 #include "generichash.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -109,6 +109,7 @@ CCountedStringPool::CCountedStringPool()
 	m_Elements[0].pString = NULL;
 	m_Elements[0].nReferenceCount = 0;
 	m_Elements[0].nNextElement = INVALID_ELEMENT;
+
 }
 
 CCountedStringPool::~CCountedStringPool()
@@ -141,11 +142,8 @@ void CCountedStringPool::FreeAll()
 	}
 
 	// Remove all but the invalid element:
-	m_Elements.RemoveAll();
-	m_Elements.AddToTail();
-	m_Elements[0].pString = NULL;
-	m_Elements[0].nReferenceCount = 0;
-	m_Elements[0].nNextElement = INVALID_ELEMENT;
+	m_Elements.SetCount(1);
+
 }
 
 
@@ -238,18 +236,19 @@ char* CCountedStringPool::ReferenceString( const char* pIntrinsic )
 	return m_Elements[ReferenceStringHandle( pIntrinsic)].pString; 
 }
 
-void CCountedStringPool::DereferenceString( const char* pIntrinsic )
+void  CCountedStringPool::DereferenceString( const char* pIntrinsic )
 {
 	// If we get a NULL pointer, just return
-	if (!pIntrinsic)
+	if(!pIntrinsic)
 		return;
 
 	unsigned short nHashBucketIndex = (HashStringCaseless( pIntrinsic ) % m_HashTable.Count());
 	unsigned short nCurrentBucket =  m_HashTable[ nHashBucketIndex ];
 
 	// If there isn't anything in the bucket, just return.
-	if ( nCurrentBucket == INVALID_ELEMENT )
+	if( nCurrentBucket == INVALID_ELEMENT )
 		return;
+
 
 	for( unsigned short previous = INVALID_ELEMENT; nCurrentBucket != INVALID_ELEMENT ; nCurrentBucket = m_Elements[nCurrentBucket].nNextElement )
 	{
@@ -292,20 +291,26 @@ char* CCountedStringPool::HandleToString( unsigned short handle )
 	return m_Elements[handle].pString;
 }
 
-void CCountedStringPool::SpewStrings()
+CCountedStringPool g_CountedStringPool;
+
+CON_COMMAND( dumpcountedstrings, "Tests the class CStringPool" )
 {
 	int i;
-	for ( i = 0; i < m_Elements.Count(); i++ )
+	for( i = 0; i < g_CountedStringPool.m_Elements.Count(); i++ )
 	{
-		char* string = m_Elements[i].pString;
+		char* string = g_CountedStringPool.m_Elements[i].pString;
 
-		Msg("String %d: ref:%d %s", i, m_Elements[i].nReferenceCount, string == NULL? "EMPTY - ok for slot zero only!" : string);
+		Msg("String %d: ref:%d %s", i, g_CountedStringPool.m_Elements[i].nReferenceCount, string == NULL? "EMPTY - ok for slot zero only!" : string);
 	}
 
-	Msg("\n%d total counted strings.", m_Elements.Count());
+	Msg("\n%d total counted strings.",g_CountedStringPool.m_Elements.Count());
 }
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
 #ifdef _DEBUG
+
 CON_COMMAND( test_stringpool, "Tests the class CStringPool" )
 {
 	CStringPool pool;
@@ -331,4 +336,5 @@ CON_COMMAND( test_stringpool, "Tests the class CStringPool" )
 
 	Msg("Pass.");
 }
+
 #endif

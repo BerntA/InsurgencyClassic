@@ -1,15 +1,20 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Math primitives.
 //
-//===========================================================================//
+// $Workfile:     $
+// $NoKeywords: $
+//=============================================================================//
+
+#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
+
 
 /// FIXME: As soon as all references to mathlib.c are gone, include it in here
 
 #include <math.h>
 #include <float.h>	// Needed for FLT_EPSILON
 
-#include "tier0/basetypes.h"
+#include "basetypes.h"
 #include <memory.h>
 #include "tier0/dbg.h"
 
@@ -19,33 +24,95 @@
 #pragma warning(disable:4244)   // "conversion from 'const int' to 'float', possible loss of data"
 #pragma warning(disable:4730)	// "mixing _m64 and floating point expressions may result in incorrect code"
 
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#if !defined( _X360 )
-#include "mathlib/amd3dx.h"
-#ifndef OSX
-#include "3dnow.h"
-#endif
-#include "sse.h"
-#endif
-
-#include "mathlib/ssemath.h"
-#include "mathlib/ssequaternion.h"
+#include "mathlib.h"
+#include "amd3dx.h"
+#include "vector.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-bool s_bMathlibInitialized = false;
+static bool s_bMathlibInitialized = false;
+
 
 #ifdef PARANOID
 // User must provide an implementation of Sys_Error()
 void Sys_Error (char *error, ...);
+#endif
+#ifdef _XBOX
+#include <xmmintrin.h>
 #endif
 
 const Vector vec3_origin(0,0,0);
 const QAngle vec3_angle(0,0,0);
 const Vector vec3_invalid( FLT_MAX, FLT_MAX, FLT_MAX );
 const int nanmask = 255<<23;
+
+
+// Math routines which have alternate versions for MMX/SSE/3DNOW in MATHLIB.C
+// void  _VectorMA( const float *start, float scale, const float *direction, float *dest );
+
+#ifdef PFN_VECTORMA
+void  __cdecl _SSE_VectorMA( const float *start, float scale, const float *direction, float *dest );
+#endif
+
+//-----------------------------------------------------------------------------
+// Macros and constants required by some of the SSE assembly:
+//-----------------------------------------------------------------------------
+
+#ifdef _WIN32
+#define _PS_EXTERN_CONST(Name, Val) \
+const __declspec(align(16)) float _ps_##Name[4] = { Val, Val, Val, Val }
+
+#define _PS_EXTERN_CONST_TYPE(Name, Type, Val) \
+const __declspec(align(16)) Type _ps_##Name[4] = { Val, Val, Val, Val }; \
+
+#define _EPI32_CONST(Name, Val) \
+static const __declspec(align(16)) __int32 _epi32_##Name[4] = { Val, Val, Val, Val }
+
+#define _PS_CONST(Name, Val) \
+	static const __declspec(align(16)) float _ps_##Name[4] = { Val, Val, Val, Val }
+
+#elif _LINUX
+#define _PS_EXTERN_CONST(Name, Val) \
+const __attribute__((aligned(16))) float _ps_##Name[4] = { Val, Val, Val, Val }
+
+#define _PS_EXTERN_CONST_TYPE(Name, Type, Val) \
+const __attribute__((aligned(16))) Type _ps_##Name[4] = { Val, Val, Val, Val }; \
+
+#define _EPI32_CONST(Name, Val) \
+static const __attribute__((aligned(16))) int32 _epi32_##Name[4] = { Val, Val, Val, Val }
+
+#define _PS_CONST(Name, Val) \
+	static const __attribute__((aligned(16))) float _ps_##Name[4] = { Val, Val, Val, Val }
+
+#endif
+
+_PS_EXTERN_CONST(am_0, 0.0f);
+_PS_EXTERN_CONST(am_1, 1.0f);
+_PS_EXTERN_CONST(am_m1, -1.0f);
+_PS_EXTERN_CONST(am_0p5, 0.5f);
+_PS_EXTERN_CONST(am_1p5, 1.5f);
+_PS_EXTERN_CONST(am_pi, (float)M_PI);
+_PS_EXTERN_CONST(am_pi_o_2, (float)(M_PI / 2.0));
+_PS_EXTERN_CONST(am_2_o_pi, (float)(2.0 / M_PI));
+_PS_EXTERN_CONST(am_pi_o_4, (float)(M_PI / 4.0));
+_PS_EXTERN_CONST(am_4_o_pi, (float)(4.0 / M_PI));
+_PS_EXTERN_CONST_TYPE(am_sign_mask, int32, 0x80000000);
+_PS_EXTERN_CONST_TYPE(am_inv_sign_mask, int32, ~0x80000000);
+_PS_EXTERN_CONST_TYPE(am_min_norm_pos,int32, 0x00800000);
+_PS_EXTERN_CONST_TYPE(am_mant_mask, int32, 0x7f800000);
+_PS_EXTERN_CONST_TYPE(am_inv_mant_mask, int32, ~0x7f800000);
+
+_EPI32_CONST(1, 1);
+_EPI32_CONST(2, 2);
+
+_PS_CONST(sincos_p0, 0.15707963267948963959e1f);
+_PS_CONST(sincos_p1, -0.64596409750621907082e0f);
+_PS_CONST(sincos_p2, 0.7969262624561800806e-1f);
+_PS_CONST(sincos_p3, -0.468175413106023168e-2f);
+
+static const uint32 _sincos_masks[]	  = { (uint32)0x0,  (uint32)~0x0 };
+static const uint32 _sincos_inv_masks[] = { (uint32)~0x0, (uint32)0x0 };
 
 //-----------------------------------------------------------------------------
 // Standard C implementations of optimized routines:
@@ -103,8 +170,727 @@ float _InvRSquared(const float* v)
 	return r2 < 1.f ? 1.f : 1/r2;
 }
 
+// Math routines done in optimized assembly math package routines
+
 //-----------------------------------------------------------------------------
-// Function pointers selecting the appropriate implementation
+// 3D Now Implementations of optimized routines:
+//-----------------------------------------------------------------------------
+float _3DNow_Sqrt(float x)
+{
+	Assert( s_bMathlibInitialized );
+	float	root = 0.f;
+#ifdef _WIN32
+	_asm
+	{
+		femms
+		movd		mm0, x
+		PFRSQRT		(mm1,mm0)
+		punpckldq	mm0, mm0
+		PFMUL		(mm0, mm1)
+		movd		root, mm0
+		femms
+	}
+#elif _LINUX
+ 	__asm __volatile__( "femms" );
+ 	__asm __volatile__
+	(
+		"pfrsqrt    %y0, %y1 \n\t"
+		"punpckldq   %y1, %y1 \n\t"
+		"pfmul      %y1, %y0 \n\t"
+		: "=y" (root), "=y" (x)
+ 		:"0" (x)
+ 	);
+ 	__asm __volatile__( "femms" );
+#else
+#error
+#endif
+
+	return root;
+}
+
+// NJS FIXME: Need to test Recripricol squareroot performance and accuraccy
+// on AMD's before using the specialized instruction.
+float _3DNow_RSqrt(float x)
+{
+	Assert( s_bMathlibInitialized );
+
+	return 1.f / _3DNow_Sqrt(x);
+}
+
+
+float FASTCALL _3DNow_VectorNormalize (Vector& vec)
+{
+	Assert( s_bMathlibInitialized );
+	float *v = &vec[0];
+	float	radius = 0.f;
+
+	if ( v[0] || v[1] || v[2] )
+	{
+#ifdef _WIN32
+	_asm
+		{
+			mov			eax, v
+			femms
+			movq		mm0, QWORD PTR [eax]
+			movd		mm1, DWORD PTR [eax+8]
+			movq		mm2, mm0
+			movq		mm3, mm1
+			PFMUL		(mm0, mm0)
+			PFMUL		(mm1, mm1)
+			PFACC		(mm0, mm0)
+			PFADD		(mm1, mm0)
+			PFRSQRT		(mm0, mm1)
+			punpckldq	mm1, mm1
+			PFMUL		(mm1, mm0)
+			PFMUL		(mm2, mm0)
+			PFMUL		(mm3, mm0)
+			movq		QWORD PTR [eax], mm2
+			movd		DWORD PTR [eax+8], mm3
+			movd		radius, mm1
+			femms
+		}
+#elif _LINUX	
+		long long a,c;
+    		int b,d;
+    		memcpy(&a,&vec[0],sizeof(a));
+    		memcpy(&b,&vec[2],sizeof(b));
+    		memcpy(&c,&vec[0],sizeof(c));
+    		memcpy(&d,&vec[2],sizeof(d));
+
+      		__asm __volatile__( "femms" );
+        	__asm __volatile__
+        	(
+        		"pfmul           %y3, %y3\n\t"
+        		"pfmul           %y0, %y0 \n\t"
+        		"pfacc           %y3, %y3 \n\t"
+        		"pfadd           %y3, %y0 \n\t"
+        		"pfrsqrt         %y0, %y3 \n\t"
+        		"punpckldq       %y0, %y0 \n\t"
+        		"pfmul           %y3, %y0 \n\t"
+        		"pfmul           %y3, %y2 \n\t"
+        		"pfmul           %y3, %y1 \n\t"
+        		: "=y" (radius), "=y" (c), "=y" (d)
+        		: "y" (a), "0" (b), "1" (c), "2" (d)
+        	);
+      		memcpy(&vec[0],&c,sizeof(c));
+      		memcpy(&vec[2],&d,sizeof(d));		
+        	__asm __volatile__( "femms" );
+
+#else
+#error
+#endif
+	}
+    return radius;
+}
+
+void FASTCALL _3DNow_VectorNormalizeFast (Vector& vec)
+{
+	_3DNow_VectorNormalize( vec );
+}
+
+// JAY: This complains with the latest processor pack
+#pragma warning(disable: 4730)
+
+float _3DNow_InvRSquared(const float* v)
+{
+	Assert( s_bMathlibInitialized );
+	float	r2 = 1.f;
+#ifdef _WIN32
+	_asm { // AMD 3DNow only routine
+		mov			eax, v
+		femms
+		movq		mm0, QWORD PTR [eax]
+		movd		mm1, DWORD PTR [eax+8]
+		movd		mm2, [r2]
+		PFMUL		(mm0, mm0)
+		PFMUL		(mm1, mm1)
+		PFACC		(mm0, mm0)
+		PFADD		(mm1, mm0)
+		PFMAX		(mm1, mm2)
+		PFRCP		(mm0, mm1)
+		movd		[r2], mm0
+		femms
+	}
+#elif _LINUX
+		long long a,c;
+    		int b;
+    		memcpy(&a,&v[0],sizeof(a));
+    		memcpy(&b,&v[2],sizeof(b));
+    		memcpy(&c,&v[0],sizeof(c));
+
+      		__asm __volatile__( "femms" );
+        	__asm __volatile__
+        	(
+			"PFMUL          %y2, %y2 \n\t"
+                        "PFMUL          %y3, %y3 \n\t"
+                        "PFACC          %y2, %y2 \n\t"
+                        "PFADD          %y2, %y3 \n\t"
+                        "PFMAX          %y3, %y4 \n\t"
+                        "PFRCP          %y3, %y2 \n\t"
+                        "movq           %y2, %y0 \n\t"
+        		: "=y" (r2)
+        		: "0" (r2), "y" (a), "y" (b), "y" (c)
+        	);
+        	__asm __volatile__( "femms" );
+#else
+#error
+#endif
+
+	return r2;
+}
+
+//-----------------------------------------------------------------------------
+// SSE implementations of optimized routines:
+//-----------------------------------------------------------------------------
+float _SSE_Sqrt(float x)
+{
+	Assert( s_bMathlibInitialized );
+	float	root = 0.f;
+#ifdef _WIN32
+	_asm
+	{
+		sqrtss		xmm0, x
+		movss		root, xmm0
+	}
+#elif _LINUX
+	__asm__ __volatile__(
+		"movss %1,%%xmm2\n"
+		"sqrtss %%xmm2,%%xmm1\n"
+		"movss %%xmm1,%0"
+       		: "=m" (root)
+		: "m" (x)
+	);
+#endif
+	return root;
+}
+
+//	Single iteration NewtonRaphson reciprocal square root:
+// 0.5 * rsqrtps * (3 - x * rsqrtps(x) * rsqrtps(x)) 	
+// Very low error, and fine to use in place of 1.f / sqrtf(x).	
+#if 0
+	float _SSE_RSqrtAccurate(float x)
+	{
+		Assert( s_bMathlibInitialized );
+
+		float rroot;
+		_asm
+		{
+			rsqrtss	xmm0, x
+			movss	rroot, xmm0
+		}
+
+		return (0.5f * rroot) * (3.f - (x * rroot) * rroot);
+	}
+#else
+
+	// Intel / Kipps SSE RSqrt.  Significantly faster than above.
+	inline float _SSE_RSqrtAccurate(float a)
+	{
+		float x;
+		float half = 0.5f;
+		float three = 3.f;
+
+#ifdef _WIN32
+		__asm
+		{
+			movss   xmm3, a;
+			movss   xmm1, half;
+			movss   xmm2, three;
+			rsqrtss xmm0, xmm3;
+
+			mulss   xmm3, xmm0;
+			mulss   xmm1, xmm0;
+			mulss   xmm3, xmm0;
+			subss   xmm2, xmm3;
+			mulss   xmm1, xmm2;
+
+			movss   x,    xmm1;
+		}
+#elif _LINUX
+	 __asm__ __volatile__(
+		"movss   %1, %%xmm3 \n\t"
+                "movss   %2, %%xmm1 \n\t"
+                "movss   %3, %%xmm2 \n\t"
+                "rsqrtss %%xmm3, %%xmm0 \n\t"
+                "mulss   %%xmm0, %%xmm3 \n\t"
+                "mulss   %%xmm0, %%xmm1 \n\t"
+                "mulss   %%xmm0, %%xmm3 \n\t"
+                "subss   %%xmm3, %%xmm2 \n\t"
+                "mulss   %%xmm2, %%xmm1 \n\t"
+                "movss   %%xmm1, %0 \n\t"
+		: "=m" (x)
+		: "m" (a), "m" (half), "m" (three)
+	);
+#else
+#error
+#endif
+
+		return x;
+	}
+#endif
+
+// Simple SSE rsqrt.  Usually accurate to around 6 (relative) decimal places 
+// or so, so ok for closed transforms.  (ie, computing lighting normals)
+inline float _SSE_RSqrtFast(float x)
+{
+	Assert( s_bMathlibInitialized );
+
+	float rroot;
+#ifdef _WIN32
+	_asm
+	{
+		rsqrtss	xmm0, x
+		movss	rroot, xmm0
+	}
+#elif _LINUX
+	 __asm__ __volatile__(
+		"rsqrtss %1, %%xmm0 \n\t"
+		"movss %%xmm0, %0 \n\t"
+		: "=m" (x)
+		: "m" (rroot)
+		: "%xmm0"
+	);
+#else
+#error
+#endif
+
+	return rroot;
+}
+
+float FASTCALL _SSE_VectorNormalize (Vector& vec)
+{
+	Assert( s_bMathlibInitialized );
+
+	// NOTE: This is necessary to prevent an memory overwrite...
+	// sice vec only has 3 floats, we can't "movaps" directly into it.
+#ifdef _WIN32
+	__declspec(align(16)) float result[4];
+#elif _LINUX
+	__attribute__((aligned(16))) float result[4];
+#endif
+
+	float *v = &vec[0];
+	float *r = &result[0];
+
+	float	radius = 0.f;
+	// Blah, get rid of these comparisons ... in reality, if you have all 3 as zero, it shouldn't 
+	// be much of a performance win, considering you will very likely miss 3 branch predicts in a row.
+	if ( v[0] || v[1] || v[2] )
+	{
+#ifdef _WIN32
+	_asm
+		{
+			mov			eax, v
+			mov			edx, r
+#ifdef ALIGNED_VECTOR
+			movaps		xmm4, [eax]			// r4 = vx, vy, vz, X
+			movaps		xmm1, xmm4			// r1 = r4
+#else
+			movups		xmm4, [eax]			// r4 = vx, vy, vz, X
+			movaps		xmm1, xmm4			// r1 = r4
+#endif
+			mulps		xmm1, xmm4			// r1 = vx * vx, vy * vy, vz * vz, X
+			movhlps		xmm3, xmm1			// r3 = vz * vz, X, X, X
+			movaps		xmm2, xmm1			// r2 = r1
+			shufps		xmm2, xmm2, 1		// r2 = vy * vy, X, X, X
+			addss		xmm1, xmm2			// r1 = (vx * vx) + (vy * vy), X, X, X
+			addss		xmm1, xmm3			// r1 = (vx * vx) + (vy * vy) + (vz * vz), X, X, X
+			sqrtss		xmm1, xmm1			// r1 = sqrt((vx * vx) + (vy * vy) + (vz * vz)), X, X, X
+			movss		radius, xmm1		// radius = sqrt((vx * vx) + (vy * vy) + (vz * vz))
+			rcpss		xmm1, xmm1			// r1 = 1/radius, X, X, X
+			shufps		xmm1, xmm1, 0		// r1 = 1/radius, 1/radius, 1/radius, X
+			mulps		xmm4, xmm1			// r4 = vx * 1/radius, vy * 1/radius, vz * 1/radius, X
+			movaps		[edx], xmm4			// v = vx * 1/radius, vy * 1/radius, vz * 1/radius, X
+		}
+#elif _LINUX
+		__asm__ __volatile__(
+#ifdef ALIGNED_VECTOR
+                        "movaps          %2, %%xmm4 \n\t"
+                        "movaps          %%xmm4, %%xmm1 \n\t"
+#else
+                        "movups          %2, %%xmm4 \n\t"
+                        "movaps          %%xmm4, %%xmm1 \n\t"
+#endif
+                        "mulps           %%xmm4, %%xmm1 \n\t"
+                        "movhlps         %%xmm1, %%xmm3 \n\t"
+                        "movaps          %%xmm1, %%xmm2 \n\t"
+                        "shufps          $1, %%xmm2, %%xmm2 \n\t"
+                        "addss           %%xmm2, %%xmm1 \n\t"
+                        "addss           %%xmm3, %%xmm1 \n\t"
+                        "sqrtss          %%xmm1, %%xmm1 \n\t"
+                        "movss           %%xmm1, %0 \n\t"
+                        "rcpss           %%xmm1, %%xmm1 \n\t"
+                        "shufps          $0, %%xmm1, %%xmm1 \n\t"
+                        "mulps           %%xmm1, %%xmm4 \n\t"
+                        "movaps          %%xmm4, %1 \n\t"
+                        : "=m" (radius), "=m" (result)
+                        : "m" (*v)
+ 		);
+#else
+#error
+#endif
+		vec.x = result[0];
+		vec.y = result[1];
+		vec.z = result[2];
+
+	}
+
+	return radius;
+}
+
+void FASTCALL _SSE_VectorNormalizeFast (Vector& vec)
+{
+	float ool = _SSE_RSqrtAccurate( FLT_EPSILON + vec.x * vec.x + vec.y * vec.y + vec.z * vec.z );
+
+	vec.x *= ool;
+	vec.y *= ool;
+	vec.z *= ool;
+}
+
+float _SSE_InvRSquared(const float* v)
+{
+	float	inv_r2 = 1.f;
+#ifdef _WIN32
+	_asm { // Intel SSE only routine
+		mov			eax, v
+		movss		xmm5, inv_r2		// x5 = 1.0, 0, 0, 0
+#ifdef ALIGNED_VECTOR
+		movaps		xmm4, [eax]			// x4 = vx, vy, vz, X
+#else
+		movups		xmm4, [eax]			// x4 = vx, vy, vz, X
+#endif
+		movaps		xmm1, xmm4			// x1 = x4
+		mulps		xmm1, xmm4			// x1 = vx * vx, vy * vy, vz * vz, X
+		movhlps		xmm3, xmm1			// x3 = vz * vz, X, X, X
+		movaps		xmm2, xmm1			// x2 = x1
+		shufps		xmm2, xmm2, 1		// x2 = vy * vy, X, X, X
+		addss		xmm1, xmm2			// x1 = (vx * vx) + (vy * vy), X, X, X
+		addss		xmm1, xmm3			// x1 = (vx * vx) + (vy * vy) + (vz * vz), X, X, X
+		maxss		xmm1, xmm5			// x1 = max( 1.0, x1 )
+		rcpss		xmm0, xmm1			// x0 = 1 / max( 1.0, x1 )
+		movss		inv_r2, xmm0		// inv_r2 = x0
+	}
+#elif _LINUX
+		__asm__ __volatile__(
+#ifdef ALIGNED_VECTOR
+                        "movaps          %1, %%xmm4 \n\t"
+#else
+                        "movups          %1, %%xmm4 \n\t"
+#endif
+                        "movaps          %%xmm4, %%xmm1 \n\t"
+                        "mulps           %%xmm4, %%xmm1 \n\t"
+			"movhlps         %%xmm1, %%xmm3 \n\t"
+			"movaps          %%xmm1, %%xmm2 \n\t"
+                        "shufps          $1, %%xmm2, %%xmm2 \n\t"
+                        "addss           %%xmm2, %%xmm1 \n\t"
+                        "addss           %%xmm3, %%xmm1 \n\t"
+			"maxss           %%xmm5, %%xmm1 \n\t"
+                        "rcpss           %%xmm1, %%xmm0 \n\t"
+			"movss           %%xmm0, %0 \n\t" 
+                        : "=m" (inv_r2)
+                        : "m" (*v), "0" (inv_r2)
+ 		);
+
+#else
+#error
+#endif
+
+	return inv_r2;
+}
+
+#ifdef _WIN32
+
+void _SSE_SinCos(float x, float* s, float* c)
+{
+
+	float t4, t8, t12;
+
+	__asm
+	{
+		movss	xmm0, x
+		movss	t12, xmm0
+		movss	xmm1, _ps_am_inv_sign_mask
+		mov		eax, t12
+		mulss	xmm0, _ps_am_2_o_pi
+		andps	xmm0, xmm1
+		and		eax, 0x80000000
+
+		cvttss2si	edx, xmm0
+		mov		ecx, edx
+		mov		t12, esi
+		mov		esi, edx
+		add		edx, 0x1	
+		shl		ecx, (31 - 1)
+		shl		edx, (31 - 1)
+
+		movss	xmm4, _ps_am_1
+		cvtsi2ss	xmm3, esi
+		mov		t8, eax
+		and		esi, 0x1
+
+		subss	xmm0, xmm3
+		movss	xmm3, _sincos_inv_masks[esi * 4]
+		minss	xmm0, xmm4
+
+		subss	xmm4, xmm0
+
+		movss	xmm6, xmm4
+		andps	xmm4, xmm3
+		and		ecx, 0x80000000
+		movss	xmm2, xmm3
+		andnps	xmm3, xmm0
+		and		edx, 0x80000000
+		movss	xmm7, t8
+		andps	xmm0, xmm2
+		mov		t8, ecx
+		mov		t4, edx
+		orps	xmm4, xmm3
+
+		mov		eax, s     //mov eax, [esp + 4 + 16]
+		mov		edx, c //mov edx, [esp + 4 + 16 + 4]
+
+		andnps	xmm2, xmm6
+		orps	xmm0, xmm2
+
+		movss	xmm2, t8
+		movss	xmm1, xmm0
+		movss	xmm5, xmm4
+		xorps	xmm7, xmm2
+		movss	xmm3, _ps_sincos_p3
+		mulss	xmm0, xmm0
+		mulss	xmm4, xmm4
+		movss	xmm2, xmm0
+		movss	xmm6, xmm4
+		orps	xmm1, xmm7
+		movss	xmm7, _ps_sincos_p2
+		mulss	xmm0, xmm3
+		mulss	xmm4, xmm3
+		movss	xmm3, _ps_sincos_p1
+		addss	xmm0, xmm7
+		addss	xmm4, xmm7
+		movss	xmm7, _ps_sincos_p0
+		mulss	xmm0, xmm2
+		mulss	xmm4, xmm6
+		addss	xmm0, xmm3
+		addss	xmm4, xmm3
+		movss	xmm3, t4
+		mulss	xmm0, xmm2
+		mulss	xmm4, xmm6
+		orps	xmm5, xmm3
+		mov		esi, t12
+		addss	xmm0, xmm7
+		addss	xmm4, xmm7
+		mulss	xmm0, xmm1
+		mulss	xmm4, xmm5
+
+		// use full stores since caller might reload with full loads
+		movss	[eax], xmm0
+		movss	[edx], xmm4
+
+	}
+}
+
+
+float _SSE_cos( float x)
+{
+	float temp;
+	__asm
+	{
+		movss	xmm0, x
+		movss	xmm1, _ps_am_inv_sign_mask
+		andps	xmm0, xmm1
+		addss	xmm0, _ps_am_pi_o_2
+		mulss	xmm0, _ps_am_2_o_pi
+
+		cvttss2si	ecx, xmm0
+		movss	xmm5, _ps_am_1
+		mov		edx, ecx
+		shl		edx, (31 - 1)
+		cvtsi2ss	xmm1, ecx
+		and		edx, 0x80000000
+		and		ecx, 0x1
+
+		subss	xmm0, xmm1
+		movss	xmm6, _sincos_masks[ecx * 4]
+		minss	xmm0, xmm5
+
+		movss	xmm1, _ps_sincos_p3
+		subss	xmm5, xmm0
+
+		andps	xmm5, xmm6
+		movss	xmm7, _ps_sincos_p2
+		andnps	xmm6, xmm0
+		mov		temp, edx
+		orps	xmm5, xmm6
+		movss	xmm0, xmm5
+
+		mulss	xmm5, xmm5
+		movss	xmm4, _ps_sincos_p1
+		movss	xmm2, xmm5
+		mulss	xmm5, xmm1
+		movss	xmm1, _ps_sincos_p0
+		addss	xmm5, xmm7
+		mulss	xmm5, xmm2
+		movss	xmm3, temp
+		addss	xmm5, xmm4
+		mulss	xmm5, xmm2
+		orps	xmm0, xmm3
+		addss	xmm5, xmm1
+		mulss	xmm0, xmm5
+		
+		movss   x,    xmm0
+
+	}
+
+	return x;
+}
+
+
+//-----------------------------------------------------------------------------
+// SSE2 implementations of optimized routines:
+//-----------------------------------------------------------------------------
+#ifndef _XBOX
+void _SSE2_SinCos(float x, float* s, float* c)  // any x
+{
+	__asm
+	{
+		movss	xmm0, x
+		movaps	xmm7, xmm0
+		movss	xmm1, _ps_am_inv_sign_mask
+		movss	xmm2, _ps_am_sign_mask
+		movss	xmm3, _ps_am_2_o_pi
+		andps	xmm0, xmm1
+		andps	xmm7, xmm2
+		mulss	xmm0, xmm3
+
+		pxor	xmm3, xmm3
+		movd	xmm5, _epi32_1
+		movss	xmm4, _ps_am_1
+
+		cvttps2dq	xmm2, xmm0
+		pand	xmm5, xmm2
+		movd	xmm1, _epi32_2
+		pcmpeqd	xmm5, xmm3
+		movd	xmm3, _epi32_1
+		cvtdq2ps	xmm6, xmm2
+		paddd	xmm3, xmm2
+		pand	xmm2, xmm1
+		pand	xmm3, xmm1
+		subss	xmm0, xmm6
+		pslld	xmm2, (31 - 1)
+		minss	xmm0, xmm4
+
+		mov		eax, s     // mov eax, [esp + 4 + 16]
+		mov		edx, c	   // mov edx, [esp + 4 + 16 + 4]
+
+		subss	xmm4, xmm0
+		pslld	xmm3, (31 - 1)
+
+		movaps	xmm6, xmm4
+		xorps	xmm2, xmm7
+		movaps	xmm7, xmm5
+		andps	xmm6, xmm7
+		andnps	xmm7, xmm0
+		andps	xmm0, xmm5
+		andnps	xmm5, xmm4
+		movss	xmm4, _ps_sincos_p3
+		orps	xmm6, xmm7
+		orps	xmm0, xmm5
+		movss	xmm5, _ps_sincos_p2
+
+		movaps	xmm1, xmm0
+		movaps	xmm7, xmm6
+		mulss	xmm0, xmm0
+		mulss	xmm6, xmm6
+		orps	xmm1, xmm2
+		orps	xmm7, xmm3
+		movaps	xmm2, xmm0
+		movaps	xmm3, xmm6
+		mulss	xmm0, xmm4
+		mulss	xmm6, xmm4
+		movss	xmm4, _ps_sincos_p1
+		addss	xmm0, xmm5
+		addss	xmm6, xmm5
+		movss	xmm5, _ps_sincos_p0
+		mulss	xmm0, xmm2
+		mulss	xmm6, xmm3
+		addss	xmm0, xmm4
+		addss	xmm6, xmm4
+		mulss	xmm0, xmm2
+		mulss	xmm6, xmm3
+		addss	xmm0, xmm5
+		addss	xmm6, xmm5
+		mulss	xmm0, xmm1
+		mulss	xmm6, xmm7
+
+		// use full stores since caller might reload with full loads
+		movss	[eax], xmm0
+		movss	[edx], xmm6
+
+	}
+}
+#endif
+
+#ifndef _XBOX
+float _SSE2_cos(float x)  
+{
+	__asm
+	{
+		movss	xmm0, x
+		movss	xmm1, _ps_am_inv_sign_mask
+		movss	xmm2, _ps_am_pi_o_2
+		movss	xmm3, _ps_am_2_o_pi
+		andps	xmm0, xmm1
+		addss	xmm0, xmm2
+		mulss	xmm0, xmm3
+
+		pxor	xmm3, xmm3
+		movd	xmm5, _epi32_1
+		movss	xmm4, _ps_am_1
+		cvttps2dq	xmm2, xmm0
+		pand	xmm5, xmm2
+		movd	xmm1, _epi32_2
+		pcmpeqd	xmm5, xmm3
+		cvtdq2ps	xmm6, xmm2
+		pand	xmm2, xmm1
+		pslld	xmm2, (31 - 1)
+
+		subss	xmm0, xmm6
+		movss	xmm3, _ps_sincos_p3
+		minss	xmm0, xmm4
+		subss	xmm4, xmm0
+		andps	xmm0, xmm5
+		andnps	xmm5, xmm4
+		orps	xmm0, xmm5
+
+		movaps	xmm1, xmm0
+		movss	xmm4, _ps_sincos_p2
+		mulss	xmm0, xmm0
+		movss	xmm5, _ps_sincos_p1
+		orps	xmm1, xmm2
+		movaps	xmm7, xmm0
+		mulss	xmm0, xmm3
+		movss	xmm6, _ps_sincos_p0
+		addss	xmm0, xmm4
+		mulss	xmm0, xmm7
+		addss	xmm0, xmm5
+		mulss	xmm0, xmm7
+		addss	xmm0, xmm6
+		mulss	xmm0, xmm1
+		movss   x,    xmm0
+	}
+
+	return x;
+}
+#endif
+#elif _LINUX
+#warning "_SSE_sincos,_SSE_cos,_SSE2_cos,_SSE_sincos NOT implemented!"
+#else
+#error
+#endif
+
+//-----------------------------------------------------------------------------
+// Function pointers selecting the appropriate implementation from above:
 //-----------------------------------------------------------------------------
 float (*pfSqrt)(float x)  = _sqrtf;
 float (*pfRSqrt)(float x) = _rsqrtf;
@@ -115,7 +901,9 @@ float (*pfInvRSquared)(const float* v) = _InvRSquared;
 void  (*pfFastSinCos)(float x, float* s, float* c) = SinCos;
 float (*pfFastCos)(float x) = cosf;
 
+
 float SinCosTable[SIN_TABLE_SIZE];
+
 void InitSinCosTable()
 {
 	for( int i = 0; i < SIN_TABLE_SIZE; i++ )
@@ -124,12 +912,187 @@ void InitSinCosTable()
 	}
 }
 
+#ifdef PARANOID
+/*
+==================
+BOPS_Error
+
+Split out like this for ASM to call.
+==================
+*/
+void BOPS_Error (void)
+{
+	Sys_Error ("BoxOnPlaneSide:  Bad signbits");
+}
+#endif
+
+
+#if	!id386 && !_LINUX
+
+/*
+==================
+BoxOnPlaneSide
+
+Returns 1, 2, or 1 + 2
+==================
+*/
+int BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *p)
+{
+	Assert( s_bMathlibInitialized );
+	float	dist1, dist2;
+	int		sides;
+
+#if 0	// this is done by the BOX_ON_PLANE_SIDE macro before calling this
+		// function
+// fast axial cases
+	if (p->type < 3)
+	{
+		if (p->dist <= emins[p->type])
+			return 1;
+		if (p->dist >= emaxs[p->type])
+			return 2;
+		return 3;
+	}
+#endif
+	
+	// general case
+	switch (p->signbits)
+	{
+	case 0:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 1:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 2:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 3:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 4:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 5:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 6:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	case 7:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	default:
+		dist1 = dist2 = 0;		// shut up compiler
+#ifdef PARANOID
+		BOPS_Error ();
+#endif
+		break;
+	}
+
+#if 0
+	int		i;
+	float	corners[2][3];
+
+	for (i=0 ; i<3 ; i++)
+	{
+		if (plane->normal[i] < 0)
+		{
+			corners[0][i] = emins[i];
+			corners[1][i] = emaxs[i];
+		}
+		else
+		{
+			corners[1][i] = emins[i];
+			corners[0][i] = emaxs[i];
+		}
+	}
+	dist = DotProduct (plane->normal, corners[0]) - plane->dist;
+	dist2 = DotProduct (plane->normal, corners[1]) - plane->dist;
+	sides = 0;
+	if (dist1 >= 0)
+		sides = 1;
+	if (dist2 < 0)
+		sides |= 2;
+
+#endif
+
+	sides = 0;
+	if (dist1 >= p->dist)
+		sides = 1;
+	if (dist2 < p->dist)
+		sides |= 2;
+
+#ifdef PARANOID
+if (sides == 0)
+	Sys_Error ("BoxOnPlaneSide: sides==0");
+#endif
+
+	return sides;
+}
+
+#endif
+//#endif
+
 qboolean VectorsEqual( const float *v1, const float *v2 )
 {
 	Assert( s_bMathlibInitialized );
 	return ( ( v1[0] == v2[0] ) &&
 		     ( v1[1] == v2[1] ) &&
 			 ( v1[2] == v2[2] ) );
+}
+
+
+
+int LineSphereIntersection(
+	const Vector &vSphereCenter,
+	const float fSphereRadius,
+	const Vector &vLinePt,
+	const Vector &vLineDir,
+	float *fIntersection1,
+	float *fIntersection2)
+{
+	Assert( s_bMathlibInitialized );
+	// Line = P + Vt
+	// Sphere = r (assume we've translated to origin)
+	// (P + Vt)^2 = r^2
+	// VVt^2 + 2PVt + (PP - r^2)
+	// Solve as quadratic:  (-b  +/-  sqrt(b^2 - 4ac)) / 2a
+	// If (b^2 - 4ac) is < 0 there is no solution.
+	// If (b^2 - 4ac) is = 0 there is one solution (a case this function doesn't support).
+	// If (b^2 - 4ac) is > 0 there are two solutions.
+	Vector P;
+	float a, b, c, sqr, insideSqr;
+
+
+	// Translate sphere to origin.
+	P[0] = vLinePt[0] - vSphereCenter[0];
+	P[1] = vLinePt[1] - vSphereCenter[1];
+	P[2] = vLinePt[2] - vSphereCenter[2];
+	
+	a = vLineDir.Dot(vLineDir);
+	b = 2.0f * P.Dot(vLineDir);
+	c = P.Dot(P) - (fSphereRadius * fSphereRadius);
+
+	insideSqr = b*b - 4*a*c;
+	if(insideSqr <= 0.000001f)
+		return 0;
+
+	// Ok, two solutions.
+	sqr = (float)sqrt(insideSqr);
+	
+	*fIntersection1 = (-b + sqr) / (2.0f * a);
+	*fIntersection2 = (-b - sqr) / (2.0f * a);
+
+	return 1;
 }
 
 
@@ -235,6 +1198,8 @@ void MatrixAngles( const matrix3x4_t& matrix, float *angles )
 		// (yaw)	y = ATAN( forward.y, forward.x );		-- in our space, forward is the X axis
 		angles[1] = RAD2DEG( atan2f( forward[1], forward[0] ) );
 
+		// The engine does pitch inverted from this, but we always end up negating it in the DLL
+		// UNDONE: Fix the engine to make it consistent
 		// (pitch)	x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
 		angles[0] = RAD2DEG( atan2f( -forward[2], xyDist ) );
 
@@ -246,6 +1211,8 @@ void MatrixAngles( const matrix3x4_t& matrix, float *angles )
 		// (yaw)	y = ATAN( -left.x, left.y );			-- forward is mostly z, so use right for yaw
 		angles[1] = RAD2DEG( atan2f( -left[0], left[1] ) );
 
+		// The engine does pitch inverted from this, but we always end up negating it in the DLL
+		// UNDONE: Fix the engine to make it consistent
 		// (pitch)	x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
 		angles[0] = RAD2DEG( atan2f( -forward[2], xyDist ) );
 
@@ -254,8 +1221,71 @@ void MatrixAngles( const matrix3x4_t& matrix, float *angles )
 	}
 }
 
+#if 0
+/*
+=============
+DecomposeRotation
+=============
+*/
+// What is this for and why is this different from MatrixAngle?
+void DecomposeRotation( const matrix3x4_t& mat, float* out )
+{
+	Assert( s_bMathlibInitialized );
+	float cp;
+	qboolean fixYaw = 0;
+	qboolean fixRoll = 0;
 
-// transform in1 by the matrix in2
+	// Start off in radians
+	out[ PITCH ] = asin( -mat[ 0 ][ 2 ] );
+
+	cp = cos( out[ PITCH ] );
+	if( cp )
+	{
+		float cy = mat[ 0 ][ 0 ] / cp;
+		float cr = mat[ 2 ][ 2 ] / cp;
+
+		// fix xome rounding error
+		if( cy > 1.0 ) cy = 1.0;
+		else if( cy < -1.0 ) cy = -1.0;
+		if( cr > 1.0 ) cr = 1.0;
+		else if( cr < -1.0 ) cr = -1.0;
+
+		out[ YAW ] = acos( cy );
+		out[ ROLL ] = acos( cr );
+	}
+	else
+	{
+		out[ YAW ] = 0;
+		out[ ROLL ] = acos( mat[ 1 ][ 1 ] );
+	}
+
+	// convert angles to degrees
+	out[ PITCH ] *= 180.0 / M_PI;
+	out[ YAW ] *= 180.0 / M_PI;
+	out[ ROLL ] *= 180.0 / M_PI;
+
+	// correct for quadrants
+	fixYaw = mat[ 0 ][ 1 ] / cp > 0;
+	fixRoll = ( mat[ 1 ][ 2 ] / -cp < 0 );
+
+	if( fixYaw )
+		out[ YAW ] = 360 - out[ YAW ];
+	if( fixRoll )
+		out[ ROLL ] = 360 - out[ ROLL ];
+
+	// normalize
+#if 0
+	if( out[ PITCH ] < 0 )
+		out[ PITCH ] += 360;
+	if( out[ YAW ] < 0 )
+		out[ YAW ] += 360;
+	if( out[ ROLL ] < 0 )
+		out[ ROLL ] += 360;
+#endif
+}
+#endif
+
+
 void VectorTransform (const float *in1, const matrix3x4_t& in2, float *out)
 {
 	Assert( s_bMathlibInitialized );
@@ -265,8 +1295,64 @@ void VectorTransform (const float *in1, const matrix3x4_t& in2, float *out)
 	out[2] = DotProduct(in1, in2[2]) + in2[2][3];
 }
 
+// SSE Version of VectorTransform
+void VectorTransformSSE(const float *in1, const matrix3x4_t& in2, float *out1)
+{
+	Assert( s_bMathlibInitialized );
+	Assert( in1 != out1 );
 
-// assuming the matrix is orthonormal, transform in1 by the transpose (also the inverse in this case) of in2.
+#ifdef _WIN32
+	__asm
+	{
+		mov eax, in1;
+		mov ecx, in2;
+		mov edx, out1;
+
+		movss xmm0, [eax];
+		mulss xmm0, [ecx];
+		movss xmm1, [eax+4];
+		mulss xmm1, [ecx+4];
+		movss xmm2, [eax+8];
+		mulss xmm2, [ecx+8];
+		addss xmm0, xmm1;
+		addss xmm0, xmm2;
+		addss xmm0, [ecx+12]
+ 		movss [edx], xmm0;
+		add ecx, 16;
+
+		movss xmm0, [eax];
+		mulss xmm0, [ecx];
+		movss xmm1, [eax+4];
+		mulss xmm1, [ecx+4];
+		movss xmm2, [eax+8];
+		mulss xmm2, [ecx+8];
+		addss xmm0, xmm1;
+		addss xmm0, xmm2;
+		addss xmm0, [ecx+12]
+		movss [edx+4], xmm0;
+		add ecx, 16;
+
+		movss xmm0, [eax];
+		mulss xmm0, [ecx];
+		movss xmm1, [eax+4];
+		mulss xmm1, [ecx+4];
+		movss xmm2, [eax+8];
+		mulss xmm2, [ecx+8];
+		addss xmm0, xmm1;
+		addss xmm0, xmm2;
+		addss xmm0, [ecx+12]
+		movss [edx+8], xmm0;
+	}
+#elif _LINUX
+#warning "VectorTransformSSE C implementation only"
+	out1[0] = DotProduct(in1, in2[0]) + in2[0][3];
+	out1[1] = DotProduct(in1, in2[1]) + in2[1][3];
+	out1[2] = DotProduct(in1, in2[2]) + in2[2][3];
+#else
+#error
+#endif
+}
+
 void VectorITransform (const float *in1, const matrix3x4_t& in2, float *out)
 {
 	Assert( s_bMathlibInitialized );
@@ -282,7 +1368,6 @@ void VectorITransform (const float *in1, const matrix3x4_t& in2, float *out)
 }
 
 
-// assume in2 is a rotation and rotate the input vector
 void VectorRotate( const float *in1, const matrix3x4_t& in2, float *out )
 {
 	Assert( s_bMathlibInitialized );
@@ -292,7 +1377,6 @@ void VectorRotate( const float *in1, const matrix3x4_t& in2, float *out )
 	out[2] = DotProduct( in1, in2[2] );
 }
 
-// assume in2 is a rotation and rotate the input vector
 void VectorRotate( const Vector &in1, const QAngle &in2, Vector &out )
 {
 	matrix3x4_t matRotate;
@@ -300,14 +1384,216 @@ void VectorRotate( const Vector &in1, const QAngle &in2, Vector &out )
 	VectorRotate( in1, matRotate, out );
 }
 
-// assume in2 is a rotation and rotate the input vector
-void VectorRotate( const Vector &in1, const Quaternion &in2, Vector &out )
+void VectorRotateSSE( const float *in1, const matrix3x4_t& in2, float *out1 )
 {
-	matrix3x4_t matRotate;
-	QuaternionMatrix( in2, matRotate );
-	VectorRotate( in1, matRotate, out );
+	Assert( s_bMathlibInitialized );
+	Assert( in1 != out1 );
+
+#ifdef _WIN32
+	__asm
+	{
+		mov eax, in1;
+		mov ecx, in2;
+		mov edx, out1;
+
+		movss xmm0, [eax];
+		mulss xmm0, [ecx];
+		movss xmm1, [eax+4];
+		mulss xmm1, [ecx+4];
+		movss xmm2, [eax+8];
+		mulss xmm2, [ecx+8];
+		addss xmm0, xmm1;
+		addss xmm0, xmm2;
+ 		movss [edx], xmm0;
+		add ecx, 16;
+
+		movss xmm0, [eax];
+		mulss xmm0, [ecx];
+		movss xmm1, [eax+4];
+		mulss xmm1, [ecx+4];
+		movss xmm2, [eax+8];
+		mulss xmm2, [ecx+8];
+		addss xmm0, xmm1;
+		addss xmm0, xmm2;
+		movss [edx+4], xmm0;
+		add ecx, 16;
+
+		movss xmm0, [eax];
+		mulss xmm0, [ecx];
+		movss xmm1, [eax+4];
+		mulss xmm1, [ecx+4];
+		movss xmm2, [eax+8];
+		mulss xmm2, [ecx+8];
+		addss xmm0, xmm1;
+		addss xmm0, xmm2;
+		movss [edx+8], xmm0;
+	}
+#elif _LINUX
+#warning "VectorRotateSSE C implementation only"
+	out1[0] = DotProduct( in1, in2[0] );
+	out1[1] = DotProduct( in1, in2[1] );
+	out1[2] = DotProduct( in1, in2[2] );
+
+#else
+#error
+#endif
 }
 
+
+//-----------------------------------------------------------------------------
+// NOTE: This actually works, but we need to be sure it actually optimizes anything
+// I've actually really only added it to make sure it's in source control
+//-----------------------------------------------------------------------------
+void TransformAndRotate( const Vector &srcPos, const Vector &srcNorm, 
+							const matrix3x4_t& mat, Vector &pos, Vector &norm )
+{
+	const float *pMat = &mat[0][0];
+	const float *pPos = &srcPos.x;
+	const float *pNormal = &srcNorm.x;
+	float *pPosOut = &pos.x;
+	float *pNormalOut = &norm.x;
+
+//	Vector pt, nt;
+//	pt[0] = DotProduct(vert.m_vecPosition.Base(), mat[0]) + mat[0][3];
+//	pt[1] = DotProduct(vert.m_vecPosition.Base(), mat[1]) + mat[1][3];
+//	pt[2] = DotProduct(vert.m_vecPosition.Base(), mat[2]) + mat[2][3];
+//	nt[0] = DotProduct( vert.m_vecNormal.Base(), mat[0] );
+//	nt[1] = DotProduct( vert.m_vecNormal.Base(), mat[1] );
+//	nt[2] = DotProduct( vert.m_vecNormal.Base(), mat[2] );
+
+#ifdef _WIN32
+	__asm
+	{
+		mov		eax, DWORD PTR [pMat]
+		mov		edx, DWORD PTR [pPos]
+		mov		ecx, DWORD PTR [pNormal]
+		mov		esi, DWORD PTR [pNormalOut]
+		mov		edi, DWORD PTR [pPosOut]
+
+		fld DWORD PTR[eax + 3*4]	; m03
+		fld DWORD PTR[eax + 0]		; m00		| m03
+		fld DWORD PTR[edx + 0]		; pos.x		| m00		| m03
+		fld DWORD PTR[ecx + 0]		; norm.x	| pos.x		| m00		| m03
+		fld DWORD PTR[edx + 4]		; pos.y		| norm.x	| pos.x		| m00		| m03
+		fld DWORD PTR[eax + 1*4]	; m01		| pos.y		| norm.x	| pos.x		| m00		| m03
+		fld DWORD PTR[ecx + 4]		; norm.y	| m01		| pos.y		| norm.x	| pos.x		| m00		| m03
+
+		fxch st(5)					; m00		| m01				| pos.y			| norm.x		| pos.x			| norm.y	| m03
+		fmul st(4), st(0)			; m00		| m01				| pos.y			| norm.x 		| pos.x	* m00	| norm.y	| m03
+		fmulp st(3), st(0)			; m01		| pos.y				| norm.x * m00	| pos.x	* m00	| norm.y		| m03
+		fmul st(1), st(0)			; m01		| pos.y * m01		| norm.x * m00	| pos.x	* m00	| norm.y		| m03
+		fmulp st(4), st(0)			; pos.y * m01	| norm.x * m00	| pos.x * m00	| norm.y * m01	| m03
+
+		fld DWORD PTR[eax + 2*4]	; m02		| pos.y * m01		| norm.x * m00	| pos.x * m00		| norm.y * m01	| m03
+		fld DWORD PTR[edx + 8]		; pos.z		| m02				| pos.y * m01		| norm.x * m00	| pos.x * m00		| norm.y * m01	| m03
+		fld DWORD PTR[ecx + 8]		; norm.z	| pos.z					| m02				| pos.y * m01		| norm.x * m00	| pos.x * m00		| norm.y * m01	| m03
+
+		fxch st(5)					; pos.x * m00	| pos.z							| m02						| pos.y * m01	| norm.x * m00	| norm.z				| norm.y * m01	| m03
+		faddp st(3), st(0)			; pos.z			| m02							| pos.x * m00 + pos.y * m01	| norm.x * m00	| norm.z				| norm.y * m01	| m03
+		fxch st(3)					; norm.x * m00	| m02							| pos.x * m00 + pos.y * m01	| pos.z			| norm.z				| norm.y * m01	| m03
+		faddp st(5), st(0)			; m02			| pos.x * m00 + pos.y * m01		| pos.z						| norm.z		| norm.y * m01 + norm.x * m00		| m03
+		fmul  st(2), st(0)			; m02			| pos.x * m00 + pos.y * m01		| pos.z * m02				| norm.z		| norm.y * m01 + norm.x * m00		| m03
+		fmulp st(3), st(0)			; pos.x * m00 + pos.y * m01		| pos.z * m02	| norm.z * m02	| norm.y * m01 + norm.x * m00		| m03
+		faddp st(4), st(0)			; pos.z * m02	| norm.z * m02	| norm.y * m01 + norm.x * m00		| pos.x * m00 + pos.y * m01	+ m03
+
+		; NOTE: Need two more instructions before we can start using the .z stuff
+
+		fld DWORD PTR[eax + 1*16 + 3*4]	; m13		| pos.z * m02	| norm.z * m02	| norm.y * m01 + norm.x * m00		| pos.x * m00 + pos.y * m01	+ m03
+		fld DWORD PTR[eax + 1*16 + 0]	; m10		| m13		| pos.z * m02		| norm.z * m02	| norm.y * m01 + norm.x * m00	| pos.x * m00 + pos.y * m01	+ m03
+		fld DWORD PTR[edx + 0]		; pos.x		| m10		| m13				| pos.z * m02	| norm.z * m02		| norm.y * m01 + norm.x * m00		| pos.x * m00 + pos.y * m01	+ m03
+		fld DWORD PTR[ecx + 0]		; norm.x	| pos.x		| m10				| m13			| pos.z * m02		| norm.z * m02	| norm.y * m01 + norm.x * m00		| pos.x * m00 + pos.y * m01	+ m03
+
+		fxch st(7)					; pos.x * m00 + pos.y * m01	+ m03 | pos.x		| m10 | m13 | pos.z * m02		| norm.z * m02	| norm.y * m01 + norm.x * m00		| norm.x
+		faddp st(4), st(0)			; pos.x		| m10 | m13 | pos.x * m00 + pos.y * m01	+ pos.z * m02 + m03 	| norm.z * m02	| norm.y * m01 + norm.x * m00		| norm.x
+		fxch st(5)					; norm.y * m01 + norm.x * m00		| m10 | m13 | pos.x * m00 + pos.y * m01	+ pos.z * m02 + m03 	| norm.z * m02	| pos.x		| norm.x
+		faddp st(4), st(0)			; m10 | m13 | pos.x * m00 + pos.y * m01	+ pos.z * m02 + m03 	| norm.x * m00 + norm.y * m01 + norm.z * m02	| pos.x		| norm.x
+		fmul st(4), st(0)			; m10 | m13 | pos.x * m00 + pos.y * m01	+ pos.z * m02 + m03 	| norm.x * m00 + norm.y * m01 + norm.z * m02	| pos.x	* m10	| norm.x
+		fmulp st(5), st(0)			; m13 | pos.x * m00 + pos.y * m01	+ pos.z * m02 + m03 	| norm.x * m00 + norm.y * m01 + norm.z * m02	| pos.x	* m10	| norm.x * m10
+		fxch st(2)					; norm.x * m00 + norm.y * m01 + norm.z * m02 | pos.x * m00 + pos.y * m01	+ pos.z * m02 + m03 	| m13	| pos.x	* m10	| norm.x * m10
+
+		fstp DWORD PTR[esi]			; pos.x * m00 + pos.y * m01	+ pos.z * m02 + m03 	| m13	| pos.x	* m10	| norm.x * m10
+		fstp DWORD PTR[edi]			; m13	| pos.x	* m10	| norm.x * m10
+
+		fld DWORD PTR[eax + 1*16 + 1*4]				; m11	| m13	| pos.x	* m10	| norm.x * m10
+		fld DWORD PTR[edx + 4]		; pos.y	| m11	| m13		| pos.x	* m10	| norm.x * m10
+		fld DWORD PTR[ecx + 4]		; norm.y| pos.y	| m11		| m13	| pos.x	* m10	| norm.x * m10
+		fld DWORD PTR[eax + 1*16 + 2*4]				; m12	| norm.y| pos.y		| m11	| m13	| pos.x	* m10	| norm.x * m10
+		fld DWORD PTR[edx + 8]		; pos.z	| m12	| norm.y	| pos.y	| m11	| m13	| pos.x	* m10	| norm.x * m10
+
+		fxch st(4)					; m11	| m12	| norm.y	| pos.y		| pos.z		| m13	| pos.x	* m10	| norm.x * m10
+		fmul st(3), st(0)			; m11	| m12	| norm.y	| pos.y	* m11	| pos.z		| m13	| pos.x	* m10	| norm.x * m10
+		fmulp st(2), st(0)			; m12	| norm.y * m11	| pos.y	* m11	| pos.z		| m13	| pos.x	* m10	| norm.x * m10
+
+		fld DWORD PTR[ecx + 8]		; norm.z	| m12	| norm.y * m11	| pos.y	* m11	| pos.z		| m13	| pos.x	* m10	| norm.x * m10
+		fxch st(1)					; m12	| norm.z	| norm.y * m11	| pos.y	* m11	| pos.z		| m13	| pos.x	* m10	| norm.x * m10
+		fmul st(4), st(0)			; m12	| norm.z	| norm.y * m11	| pos.y	* m11	| pos.z * m12		| m13	| pos.x	* m10	| norm.x * m10
+		fmulp st(1), st(0)			; norm.z * m12		| norm.y * m11	| pos.y	* m11	| pos.z * m12		| m13	| pos.x	* m10	| norm.x * m10
+
+		fld DWORD PTR[eax + 2*16 + 3*4]				; m23	|	norm.z * m12	| norm.y * m11	| pos.y	* m11	| pos.z * m12		| m13	| pos.x	* m10	| norm.x * m10
+
+		fxch st(6)					; pos.x	* m10	| norm.z * m12	| norm.y * m11	| pos.y	* m11	| pos.z * m12	| m13			| m23			| norm.x * m10
+		faddp st(3), st(0)			; norm.z * m12	| norm.y * m11	| pos.x	* m10 + pos.y * m11	| pos.z * m12		| m13			| m23			| norm.x * m10
+		fxch st(4)					; m13			| norm.y * m11	| pos.x	* m10 + pos.y * m11	| pos.z * m12		| norm.z * m12	| m23			| norm.x * m10
+		faddp st(3), st(0)			; norm.y * m11	| pos.x	* m10 + pos.y * m11	| pos.z * m12 + m13	| norm.z * m12	| m23			| norm.x * m10
+		faddp st(5), st(0)			; pos.x	* m10 + pos.y * m11	| pos.z * m12 + m13	| norm.z * m12	| m23			| norm.x * m10 + norm.y * m11
+
+		fld DWORD PTR[eax + 2*16 + 0]				; m20		| pos.x	* m10 + pos.y * m11	| pos.z * m12 + m13	| norm.z * m12	| m23			| norm.x * m10 + norm.y * m11
+		fld DWORD PTR[edx + 0]		; pos.x		| m20		| pos.x	* m10 + pos.y * m11	| pos.z * m12 + m13	| norm.z * m12	| m23			| norm.x * m10 + norm.y * m11
+		fld DWORD PTR[ecx + 0]		; norm.x	| pos.x		| m20		| pos.x	* m10 + pos.y * m11	| pos.z * m12 + m13	| norm.z * m12	| m23			| norm.x * m10 + norm.y * m11
+
+		fxch st(3)					; pos.x	* m10 + pos.y * m11	| pos.x		| m20		| norm.x	| pos.z * m12 + m13	| norm.z * m12	| m23			| norm.x * m10 + norm.y * m11
+		faddp st(4), st(0)			; pos.x		| m20		| norm.x	| pos.x	* m10 + pos.y * m11	+ pos.z * m12 + m13	| norm.z * m12	| m23			| norm.x * m10 + norm.y * m11
+		fxch st(4)					; norm.z * m12	| m20		| norm.x	| pos.x	* m10 + pos.y * m11	+ pos.z * m12 + m13	| pos.x		| m23			| norm.x * m10 + norm.y * m11
+		faddp st(6), st(0)			; m20		| norm.x	| pos.x	* m10 + pos.y * m11	+ pos.z * m12 + m13	| pos.x		| m23			| norm.x * m10 + norm.y * m11 + norm.z * m12
+		fmul st(3), st(0)			; m20		| norm.x	| pos.x	* m10 + pos.y * m11	+ pos.z * m12 + m13	| pos.x	* m20	| m23			| norm.x * m10 + norm.y * m11 + norm.z * m12
+		fmulp st(1), st(0)			; norm.x * m20	| pos.x	* m10 + pos.y * m11	+ pos.z * m12 + m13	| pos.x	* m20	| m23			| norm.x * m10 + norm.y * m11 + norm.z * m12
+
+		fld DWORD PTR[eax + 2*16 + 1*4]		; m21		| norm.x * m20	| pos.x	* m10 + pos.y * m11	+ pos.z * m12 + m13	| pos.x	* m20	| m23			| norm.x * m10 + norm.y * m11 + norm.z * m12
+		fld DWORD PTR[edx + 4]		; pos.y		| m21		| norm.x * m20	| pos.x	* m10 + pos.y * m11	+ pos.z * m12 + m13	| pos.x	* m20	| m23			| norm.x * m10 + norm.y * m11 + norm.z * m12
+		fld DWORD PTR[ecx + 4]		; norm.y	| pos.y		| m21		| norm.x * m20	| pos.x	* m10 + pos.y * m11	+ pos.z * m12 + m13	| pos.x	* m20	| m23			| norm.x * m10 + norm.y * m11 + norm.z * m12
+
+		fxch st(4)					; pos.x	* m10 + pos.y * m11	+ pos.z * m12 + m13	| pos.y		| m21		| norm.x * m20	| norm.y	| pos.x	* m20	| m23			| norm.x * m10 + norm.y * m11 + norm.z * m12
+		fstp DWORD PTR[edi + 4]		; pos.y		| m21		| norm.x * m20	| norm.y	| pos.x	* m20	| m23			| norm.x * m10 + norm.y * m11 + norm.z * m12
+		fxch st(6)					; norm.x * m10 + norm.y * m11 + norm.z * m12		| m21		| norm.x * m20	| norm.y	| pos.x	* m20	| m23			| pos.y
+		fstp DWORD PTR[esi + 4]		; m21		| norm.x * m20	| norm.y	| pos.x	* m20	| m23			| pos.y
+
+		fmul st(5), st(0)			; m21			| norm.x * m20	| norm.y		| pos.x	* m20	| m23			| pos.y	* m21
+		fmulp st(2), st(0)			; norm.x * m20	| norm.y * m21	| pos.x	* m20	| m23			| pos.y	* m21
+
+		fld DWORD PTR[eax + 2*16 + 2*4]	; m22			| norm.x * m20	| norm.y * m21	| pos.x	* m20	| m23			| pos.y	* m21
+		fld DWORD PTR[edx + 8]		; pos.z			| m22			| norm.x * m20	| norm.y * m21	| pos.x	* m20	| m23			| pos.y	* m21
+		fld DWORD PTR[ecx + 8]		; norm.z		| pos.z			| m22			| norm.x * m20	| norm.y * m21	| pos.x	* m20	| m23			| pos.y	* m21
+
+		fxch st(5) 					; pos.x	* m20	| pos.z			| m22			| norm.x * m20	| norm.y * m21	| norm.z		| m23			| pos.y	* m21
+		faddp st(6), st(0)			; pos.z			| m22			| norm.x * m20	| norm.y * m21	| norm.z		| pos.x	* m20 + m23	| pos.y	* m21
+		fxch st(2)					; norm.x * m20 	| m22			| pos.z			| norm.y * m21	| norm.z		| pos.x	* m20 + m23	| pos.y	* m21
+		faddp st(3), st(0)			; m22			| pos.z			| norm.x * m20 + norm.y * m21	| norm.z		| pos.x	* m20 + m23	| pos.y	* m21
+		fmul st(1), st(0)			; m22			| pos.z * m22	| norm.x * m20 + norm.y * m21	| norm.z		| pos.x	* m20 + m23	| pos.y	* m21
+		fmulp st(3), st(0)			; pos.z * m22	| norm.x * m20 + norm.y * m21	| norm.z * m22	| pos.x	* m20 + m23	| pos.y	* m21
+		fxch st(4)					; pos.y * m21	| norm.x * m20 + norm.y * m21	| norm.z * m22	| pos.x	* m20 + m23	| pos.z	* m22
+		faddp st(3), st(0)			; norm.x * m20 + norm.y * m21	| norm.z * m22	| pos.x	* m20 + pos.y * m21 + m23	| pos.z	* m22
+
+		; STALLS AHOY!!!
+
+		faddp st(1), st(0)			; norm.x * m20 + norm.y * m21 + norm.z * m22	| pos.x	* m20 + pos.y * m21 + m23	| pos.z	* m22
+		fxch st(2)					; pos.z	* m22									| pos.x	* m20 + pos.y * m21 + m23	| norm.x * m20 + norm.y * m21 + norm.z * m22 
+		faddp st(1), st(0)			; pos.x	* m20 + pos.y * m21 + pos.z	* m22 + m23	| norm.x * m20 + norm.y * m21 + norm.z * m22 
+		fxch st(1)					; norm.x * m20 + norm.y * m21 + norm.z * m22	| pos.x	* m20 + pos.y * m21 + pos.z	* m22 + m23
+		fstp DWORD PTR[esi + 8]		; pos.x	* m20 + pos.y * m21 + pos.z	* m22 + m23
+		fstp DWORD PTR[edi + 8]
+	}
+#elif _LINUX
+#warning "TransformAndRotate C implementation only"
+	VectorTransform( pPos, mat, pPosOut);
+	VectorRotate( pPosOut, mat, pPosOut);
+	norm=pos;
+	VectorNormalize(norm);
+#else
+#error
+
+#endif
+
+}
 
 // rotate by the inverse of the matrix
 void VectorIRotate( const float *in1, const matrix3x4_t& in2, float *out )
@@ -320,7 +1606,7 @@ void VectorIRotate( const float *in1, const matrix3x4_t& in2, float *out )
 }
 
 #ifndef VECTOR_NO_SLOW_OPERATIONS
-// transform a set of angles in the output space of parentMatrix to the input space
+
 QAngle TransformAnglesToLocalSpace( const QAngle &angles, const matrix3x4_t &parentMatrix )
 {
 	matrix3x4_t angToWorld, worldToParent, localMatrix;
@@ -333,7 +1619,6 @@ QAngle TransformAnglesToLocalSpace( const QAngle &angles, const matrix3x4_t &par
 	return out;
 }
 
-// transform a set of angles in the input space of parentMatrix to the output space
 QAngle TransformAnglesToWorldSpace( const QAngle &angles, const matrix3x4_t &parentMatrix )
 {
 	matrix3x4_t angToParent, angToWorld;
@@ -344,7 +1629,7 @@ QAngle TransformAnglesToWorldSpace( const QAngle &angles, const matrix3x4_t &par
 	return out;
 }
 
-#endif // VECTOR_NO_SLOW_OPERATIONS
+#endif
 
 void MatrixInitialize( matrix3x4_t &mat, const Vector &vecOrigin, const Vector &vecXAxis, const Vector &vecYAxis, const Vector &vecZAxis )
 {
@@ -360,35 +1645,18 @@ void MatrixCopy( const matrix3x4_t& in, matrix3x4_t& out )
 	memcpy( out.Base(), in.Base(), sizeof( float ) * 3 * 4 );
 }
 
-//-----------------------------------------------------------------------------
-// Matrix equality test
-//-----------------------------------------------------------------------------
-bool MatricesAreEqual( const matrix3x4_t &src1, const matrix3x4_t &src2, float flTolerance )
-{
-	for ( int i = 0; i < 3; ++i )
-	{
-		for ( int j = 0; j < 4; ++j )
-		{
-			if ( fabs( src1[i][j] - src2[i][j] ) > flTolerance )
-				return false;
-		}
-	}
-	return true;
-}
-
-// NOTE: This is just the transpose not a general inverse
 void MatrixInvert( const matrix3x4_t& in, matrix3x4_t& out )
 {
 	Assert( s_bMathlibInitialized );
 	if ( &in == &out )
 	{
-		V_swap(out[0][1],out[1][0]);
-		V_swap(out[0][2],out[2][0]);
-		V_swap(out[1][2],out[2][1]);
+		swap(out[0][1],out[1][0]);
+		swap(out[0][2],out[2][0]);
+		swap(out[1][2],out[2][1]);
 	}
 	else
 	{
-		// transpose the matrix
+		// I'm guessing this only works on a 3x4 orthonormal matrix
 		out[0][0] = in[0][0];
 		out[0][1] = in[1][0];
 		out[0][2] = in[2][0];
@@ -402,7 +1670,6 @@ void MatrixInvert( const matrix3x4_t& in, matrix3x4_t& out )
 		out[2][2] = in[2][2];
 	}
 
-	// now fix up the translation to be in the other space
 	float tmp[3];
 	tmp[0] = in[0][3];
 	tmp[1] = in[1][3];
@@ -427,33 +1694,6 @@ void MatrixSetColumn( const Vector &in, int column, matrix3x4_t& out )
 	out[2][column] = in.z;
 }
 
-void MatrixScaleBy ( const float flScale, matrix3x4_t &out )
-{
-	out[0][0] *= flScale;
-	out[1][0] *= flScale;
-	out[2][0] *= flScale;
-	out[0][1] *= flScale;
-	out[1][1] *= flScale;
-	out[2][1] *= flScale;
-	out[0][2] *= flScale;
-	out[1][2] *= flScale;
-	out[2][2] *= flScale;
-}
-
-void MatrixScaleByZero ( matrix3x4_t &out )
-{
-	out[0][0] = 0.0f;
-	out[1][0] = 0.0f;
-	out[2][0] = 0.0f;
-	out[0][1] = 0.0f;
-	out[1][1] = 0.0f;
-	out[2][1] = 0.0f;
-	out[0][2] = 0.0f;
-	out[1][2] = 0.0f;
-	out[2][2] = 0.0f;
-}
-
-
 
 int VectorCompare (const float *v1, const float *v2)
 {
@@ -467,6 +1707,145 @@ int VectorCompare (const float *v1, const float *v2)
 	return 1;
 }
 
+#if _WIN32
+_declspec(naked)
+#ifndef PFN_VECTORMA
+void VectorMA( const float *start, float scale, const float *direction, float *dest )
+#else
+void _VectorMA( const float *start, float scale, const float *direction, float *dest )
+#endif
+{
+	Assert( s_bMathlibInitialized );
+	_asm {
+		mov	eax, DWORD PTR [esp+0x04]	; *start, s0..s2
+		mov ecx, DWORD PTR [esp+0x0c]	; *direction, d0..d2
+		mov edx, DWORD PTR [esp+0x10]	; *dest
+		fld DWORD PTR [esp+0x08]		; sc
+		fld	DWORD PTR [eax]				; s0		| sc
+		fld DWORD PTR [ecx]				; d0		| s0	| sc
+		fld DWORD PTR [eax+4]			; s1		| d0	| s0	| sc
+		fld DWORD PTR [ecx+4]			; d1		| s1	| d0	| s0	| sc
+		fld DWORD PTR [eax+8]			; s2		| d1	| s1	| d0	| s0	| sc
+		fxch st(4)						; s0		| d1	| s1	| d0	| s2	| sc
+		fld DWORD PTR [ecx+8]			; d2		| s0	| d1	| s1	| d0	| s2	| sc
+		fxch st(4)						; d0		| s0	| d1	| s1	| d2	| s2	| sc
+		fmul st,st(6)					; d0*sc		| s0	| d1	| s1	| d2	| s2	| sc
+		fxch st(2)						; d1		| s0	| d0*sc	| s1	| d2	| s2	| sc
+		fmul st,st(6)					; d1*sc		| s0	| d0*sc	| s1	| d2	| s2	| sc
+		fxch st(4)						; d2 		| s0	| d0*sc	| s1	| d1*sc | s2	| sc
+		fmulp st(6),st					; s0		| d0*sc	| s1	| d1*sc	| s2	| d2*sc
+		faddp st(1),st					; s0+d0*sc	| s1	| d1*sc	| s2	| d2*sc
+		fstp DWORD PTR [edx]			; s1		| d1*sc	| s2	| d2*sc
+		faddp st(1),st					; s1+d1*sc	| s2	| d2*sc
+		fstp DWORD PTR [edx+4]			; s2		| d2*sc
+		faddp st(1),st					; s2+d2*sc
+		fstp DWORD PTR [edx+8]			; [Empty stack]
+		ret
+	}
+}
+#else
+#ifndef PFN_VECTORMA
+void VectorMA( const float *start, float scale, const float *direction, float *dest )
+#else
+void _VectorMA( const float *start, float scale, const float *direction, float *dest )
+#endif
+{
+	Assert( s_bMathlibInitialized );
+	dest[0] = start[0] + scale*direction[0];
+	dest[1] = start[1] + scale*direction[1];
+	dest[2] = start[2] + scale*direction[2];
+}
+#endif
+
+#ifdef _WIN32
+void 
+_declspec(naked)
+_SSE_VectorMA( const float *start, float scale, const float *direction, float *dest )
+{
+	// FIXME: This don't work!! It will overwrite memory in the write to dest
+	Assert(0);
+
+	Assert( s_bMathlibInitialized );
+	_asm {  // Intel SSE only routine
+		mov	eax, DWORD PTR [esp+0x04]	; *start, s0..s2
+		mov ecx, DWORD PTR [esp+0x0c]	; *direction, d0..d2
+		mov edx, DWORD PTR [esp+0x10]	; *dest
+		movss	xmm2, [esp+0x08]		; x2 = scale, 0, 0, 0
+#ifdef ALIGNED_VECTOR
+		movaps	xmm3, [ecx]				; x3 = dir0,dir1,dir2,X
+		pshufd	xmm2, xmm2, 0			; x2 = scale, scale, scale, scale
+		movaps	xmm1, [eax]				; x1 = start1, start2, start3, X
+		mulps	xmm3, xmm2				; x3 *= x2
+		addps	xmm3, xmm1				; x3 += x1
+		movaps	[edx], xmm3				; *dest = x3
+#else
+		movups	xmm3, [ecx]				; x3 = dir0,dir1,dir2,X
+		pshufd	xmm2, xmm2, 0			; x2 = scale, scale, scale, scale
+		movups	xmm1, [eax]				; x1 = start1, start2, start3, X
+		mulps	xmm3, xmm2				; x3 *= x2
+		addps	xmm3, xmm1				; x3 += x1
+		movups	[edx], xmm3				; *dest = x3
+#endif
+	}
+}
+#endif
+
+#ifdef OLD_DOTPRODUCT
+
+_declspec(naked)
+vec_t __cdecl DotProduct (const vec_t *a, const vec_t *c)
+{
+	Assert( s_bMathlibInitialized );
+	_asm {
+		mov	eax, DWORD PTR [esp+4]	; *a
+		mov ecx, DWORD PTR [esp+8]	; *c
+		fld DWORD PTR [eax]				; a0
+		fmul DWORD PTR [ecx]			; a0*c0
+		fld DWORD PTR [eax+4]			; a1	| a0*c0
+		fmul DWORD PTR [ecx+4]			; a1*c1	| a0*c0
+		fld DWORD PTR [eax+8]			; a2	| a1*c1 | a0*c0
+		fmul DWORD PTR [ecx+8]			; a2*c2	| a1*c1 | a0*c0
+		fxch st(2)						; a0*c0 | a1*c1 | a2*c2
+		faddp st(1), st					; a1*c1+a0*c0	| a2*c2
+		faddp st(1), st					; a2*c2+a0*c0+a1*c1
+		ret
+	}
+}
+
+#endif
+
+
+// SSE DotProduct -- it's a smidgen faster than the asm DotProduct...
+//   Should be validated too!  :)
+//   NJS: (Nov 1 2002) -NOT- faster.  may time a couple cycles faster in a single function like 
+//   this, but when inlined, and instruction scheduled, the C version is faster.  
+//   Verified this via VTune
+   
+/*
+vec_t DotProduct (const vec_t *a, const vec_t *c)
+{
+	vec_t temp;
+
+	__asm
+	{
+		mov eax, a;
+		mov ecx, c;
+		mov edx, DWORD PTR [temp]
+		movss xmm0, [eax];
+		mulss xmm0, [ecx];
+		movss xmm1, [eax+4];
+		mulss xmm1, [ecx+4];
+		movss xmm2, [eax+8];
+		mulss xmm2, [ecx+8];
+		addss xmm0, xmm1;
+		addss xmm0, xmm2;
+		movss [edx], xmm0;
+		fld DWORD PTR [edx];
+		ret
+	}
+}
+*/
+
 void CrossProduct (const float* v1, const float* v2, float* cross)
 {
 	Assert( s_bMathlibInitialized );
@@ -477,6 +1856,12 @@ void CrossProduct (const float* v1, const float* v2, float* cross)
 	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
 }
 
+
+
+
+
+
+
 int Q_log2(int val)
 {
 	int answer=0;
@@ -485,13 +1870,32 @@ int Q_log2(int val)
 	return answer;
 }
 
-// Matrix is right-handed x=forward, y=left, z=up.  We a left-handed convention for vectors in the game code (forward, right, up)
-void MatrixVectors( const matrix3x4_t &matrix, Vector* pForward, Vector *pRight, Vector *pUp )
+void VectorMatrix( const Vector &forward, matrix3x4_t& matrix)
 {
-	MatrixGetColumn( matrix, 0, *pForward );
-	MatrixGetColumn( matrix, 1, *pRight );
-	MatrixGetColumn( matrix, 2, *pUp );
-	*pRight *= -1.0f;
+	Assert( s_bMathlibInitialized );
+	Vector right, left, up, tmp;
+
+	if (forward[0] == 0 && forward[1] == 0)
+	{
+		// pitch 90 degrees up/down from identity
+		left[0] = 0;	
+		left[1] = 1; 
+		left[2] = 0;
+		up[0] = -forward[2]; // NOTE: This should be 1.0f or -1.0f, Assert?
+		up[1] = 0; 
+		up[2] = 0;
+	}
+	else
+	{
+		tmp[0] = 0; tmp[1] = 0; tmp[2] = 1.0;
+		CrossProduct( tmp, forward, left );
+		VectorNormalize( left );
+		CrossProduct( forward, left, up );
+		VectorNormalize( up );
+	}
+	MatrixSetColumn( forward, 0, matrix );
+	MatrixSetColumn( left, 1, matrix );
+	MatrixSetColumn( up, 2, matrix );
 }
 
 
@@ -519,18 +1923,6 @@ void VectorVectors( const Vector &forward, Vector &right, Vector &up )
 		VectorNormalize( up );
 	}
 }
-
-void VectorMatrix( const Vector &forward, matrix3x4_t& matrix)
-{
-	Assert( s_bMathlibInitialized );
-	Vector right, up;
-	VectorVectors(forward, right, up);
-
-	MatrixSetColumn( forward, 0, matrix );
-	MatrixSetColumn( -right, 1, matrix );
-	MatrixSetColumn( up, 2, matrix );
-}
-
 
 void VectorAngles( const float *forward, float *angles )
 {
@@ -593,128 +1985,53 @@ void ConcatRotations (const float in1[3][3], const float in2[3][3], float out[3]
 				in1[2][2] * in2[2][2];
 }
 
-void ConcatTransforms_Aligned( const matrix3x4_t &m0, const matrix3x4_t &m1, matrix3x4_t &out )
-{
-	Assert( (((size_t)&m0) % 16) == 0 );
-	Assert( (((size_t)&m1) % 16) == 0 );
-	Assert( (((size_t)&out) % 16) == 0 );
-
-	fltx4 lastMask = *(fltx4 *)(&g_SIMD_ComponentMask[3]);
-	fltx4 rowA0 = LoadAlignedSIMD( m0.m_flMatVal[0] );
-	fltx4 rowA1 = LoadAlignedSIMD( m0.m_flMatVal[1] );
-	fltx4 rowA2 = LoadAlignedSIMD( m0.m_flMatVal[2] );
-
-	fltx4 rowB0 = LoadAlignedSIMD( m1.m_flMatVal[0] );
-	fltx4 rowB1 = LoadAlignedSIMD( m1.m_flMatVal[1] );
-	fltx4 rowB2 = LoadAlignedSIMD( m1.m_flMatVal[2] );
-
-	// now we have the rows of m0 and the columns of m1
-	// first output row
-	fltx4 A0 = SplatXSIMD(rowA0);
-	fltx4 A1 = SplatYSIMD(rowA0);
-	fltx4 A2 = SplatZSIMD(rowA0);
-	fltx4 mul00 = MulSIMD( A0, rowB0 );
-	fltx4 mul01 = MulSIMD( A1, rowB1 );
-	fltx4 mul02 = MulSIMD( A2, rowB2 );
-	fltx4 out0 = AddSIMD( mul00, AddSIMD(mul01,mul02) );
-
-	// second output row
-	A0 = SplatXSIMD(rowA1);
-	A1 = SplatYSIMD(rowA1);
-	A2 = SplatZSIMD(rowA1);
-	fltx4 mul10 = MulSIMD( A0, rowB0 );
-	fltx4 mul11 = MulSIMD( A1, rowB1 );
-	fltx4 mul12 = MulSIMD( A2, rowB2 );
-	fltx4 out1 = AddSIMD( mul10, AddSIMD(mul11,mul12) );
-
-	// third output row
-	A0 = SplatXSIMD(rowA2);
-	A1 = SplatYSIMD(rowA2);
-	A2 = SplatZSIMD(rowA2);
-	fltx4 mul20 = MulSIMD( A0, rowB0 );
-	fltx4 mul21 = MulSIMD( A1, rowB1 );
-	fltx4 mul22 = MulSIMD( A2, rowB2 );
-	fltx4 out2 = AddSIMD( mul20, AddSIMD(mul21,mul22) );
-
-	// add in translation vector
-	A0 = AndSIMD(rowA0,lastMask);
-	A1 = AndSIMD(rowA1,lastMask);
-	A2 = AndSIMD(rowA2,lastMask);
-	out0 = AddSIMD(out0, A0);
-	out1 = AddSIMD(out1, A1);
-	out2 = AddSIMD(out2, A2);
-
-	StoreAlignedSIMD( out.m_flMatVal[0], out0 );
-	StoreAlignedSIMD( out.m_flMatVal[1], out1 );
-	StoreAlignedSIMD( out.m_flMatVal[2], out2 );
-}
 
 /*
 ================
 R_ConcatTransforms
 ================
 */
-
 void ConcatTransforms (const matrix3x4_t& in1, const matrix3x4_t& in2, matrix3x4_t& out)
 {
-#if 0
-	// test for ones that'll be 2x faster
-	if ( (((size_t)&in1) % 16) == 0 && (((size_t)&in2) % 16) == 0 && (((size_t)&out) % 16) == 0 )
+	Assert( s_bMathlibInitialized );
+	if ( &in1 == &out )
 	{
-		ConcatTransforms_Aligned( in1, in2, out );
+		matrix3x4_t in1b;
+		MatrixCopy( in1, in1b );
+		ConcatTransforms( in1b, in2, out );
 		return;
 	}
-#endif
-
-	fltx4 lastMask = *(fltx4 *)(&g_SIMD_ComponentMask[3]);
-	fltx4 rowA0 = LoadUnalignedSIMD( in1.m_flMatVal[0] );
-	fltx4 rowA1 = LoadUnalignedSIMD( in1.m_flMatVal[1] );
-	fltx4 rowA2 = LoadUnalignedSIMD( in1.m_flMatVal[2] );
-
-	fltx4 rowB0 = LoadUnalignedSIMD( in2.m_flMatVal[0] );
-	fltx4 rowB1 = LoadUnalignedSIMD( in2.m_flMatVal[1] );
-	fltx4 rowB2 = LoadUnalignedSIMD( in2.m_flMatVal[2] );
-
-	// now we have the rows of m0 and the columns of m1
-	// first output row
-	fltx4 A0 = SplatXSIMD(rowA0);
-	fltx4 A1 = SplatYSIMD(rowA0);
-	fltx4 A2 = SplatZSIMD(rowA0);
-	fltx4 mul00 = MulSIMD( A0, rowB0 );
-	fltx4 mul01 = MulSIMD( A1, rowB1 );
-	fltx4 mul02 = MulSIMD( A2, rowB2 );
-	fltx4 out0 = AddSIMD( mul00, AddSIMD(mul01,mul02) );
-
-	// second output row
-	A0 = SplatXSIMD(rowA1);
-	A1 = SplatYSIMD(rowA1);
-	A2 = SplatZSIMD(rowA1);
-	fltx4 mul10 = MulSIMD( A0, rowB0 );
-	fltx4 mul11 = MulSIMD( A1, rowB1 );
-	fltx4 mul12 = MulSIMD( A2, rowB2 );
-	fltx4 out1 = AddSIMD( mul10, AddSIMD(mul11,mul12) );
-
-	// third output row
-	A0 = SplatXSIMD(rowA2);
-	A1 = SplatYSIMD(rowA2);
-	A2 = SplatZSIMD(rowA2);
-	fltx4 mul20 = MulSIMD( A0, rowB0 );
-	fltx4 mul21 = MulSIMD( A1, rowB1 );
-	fltx4 mul22 = MulSIMD( A2, rowB2 );
-	fltx4 out2 = AddSIMD( mul20, AddSIMD(mul21,mul22) );
-
-	// add in translation vector
-	A0 = AndSIMD(rowA0,lastMask);
-	A1 = AndSIMD(rowA1,lastMask);
-	A2 = AndSIMD(rowA2,lastMask);
-	out0 = AddSIMD(out0, A0);
-	out1 = AddSIMD(out1, A1);
-	out2 = AddSIMD(out2, A2);
-
-	// write to output
-	StoreUnalignedSIMD( out.m_flMatVal[0], out0 );
-	StoreUnalignedSIMD( out.m_flMatVal[1], out1 );
-	StoreUnalignedSIMD( out.m_flMatVal[2], out2 );
+	if ( &in2 == &out )
+	{
+		matrix3x4_t in2b;
+		MatrixCopy( in2, in2b );
+		ConcatTransforms( in1, in2b, out );
+		return;
+	}
+	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] +
+				in1[0][2] * in2[2][0];
+	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] +
+				in1[0][2] * in2[2][1];
+	out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] +
+				in1[0][2] * in2[2][2];
+	out[0][3] = in1[0][0] * in2[0][3] + in1[0][1] * in2[1][3] +
+				in1[0][2] * in2[2][3] + in1[0][3];
+	out[1][0] = in1[1][0] * in2[0][0] + in1[1][1] * in2[1][0] +
+				in1[1][2] * in2[2][0];
+	out[1][1] = in1[1][0] * in2[0][1] + in1[1][1] * in2[1][1] +
+				in1[1][2] * in2[2][1];
+	out[1][2] = in1[1][0] * in2[0][2] + in1[1][1] * in2[1][2] +
+				in1[1][2] * in2[2][2];
+	out[1][3] = in1[1][0] * in2[0][3] + in1[1][1] * in2[1][3] +
+				in1[1][2] * in2[2][3] + in1[1][3];
+	out[2][0] = in1[2][0] * in2[0][0] + in1[2][1] * in2[1][0] +
+				in1[2][2] * in2[2][0];
+	out[2][1] = in1[2][0] * in2[0][1] + in1[2][1] * in2[1][1] +
+				in1[2][2] * in2[2][1];
+	out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] +
+				in1[2][2] * in2[2][2];
+	out[2][3] = in1[2][0] * in2[0][3] + in1[2][1] * in2[1][3] +
+				in1[2][2] * in2[2][3] + in1[2][3];
 }
 
 
@@ -753,9 +2070,9 @@ void FloorDivMod (double numer, double denom, int *quotient,
 	}
 	else
 	{
-		//
-		// perform operations with positive values, and fix mod to make floor-based
-		//
+	//
+	// perform operations with positive values, and fix mod to make floor-based
+	//
 		x = floor(-numer / denom);
 		q = -(int)x;
 		r = Floor2Int(-numer - (x * denom));
@@ -803,6 +2120,84 @@ bool IsDenormal( const float &val )
 	return  ( biased_exponent == 0 && abs_mantissa != 0 );
 }
 
+
+// ************************************** SPECIAL NOTE *******************************************************
+// IFF you find this code to be PROBLEMATIC, PLEASE "#if 0" this and send email to "tkback@valvesoftware.com
+// Note what machine this happened on and BUILD a debug version of the binary and see if it catches the problem.
+// ***********************************************************************************************************
+
+#if 0
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// This code is an TEST OPTIMIZATION for float -> long.  DISABLE this (use MSVCRT ver) if it causes problems.
+// 
+ 
+// WARNING!!!  This is an experimental replacement for the compiler intrinsic "_ftol()'
+// This code is called whenever there is a float to int conversion in c code.
+// Try this 80x87 specific FPU conversion trick!  (This normally does a ROUND during FISTP by default)
+// If positive, we subtract 0.5 before doing a round() which equals floor() for positive values
+// If negative, we add 0.5 before doing a round() which equals ceil() for negative values.
+// Together, this simulates "chop to zero" even when the FPU is in normal rounding mode.
+
+// The following two values should be "cache line aligned" ie. align 16.
+const unsigned long FPU_HALF    = 0x3EFFFFFFL;
+const unsigned long	FPU_MAGIC	= 0x59C00000L;
+
+long int
+__declspec( naked ) 
+__cdecl _ftol()
+{
+#ifdef _DEBUG
+
+// Turn off "Debug Multitreaded C Runtime Lib use in release mode" to avoid this.(why debug?)
+//#ifdef NDEBUG
+//#error Both _DEBUG and NDEBUG set!
+//#endif
+
+	Assert( s_bMathlibInitialized );
+	// Make sure that we are in 64-bit precision(53-bit mantissa) FPU mode. _ftol() needs 64bit.
+	_asm {
+		fnstcw	word ptr [esp-4]
+		and		word ptr [esp-4], 0x0300
+		cmp		word ptr [esp-4], 0x0200	; Precision bits.  Must be 0x0200
+		je		short good_precision
+		int		3				; WRONG Precision set on FPU!!!  s/b >32bit Internally.
+good_precision:
+	}
+#endif
+
+	// Start the float to long conversion
+	_asm {								; farg
+		ftst
+		fnstsw ax
+		sahf
+		jbe short negative
+
+		fsub DWORD PTR [FPU_HALF]		; Subtract 0.5 from positive float, this changes round() to floor()!
+		fadd DWORD PTR [FPU_MAGIC]		; Adjust the mantissa to have the "int" in the low bits.
+		fstp QWORD PTR [esp-0Ch]		; Write out the floating point value in 64 bit double format
+		mov	eax, DWORD PTR [esp-0Ch]	; Grab the low 32 bits of the mantissa which have our "int".
+		ret
+
+negative:
+		fadd DWORD PTR [FPU_HALF]		; Add 0.5 to Negative float, this changes round() to floor()!
+		fadd DWORD PTR [FPU_MAGIC]		; Adjust the mantissa to have the "int" in the low bits.
+		fstp QWORD PTR [esp-0Ch]		; Write out the floating point value in 64 bit double format
+		mov	eax, DWORD PTR [esp-0Ch]	; Grab the low 32 bits of the mantissa which have our "int".
+		ret
+
+	}
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+
 int SignbitsForPlane (cplane_t *out)
 {
 	Assert( s_bMathlibInitialized );
@@ -819,6 +2214,7 @@ int SignbitsForPlane (cplane_t *out)
 	return bits;
 }
 
+
 /*
 ==================
 BoxOnPlaneSide
@@ -826,13 +2222,14 @@ BoxOnPlaneSide
 Returns 1, 2, or 1 + 2
 ==================
 */
+#if 1 || !id386 || defined _LINUX
 int __cdecl BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *p)
 {
 	Assert( s_bMathlibInitialized );
 	float	dist1, dist2;
 	int		sides;
 
-	// fast axial cases
+// fast axial cases
 	if (p->type < 3)
 	{
 		if (p->dist <= emins[p->type])
@@ -842,40 +2239,40 @@ int __cdecl BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane
 		return 3;
 	}
 	
-	// general case
+// general case
 	switch (p->signbits)
 	{
 	case 0:
-		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
 		break;
 	case 1:
-		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
 		break;
 	case 2:
-		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
 		break;
 	case 3:
-		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
 		break;
 	case 4:
-		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
 		break;
 	case 5:
-		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
 		break;
 	case 6:
-		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
 		break;
 	case 7:
-		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
 		break;
 	default:
 		dist1 = dist2 = 0;		// shut up compiler
@@ -893,6 +2290,339 @@ int __cdecl BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane
 
 	return sides;
 }
+#else
+#pragma warning( disable: 4035 )
+
+__declspec( naked ) int __cdecl BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *p)
+{
+	Assert( s_bMathlibInitialized );
+	static int bops_initialized;
+	static int Ljmptab[8];
+
+	__asm {
+
+		push ebx
+			
+		cmp bops_initialized, 1
+		je  initialized
+		mov bops_initialized, 1
+		
+		mov Ljmptab[0*4], offset Lcase0
+		mov Ljmptab[1*4], offset Lcase1
+		mov Ljmptab[2*4], offset Lcase2
+		mov Ljmptab[3*4], offset Lcase3
+		mov Ljmptab[4*4], offset Lcase4
+		mov Ljmptab[5*4], offset Lcase5
+		mov Ljmptab[6*4], offset Lcase6
+		mov Ljmptab[7*4], offset Lcase7
+			
+initialized:
+
+		mov edx,ds:dword ptr[4+12+esp]
+		mov ecx,ds:dword ptr[4+4+esp]
+		xor eax,eax
+		mov ebx,ds:dword ptr[4+8+esp]
+		mov al,ds:byte ptr[17+edx]
+		cmp al,8
+		jge Lerror
+		fld ds:dword ptr[0+edx]
+		fld st(0)
+		jmp dword ptr[Ljmptab+eax*4]
+Lcase0:
+		fmul ds:dword ptr[ebx]
+		fld ds:dword ptr[0+4+edx]
+		fxch st(2)
+		fmul ds:dword ptr[ecx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[4+ebx]
+		fld ds:dword ptr[0+8+edx]
+		fxch st(2)
+		fmul ds:dword ptr[4+ecx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[8+ebx]
+		fxch st(5)
+		faddp st(3),st(0)
+		fmul ds:dword ptr[8+ecx]
+		fxch st(1)
+		faddp st(3),st(0)
+		fxch st(3)
+		faddp st(2),st(0)
+		jmp LSetSides
+Lcase1:
+		fmul ds:dword ptr[ecx]
+		fld ds:dword ptr[0+4+edx]
+		fxch st(2)
+		fmul ds:dword ptr[ebx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[4+ebx]
+		fld ds:dword ptr[0+8+edx]
+		fxch st(2)
+		fmul ds:dword ptr[4+ecx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[8+ebx]
+		fxch st(5)
+		faddp st(3),st(0)
+		fmul ds:dword ptr[8+ecx]
+		fxch st(1)
+		faddp st(3),st(0)
+		fxch st(3)
+		faddp st(2),st(0)
+		jmp LSetSides
+Lcase2:
+		fmul ds:dword ptr[ebx]
+		fld ds:dword ptr[0+4+edx]
+		fxch st(2)
+		fmul ds:dword ptr[ecx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[4+ecx]
+		fld ds:dword ptr[0+8+edx]
+		fxch st(2)
+		fmul ds:dword ptr[4+ebx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[8+ebx]
+		fxch st(5)
+		faddp st(3),st(0)
+		fmul ds:dword ptr[8+ecx]
+		fxch st(1)
+		faddp st(3),st(0)
+		fxch st(3)
+		faddp st(2),st(0)
+		jmp LSetSides
+Lcase3:
+		fmul ds:dword ptr[ecx]
+		fld ds:dword ptr[0+4+edx]
+		fxch st(2)
+		fmul ds:dword ptr[ebx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[4+ecx]
+		fld ds:dword ptr[0+8+edx]
+		fxch st(2)
+		fmul ds:dword ptr[4+ebx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[8+ebx]
+		fxch st(5)
+		faddp st(3),st(0)
+		fmul ds:dword ptr[8+ecx]
+		fxch st(1)
+		faddp st(3),st(0)
+		fxch st(3)
+		faddp st(2),st(0)
+		jmp LSetSides
+Lcase4:
+		fmul ds:dword ptr[ebx]
+		fld ds:dword ptr[0+4+edx]
+		fxch st(2)
+		fmul ds:dword ptr[ecx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[4+ebx]
+		fld ds:dword ptr[0+8+edx]
+		fxch st(2)
+		fmul ds:dword ptr[4+ecx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[8+ecx]
+		fxch st(5)
+		faddp st(3),st(0)
+		fmul ds:dword ptr[8+ebx]
+		fxch st(1)
+		faddp st(3),st(0)
+		fxch st(3)
+		faddp st(2),st(0)
+		jmp LSetSides
+Lcase5:
+		fmul ds:dword ptr[ecx]
+		fld ds:dword ptr[0+4+edx]
+		fxch st(2)
+		fmul ds:dword ptr[ebx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[4+ebx]
+		fld ds:dword ptr[0+8+edx]
+		fxch st(2)
+		fmul ds:dword ptr[4+ecx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[8+ecx]
+		fxch st(5)
+		faddp st(3),st(0)
+		fmul ds:dword ptr[8+ebx]
+		fxch st(1)
+		faddp st(3),st(0)
+		fxch st(3)
+		faddp st(2),st(0)
+		jmp LSetSides
+Lcase6:
+		fmul ds:dword ptr[ebx]
+		fld ds:dword ptr[0+4+edx]
+		fxch st(2)
+		fmul ds:dword ptr[ecx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[4+ecx]
+		fld ds:dword ptr[0+8+edx]
+		fxch st(2)
+		fmul ds:dword ptr[4+ebx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[8+ecx]
+		fxch st(5)
+		faddp st(3),st(0)
+		fmul ds:dword ptr[8+ebx]
+		fxch st(1)
+		faddp st(3),st(0)
+		fxch st(3)
+		faddp st(2),st(0)
+		jmp LSetSides
+Lcase7:
+		fmul ds:dword ptr[ecx]
+		fld ds:dword ptr[0+4+edx]
+		fxch st(2)
+		fmul ds:dword ptr[ebx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[4+ecx]
+		fld ds:dword ptr[0+8+edx]
+		fxch st(2)
+		fmul ds:dword ptr[4+ebx]
+		fxch st(2)
+		fld st(0)
+		fmul ds:dword ptr[8+ecx]
+		fxch st(5)
+		faddp st(3),st(0)
+		fmul ds:dword ptr[8+ebx]
+		fxch st(1)
+		faddp st(3),st(0)
+		fxch st(3)
+		faddp st(2),st(0)
+LSetSides:
+		faddp st(2),st(0)
+		fcomp ds:dword ptr[12+edx]
+		xor ecx,ecx
+		fnstsw ax
+		fcomp ds:dword ptr[12+edx]
+		and ah,1
+		xor ah,1
+		add cl,ah
+		fnstsw ax
+		and ah,1
+		add ah,ah
+		add cl,ah
+		pop ebx
+		mov eax,ecx
+		ret
+Lerror:
+		int 3
+	}
+}
+#pragma warning( default: 4035 )
+#endif
+
+
+
+
+
+
+
+//-----------------------------------------------------------------------------
+// VectorMA routines
+//-----------------------------------------------------------------------------
+
+#if _WIN32
+_declspec(naked)
+	#if PFN_VECTORMA
+void __cdecl _VectorMA( const Vector &start, float scale, const Vector &direction, Vector &dest )
+    #else
+void __cdecl VectorMA( const Vector &start, float scale, const Vector &direction, Vector &dest )
+	#endif
+{
+	Assert( s_bMathlibInitialized );
+	_asm {
+		mov	eax, DWORD PTR [esp+0x04]	; *start, s0..s2
+		mov ecx, DWORD PTR [esp+0x0c]	; *direction, d0..d2
+		mov edx, DWORD PTR [esp+0x10]	; *dest
+		fld DWORD PTR [esp+0x08]		; sc
+		fld	DWORD PTR [eax]				; s0		| sc
+		fld DWORD PTR [ecx]				; d0		| s0	| sc
+		fld DWORD PTR [eax+4]			; s1		| d0	| s0	| sc
+		fld DWORD PTR [ecx+4]			; d1		| s1	| d0	| s0	| sc
+		fld DWORD PTR [eax+8]			; s2		| d1	| s1	| d0	| s0	| sc
+		fxch st(4)						; s0		| d1	| s1	| d0	| s2	| sc
+		fld DWORD PTR [ecx+8]			; d2		| s0	| d1	| s1	| d0	| s2	| sc
+		fxch st(4)						; d0		| s0	| d1	| s1	| d2	| s2	| sc
+		fmul st,st(6)					; d0*sc		| s0	| d1	| s1	| d2	| s2	| sc
+		fxch st(2)						; d1		| s0	| d0*sc	| s1	| d2	| s2	| sc
+		fmul st,st(6)					; d1*sc		| s0	| d0*sc	| s1	| d2	| s2	| sc
+		fxch st(4)						; d2 		| s0	| d0*sc	| s1	| d1*sc | s2	| sc
+		fmulp st(6),st					; s0		| d0*sc	| s1	| d1*sc	| s2	| d2*sc
+		faddp st(1),st					; s0+d0*sc	| s1	| d1*sc	| s2	| d2*sc
+		fstp DWORD PTR [edx]			; s1		| d1*sc	| s2	| d2*sc
+		faddp st(1),st					; s1+d1*sc	| s2	| d2*sc
+		fstp DWORD PTR [edx+4]			; s2		| d2*sc
+		faddp st(1),st					; s2+d2*sc
+		fstp DWORD PTR [edx+8]			; [Empty stack]
+		ret
+	}
+}
+#else
+	#if PFN_VECTORMA
+void __cdecl _VectorMA( const Vector &start, float scale, const Vector &direction, Vector &dest )
+    #else
+void __cdecl VectorMA( const Vector &start, float scale, const Vector &direction, Vector &dest )
+	#endif
+{
+	Assert( s_bMathlibInitialized );
+	dest[0] = start[0] + scale*direction[0];
+	dest[1] = start[1] + scale*direction[1];
+	dest[2] = start[2] + scale*direction[2];
+}
+#endif
+
+#ifdef _WIN32
+#if PFN_VECTORMA
+void 
+_declspec(naked)
+__cdecl _SSE_VectorMA( const Vector &start, float scale, const Vector &direction, Vector &dest )
+{
+	// FIXME: This don't work!! It will overwrite memory in the write to dest
+	Assert(0);
+	Assert( s_bMathlibInitialized );
+	_asm 
+	{  
+		// Intel SSE only routine
+		mov	eax, DWORD PTR [esp+0x04]	; *start, s0..s2
+		mov ecx, DWORD PTR [esp+0x0c]	; *direction, d0..d2
+		mov edx, DWORD PTR [esp+0x10]	; *dest
+		movss	xmm2, [esp+0x08]		; x2 = scale, 0, 0, 0
+#ifdef ALIGNED_VECTOR
+		movaps	xmm3, [ecx]				; x3 = dir0,dir1,dir2,X
+		pshufd	xmm2, xmm2, 0			; x2 = scale, scale, scale, scale
+		movaps	xmm1, [eax]				; x1 = start1, start2, start3, X
+		mulps	xmm3, xmm2				; x3 *= x2
+		addps	xmm3, xmm1				; x3 += x1
+		movaps	[edx], xmm3				; *dest = x3
+#else
+		movups	xmm3, [ecx]				; x3 = dir0,dir1,dir2,X
+		pshufd	xmm2, xmm2, 0			; x2 = scale, scale, scale, scale
+		movups	xmm1, [eax]				; x1 = start1, start2, start3, X
+		mulps	xmm3, xmm2				; x3 *= x2
+		addps	xmm3, xmm1				; x3 += x1
+		movups	[edx], xmm3				; *dest = x3
+#endif
+	}
+}
+
+float (__cdecl *pfVectorMA)(Vector& v) = _VectorMA;
+#endif
+#endif
 
 //-----------------------------------------------------------------------------
 // Euler QAngle -> Basis Vectors
@@ -913,28 +2643,14 @@ void AngleVectors (const QAngle &angles, Vector *forward)
 	forward->z = -sp;
 }
 
-//-----------------------------------------------------------------------------
-// Euler QAngle -> Basis Vectors.  Each vector is optional
-//-----------------------------------------------------------------------------
-void AngleVectors( const QAngle &angles, Vector *forward, Vector *right, Vector *up )
+void AngleVectors (const QAngle &angles, Vector *forward, Vector *right, Vector *up)
 {
 	Assert( s_bMathlibInitialized );
-	
 	float sr, sp, sy, cr, cp, cy;
-
-#ifdef _X360
-	fltx4 radians, scale, sine, cosine;
-	radians = LoadUnaligned3SIMD( angles.Base() );
-	scale = ReplicateX4( M_PI_F / 180.f ); 
-	radians = MulSIMD( radians, scale );
-	SinCos3SIMD( sine, cosine, radians ); 	
-	sp = SubFloat( sine, 0 );	sy = SubFloat( sine, 1 );	sr = SubFloat( sine, 2 );
-	cp = SubFloat( cosine, 0 );	cy = SubFloat( cosine, 1 );	cr = SubFloat( cosine, 2 );
-#else
+	
 	SinCos( DEG2RAD( angles[YAW] ), &sy, &cy );
 	SinCos( DEG2RAD( angles[PITCH] ), &sp, &cp );
 	SinCos( DEG2RAD( angles[ROLL] ), &sr, &cr );
-#endif
 
 	if (forward)
 	{
@@ -1037,7 +2753,7 @@ void VectorAngles( const Vector &forward, const Vector &pseudoup, QAngle &angles
 
 	Vector left;
 
-	CrossProduct( pseudoup, forward, left );
+	CrossProduct( forward, pseudoup, left );
 	VectorNormalizeFast( left );		
 	
 	float xyDist = sqrtf( forward[0] * forward[0] + forward[1] * forward[1] );
@@ -1053,7 +2769,7 @@ void VectorAngles( const Vector &forward, const Vector &pseudoup, QAngle &angles
 		// (pitch)	x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
 		angles[0] = RAD2DEG( atan2f( -forward[2], xyDist ) );
 
-		float up_z = (left[1] * forward[0]) - (left[0] * forward[1]);
+		float up_z = (left[0] * forward[1]) - (left[1] * forward[0]);
 
 		// (roll)	z = ATAN( left.z, up.z );
 		angles[2] = RAD2DEG( atan2f( left[2], up_z ) );
@@ -1061,7 +2777,7 @@ void VectorAngles( const Vector &forward, const Vector &pseudoup, QAngle &angles
 	else	// forward is mostly Z, gimbal lock-
 	{
 		// (yaw)	y = ATAN( -left.x, left.y );			-- forward is mostly z, so use right for yaw
-		angles[1] = RAD2DEG( atan2f( -left[0], left[1] ) ); //This was originally copied from the "void MatrixAngles( const matrix3x4_t& matrix, float *angles )" code, and it's 180 degrees off, negated the values and it all works now (Dave Kircher)
+		angles[1] = RAD2DEG( atan2f( left[0], -left[1] ) ); //This was originally copied from the "void MatrixAngles( const matrix3x4_t& matrix, float *angles )" code, and it's 180 degrees off, negated the values and it all works now (Dave Kircher)
 
 		// The engine does pitch inverted from this, but we always end up negating it in the DLL
 		// UNDONE: Fix the engine to make it consistent
@@ -1080,87 +2796,6 @@ void SetIdentityMatrix( matrix3x4_t& matrix )
 	matrix[1][1] = 1.0;
 	matrix[2][2] = 1.0;
 }
-
-
-//-----------------------------------------------------------------------------
-// Builds a scale matrix
-//-----------------------------------------------------------------------------
-void SetScaleMatrix( float x, float y, float z, matrix3x4_t &dst )
-{
-	dst[0][0] = x;		dst[0][1] = 0.0f;	dst[0][2] = 0.0f;	dst[0][3] = 0.0f;
-	dst[1][0] = 0.0f;	dst[1][1] = y;		dst[1][2] = 0.0f;	dst[1][3] = 0.0f;
-	dst[2][0] = 0.0f;	dst[2][1] = 0.0f;	dst[2][2] = z;		dst[2][3] = 0.0f;
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Builds the matrix for a counterclockwise rotation about an arbitrary axis.
-//
-//		   | ax2 + (1 - ax2)cosQ		axay(1 - cosQ) - azsinQ		azax(1 - cosQ) + aysinQ |
-// Ra(Q) = | axay(1 - cosQ) + azsinQ	ay2 + (1 - ay2)cosQ			ayaz(1 - cosQ) - axsinQ |
-//		   | azax(1 - cosQ) - aysinQ	ayaz(1 - cosQ) + axsinQ		az2 + (1 - az2)cosQ     |
-//          
-// Input  : mat - 
-//			vAxisOrRot - 
-//			angle - 
-//-----------------------------------------------------------------------------
-void MatrixBuildRotationAboutAxis( const Vector &vAxisOfRot, float angleDegrees, matrix3x4_t &dst )
-{
-	float radians;
-	float axisXSquared;
-	float axisYSquared;
-	float axisZSquared;
-	float fSin;
-	float fCos;
-
-	radians = angleDegrees * ( M_PI / 180.0 );
-	fSin = sin( radians );
-	fCos = cos( radians );
-
-	axisXSquared = vAxisOfRot[0] * vAxisOfRot[0];
-	axisYSquared = vAxisOfRot[1] * vAxisOfRot[1];
-	axisZSquared = vAxisOfRot[2] * vAxisOfRot[2];
-
-	// Column 0:
-	dst[0][0] = axisXSquared + (1 - axisXSquared) * fCos;
-	dst[1][0] = vAxisOfRot[0] * vAxisOfRot[1] * (1 - fCos) + vAxisOfRot[2] * fSin;
-	dst[2][0] = vAxisOfRot[2] * vAxisOfRot[0] * (1 - fCos) - vAxisOfRot[1] * fSin;
-
-	// Column 1:
-	dst[0][1] = vAxisOfRot[0] * vAxisOfRot[1] * (1 - fCos) - vAxisOfRot[2] * fSin;
-	dst[1][1] = axisYSquared + (1 - axisYSquared) * fCos;
-	dst[2][1] = vAxisOfRot[1] * vAxisOfRot[2] * (1 - fCos) + vAxisOfRot[0] * fSin;
-
-	// Column 2:
-	dst[0][2] = vAxisOfRot[2] * vAxisOfRot[0] * (1 - fCos) + vAxisOfRot[1] * fSin;
-	dst[1][2] = vAxisOfRot[1] * vAxisOfRot[2] * (1 - fCos) - vAxisOfRot[0] * fSin;
-	dst[2][2] = axisZSquared + (1 - axisZSquared) * fCos;
-
-	// Column 3:
-	dst[0][3] = 0;
-	dst[1][3] = 0;
-	dst[2][3] = 0;
-}
-
-
-//-----------------------------------------------------------------------------
-// Computes the transpose
-//-----------------------------------------------------------------------------
-void MatrixTranspose( matrix3x4_t& mat )
-{
-	vec_t tmp;
-	tmp = mat[0][1]; mat[0][1] = mat[1][0]; mat[1][0] = tmp;
-	tmp = mat[0][2]; mat[0][2] = mat[2][0]; mat[2][0] = tmp;
-	tmp = mat[1][2]; mat[1][2] = mat[2][1]; mat[2][1] = tmp;
-}
-
-void MatrixTranspose( const matrix3x4_t& src, matrix3x4_t& dst )
-{
-	dst[0][0] = src[0][0]; dst[0][1] = src[1][0]; dst[0][2] = src[2][0]; dst[0][3] = 0.0f;
-	dst[1][0] = src[0][1]; dst[1][1] = src[1][1]; dst[1][2] = src[2][1]; dst[1][3] = 0.0f;
-	dst[2][0] = src[0][2]; dst[2][1] = src[1][2]; dst[2][2] = src[2][2]; dst[2][3] = 0.0f;
-}
-
 
 //-----------------------------------------------------------------------------
 // Purpose: converts engine euler angles into a matrix
@@ -1197,44 +2832,25 @@ void AngleMatrix( const QAngle &angles, matrix3x4_t& matrix )
 	VPROF_BUDGET( "AngleMatrix", "Mathlib" );
 #endif
 	Assert( s_bMathlibInitialized );
+	float		sr, sp, sy, cr, cp, cy;
 
-	float sr, sp, sy, cr, cp, cy;
-
-#ifdef _X360
-	fltx4 radians, scale, sine, cosine;
-	radians = LoadUnaligned3SIMD( angles.Base() );
-	scale = ReplicateX4( M_PI_F / 180.f ); 
-	radians = MulSIMD( radians, scale );
-	SinCos3SIMD( sine, cosine, radians ); 	
-
-	sp = SubFloat( sine, 0 );	sy = SubFloat( sine, 1 );	sr = SubFloat( sine, 2 );
-	cp = SubFloat( cosine, 0 );	cy = SubFloat( cosine, 1 );	cr = SubFloat( cosine, 2 );
-#else
 	SinCos( DEG2RAD( angles[YAW] ), &sy, &cy );
 	SinCos( DEG2RAD( angles[PITCH] ), &sp, &cp );
 	SinCos( DEG2RAD( angles[ROLL] ), &sr, &cr );
-#endif
 
 	// matrix = (YAW * PITCH) * ROLL
 	matrix[0][0] = cp*cy;
 	matrix[1][0] = cp*sy;
 	matrix[2][0] = -sp;
-
-	float crcy = cr*cy;
-	float crsy = cr*sy;
-	float srcy = sr*cy;
-	float srsy = sr*sy;
-	matrix[0][1] = sp*srcy-crsy;
-	matrix[1][1] = sp*srsy+crcy;
+	matrix[0][1] = sr*sp*cy+cr*-sy;
+	matrix[1][1] = sr*sp*sy+cr*cy;
 	matrix[2][1] = sr*cp;
-
-	matrix[0][2] = (sp*crcy+srsy);
-	matrix[1][2] = (sp*crsy-srcy);
+	matrix[0][2] = (cr*sp*cy+-sr*-sy);
+	matrix[1][2] = (cr*sp*sy+-sr*cy);
 	matrix[2][2] = cr*cp;
-
-	matrix[0][3] = 0.0f;
-	matrix[1][3] = 0.0f;
-	matrix[2][3] = 0.0f;
+	matrix[0][3] = 0.f;
+	matrix[1][3] = 0.f;
+	matrix[2][3] = 0.f;
 }
 
 void AngleIMatrix( const RadianEuler& angles, matrix3x4_t& matrix )
@@ -1280,6 +2896,35 @@ void AngleIMatrix (const QAngle &angles, const Vector &position, matrix3x4_t &ma
 
 
 //-----------------------------------------------------------------------------
+// Intersects a sphere against an axis aligned box
+//-----------------------------------------------------------------------------
+bool SphereToAABBIntersection( const Vector& sphCenter, float sphRadius, 
+			   				   const Vector& boxMin, const Vector& boxMax )
+{
+	Assert( s_bMathlibInitialized );
+	int		i;
+	float	s;
+	float	dist = 0;
+
+	for( i = 0; i < 3; i++ )
+	{
+		if( sphCenter[i] < boxMin[i] )
+		{
+			s = sphCenter[i] - boxMin[i];
+			dist += s * s;
+		}
+		else if( sphCenter[i] > boxMax[i] )
+		{
+			s = sphCenter[i] - boxMax[i];
+			dist += s * s;
+		}
+	}
+	
+	return ( dist <= ( sphRadius * sphRadius ) );
+}
+
+
+//-----------------------------------------------------------------------------
 // Bounding box construction methods
 //-----------------------------------------------------------------------------
 
@@ -1304,6 +2949,265 @@ void AddPointToBounds (const Vector& v, Vector& mins, Vector& maxs)
 		if (val > maxs[i])
 			maxs[i] = val;
 	}
+}
+
+
+
+//-----------------------------------------------------------------------------
+// Gamma conversion support
+//-----------------------------------------------------------------------------
+static byte		texgammatable[256];	// palette is sent through this to convert to screen gamma
+
+static float	texturetolinear[256];	// texture (0..255) to linear (0..1)
+static int		lineartotexture[1024];	// linear (0..1) to texture (0..255)
+static int		lineartoscreen[1024];	// linear (0..1) to gamma corrected vertex light (0..255)
+
+// build a lightmap texture to combine with surface texture, adjust for src*dst+dst*src, ramp reprogramming, etc
+float			lineartovertex[4096];	// linear (0..4) to screen corrected vertex space (0..1?)
+unsigned char	lineartolightmap[4096];	// linear (0..4) to screen corrected texture value (0..255)
+
+static float	g_Mathlib_GammaToLinear[256];	// gamma (0..1) to linear (0..1)
+static float	g_Mathlib_LinearToGamma[256];	// linear (0..1) to gamma (0..1)
+
+float	power2_n[256];			// 2**(index - 128)
+
+void BuildExponentTable( )
+{
+	for( int i = 0; i < 256; i++ )
+	{
+		power2_n[i] = pow( 2.0f, i - 128 ) / 255.0f;
+	}
+}
+
+void BuildGammaTable( float gamma, float texGamma, float brightness, int overbright )
+{
+	int		i, inf;
+	float	g1, g3;
+
+	// Con_Printf("BuildGammaTable %.1f %.1f %.1f\n", g, v_lightgamma.GetFloat(), v_texgamma.GetFloat() );
+
+	float g = gamma;
+	if (g > 3.0) 
+	{
+		g = 3.0;
+	}
+
+	g = 1.0 / g;
+	g1 = texGamma * g; 
+
+	if (brightness <= 0.0) 
+	{
+		g3 = 0.125;
+	}
+	else if (brightness > 1.0) 
+	{
+		g3 = 0.05;
+	}
+	else 
+	{
+		g3 = 0.125 - (brightness * brightness) * 0.075;
+	}
+
+	for (i=0 ; i<256 ; i++)
+	{
+		inf = 255 * pow ( i/255.f, g1 ); 
+		if (inf < 0)
+			inf = 0;
+		if (inf > 255)
+			inf = 255;
+		texgammatable[i] = inf;
+	}
+
+	for (i=0 ; i<1024 ; i++)
+	{
+		float f;
+
+		f = i / 1023.0;
+
+		// scale up
+		if (brightness > 1.0)
+			f = f * brightness;
+
+		// shift up
+		if (f <= g3)
+			f = (f / g3) * 0.125;
+		else 
+			f = 0.125 + ((f - g3) / (1.0 - g3)) * 0.875;
+
+		// convert linear space to desired gamma space
+		inf = 255 * pow ( f, g ); 
+
+		if (inf < 0)
+			inf = 0;
+		if (inf > 255)
+			inf = 255;
+		lineartoscreen[i] = inf;
+	}
+
+	/*
+	for (i=0 ; i<1024 ; i++)
+	{
+		// convert from screen gamma space to linear space
+		lineargammatable[i] = 1023 * pow ( i/1023.0, v_gamma.GetFloat() );
+		// convert from linear gamma space to screen space
+		screengammatable[i] = 1023 * pow ( i/1023.0, 1.0 / v_gamma.GetFloat() );
+	}
+	*/
+
+	for (i=0 ; i<256 ; i++)
+	{
+		// convert from nonlinear texture space (0..255) to linear space (0..1)
+		texturetolinear[i] =  pow( i / 255.f, texGamma );
+
+		// convert from linear space (0..1) to nonlinear (sRGB) space (0..1)
+		g_Mathlib_LinearToGamma[i] =  pow( i / 255.f, 1.0f / 2.2f );
+
+		// convert from sRGB gamma space (0..1) to linear space (0..1)
+		g_Mathlib_GammaToLinear[i] =  pow( i / 255.f, 2.2f );
+	}
+
+	for (i=0 ; i<1024 ; i++)
+	{
+		// convert from linear space (0..1) to nonlinear texture space (0..255)
+		lineartotexture[i] =  pow( i / 1023.0, 1.0 / texGamma ) * 255;
+	}
+
+	BuildExponentTable();
+
+#if 0
+	for (i=0 ; i<256 ; i++)
+	{
+		float f;
+
+		// convert from nonlinear lightmap space (0..255) to linear space (0..4)
+		// f =  (i / 255.0) * sqrt( 4 );
+		f =  i * (2.0 / 255.0);
+		f = f * f;
+
+		texlighttolinear[i] = f;
+	}
+#endif
+
+	{
+		float f;
+		float overbrightFactor = 1.0f;
+
+		// Can't do overbright without texcombine
+		// UNDONE: Add GAMMA ramp to rectify this
+		if ( overbright == 2 )
+		{
+			overbrightFactor = 0.5;
+		}
+		else if ( overbright == 4 )
+		{
+			overbrightFactor = 0.25;
+		}
+
+		for (i=0 ; i<4096 ; i++)
+		{
+			// convert from linear 0..4 (x1024) to screen corrected vertex space (0..1?)
+			f = pow ( i/1024.0, 1.0 / gamma );
+
+			lineartovertex[i] = f * overbrightFactor;
+			if (lineartovertex[i] > 1)
+				lineartovertex[i] = 1;
+
+			int nLightmap = RoundFloatToInt( f * 255 * overbrightFactor );
+			nLightmap = clamp( nLightmap, 0, 255 );
+			lineartolightmap[i] = (unsigned char)nLightmap;
+		}
+	}
+}
+
+float GammaToLinearFullRange( float gamma )
+{
+	return pow( gamma, 2.2f );
+}
+
+float LinearToGammaFullRange( float linear )
+{
+	return pow( linear, 1.0f / 2.2f );
+}
+
+float GammaToLinear( float gamma )
+{
+	Assert( s_bMathlibInitialized );
+//	return pow( gamma, 2.2f );
+	if( gamma < 0.0f )
+	{
+		return 0.0f;
+	}
+	Assert( gamma <= 1.0f );
+	if( gamma >= 0.95f)
+	{
+		// Use GammaToLinearFullRange maybe if you trip this.
+		return 1.0f;
+	}
+
+	int index = RoundFloatToInt( gamma * 255.0f );
+	Assert( index >= 0 && index < 256 );
+	return g_Mathlib_GammaToLinear[index];
+}
+
+float LinearToGamma( float linear )
+{
+	Assert( s_bMathlibInitialized );
+//	return pow( linear, 1.0f / 2.2f );
+	if( linear < 0.0f )
+	{
+		return 0.0f;
+	}
+	if( linear > 1.0f )
+	{
+		// Use LinearToGammaFullRange maybe if you trip this.
+		Assert( 0 );
+		return 1.0f;
+	}
+
+	int index = RoundFloatToInt( linear * 255.0f );
+	Assert( index >= 0 && index < 256 );
+	return g_Mathlib_LinearToGamma[index];
+}
+
+// convert texture to linear 0..1 value
+float TextureToLinear( int c )
+{
+	Assert( s_bMathlibInitialized );
+	if (c < 0)
+		return 0;
+	if (c > 255)
+		return 1.0;
+
+	return texturetolinear[c];
+}
+
+// convert texture to linear 0..1 value
+int LinearToTexture( float f )
+{
+	Assert( s_bMathlibInitialized );
+	int i;
+	i = f * 1023;	// assume 0..1 range
+	if (i < 0)
+		i = 0;
+	if (i > 1023)
+		i = 1023;
+
+	return lineartotexture[i];
+}
+
+
+// converts 0..1 linear value to screen gamma (0..255)
+int LinearToScreenGamma( float f )
+{
+	Assert( s_bMathlibInitialized );
+	int i;
+	i = f * 1023;	// assume 0..1 range
+	if (i < 0)
+		i = 0;
+	if (i > 1023)
+		i = 1023;
+
+	return lineartoscreen[i];
 }
 
 // solve a x^2 + b x + c = 0
@@ -1341,6 +3245,8 @@ bool SolveQuadratic( float a, float b, float c, float &root1, float &root2 )
 	return true;
 }
 
+
+
 // solves for "a, b, c" where "a x^2 + b x + c = y", return true if solution exists
 bool SolveInverseQuadratic( float x1, float y1, float x2, float y2, float x3, float y3, float &a, float &b, float &c )
 {
@@ -1368,18 +3274,18 @@ bool SolveInverseQuadraticMonotonic( float x1, float y1, float x2, float y2, flo
 	// first, sort parameters
 	if (x1>x2)
 	{
-		V_swap(x1,x2);
-		V_swap(y1,y2);
+		swap(x1,x2);
+		swap(y1,y2);
 	}
 	if (x2>x3)
 	{
-		V_swap(x2,x3);
-		V_swap(y2,y3);
+		swap(x2,x3);
+		swap(y2,y3);
 	}
 	if (x1>x2)
 	{
-		V_swap(x1,x2);
-		V_swap(y1,y2);
+		swap(x1,x2);
+		swap(y1,y2);
 	}
 	// this code is not fast. what it does is when the curve would be non-monotonic, slowly shifts
 	// the center point closer to the linear line between the endpoints. Should anyone need htis
@@ -1461,9 +3367,7 @@ float Bias( float x, float biasAmt )
 	{
 		lastExponent = log( biasAmt ) * -1.4427f; // (-1.4427 = 1 / log(0.5))
 	}
-	float fRet = pow( x, lastExponent );
-	Assert ( !IS_NAN( fRet ) );
-	return fRet;
+	return pow( x, lastExponent );
 }
 
 
@@ -1479,9 +3383,7 @@ float Gain( float x, float biasAmt )
 
 float SmoothCurve( float x )
 {
-	// Actual smooth curve. Visualization:
-	// http://www.wolframalpha.com/input/?i=plot%5B+0.5+*+%281+-+cos%5B2+*+pi+*+x%5D%29+for+x+%3D+%280%2C+1%29+%5D
-	return 0.5f * (1 - cos( 2.0f * M_PI * x ) );
+	return (1 - cos( x * M_PI )) * 0.5f;
 }
 
 
@@ -1542,21 +3444,16 @@ void QuaternionAlign( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 // Do a piecewise addition of the quaternion elements. This actually makes little 
 // mathematical sense, but it's a cheap way to simulate a slerp.
 //-----------------------------------------------------------------------------
+
 void QuaternionBlend( const Quaternion &p, const Quaternion &q, float t, Quaternion &qt )
 {
 	Assert( s_bMathlibInitialized );
-#if ALLOW_SIMD_QUATERNION_MATH
-	fltx4 psimd, qsimd, qtsimd;
-	psimd = LoadUnalignedSIMD( p.Base() );
-	qsimd = LoadUnalignedSIMD( q.Base() );
-	qtsimd = QuaternionBlendSIMD( psimd, qsimd, t );
-	StoreUnalignedSIMD( qt.Base(), qtsimd );
-#else
+
 	// decide if one of the quaternions is backwards
 	Quaternion q2;
 	QuaternionAlign( p, q, q2 );
+
 	QuaternionBlendNoAlign( p, q2, t, qt );
-#endif
 }
 
 
@@ -1673,9 +3570,7 @@ float QuaternionAngleDiff( const Quaternion &p, const Quaternion &q )
 	QuaternionConjugate( q, qInv );
 	QuaternionMult( p, qInv, diff );
 
-	// Note if the quaternion is slightly non-normalized the square root below may be more than 1,
-	// the value is clamped to one otherwise it may result in asin() returning an undefined result.
-	float sinang = MIN( 1.0f, sqrt( diff.x * diff.x + diff.y * diff.y + diff.z * diff.z ) );
+	float sinang = sqrt( diff.x * diff.x + diff.y * diff.y + diff.z * diff.z );
 	float angle = RAD2DEG( 2 * asin( sinang ) );
 	return angle;
 #else
@@ -1732,6 +3627,7 @@ void QuaternionInvert( const Quaternion &p, Quaternion &q )
 //-----------------------------------------------------------------------------
 // Make sure the quaternion is of unit length
 //-----------------------------------------------------------------------------
+
 float QuaternionNormalize( Quaternion &q )
 {
 	Assert( s_bMathlibInitialized );
@@ -1752,7 +3648,6 @@ float QuaternionNormalize( Quaternion &q )
 	}
 	return radius;
 }
-
 
 void QuaternionScale( const Quaternion &p, float t, Quaternion &q )
 {
@@ -1860,10 +3755,7 @@ void QuaternionMult( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 
 void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matrix )
 {
-	if ( !HushAsserts() )
-	{
-		Assert( pos.IsValid() );
-	}
+	Assert( pos.IsValid() );
 
 	QuaternionMatrix( q, matrix );
 
@@ -1875,10 +3767,7 @@ void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matr
 void QuaternionMatrix( const Quaternion &q, matrix3x4_t& matrix )
 {
 	Assert( s_bMathlibInitialized );
-	if ( !HushAsserts() )
-	{
-		Assert( q.IsValid() );
-	}
+	Assert( q.IsValid() );
 
 #ifdef _VPROF_MATHLIB
 	VPROF_BUDGET( "QuaternionMatrix", "Mathlib" );
@@ -1899,10 +3788,6 @@ void QuaternionMatrix( const Quaternion &q, matrix3x4_t& matrix )
 	matrix[0][2] = 2.0f * q.x * q.z + 2.0f * q.w * q.y;
 	matrix[1][2] = 2.0f * q.y * q.z - 2.0f * q.w * q.x;
 	matrix[2][2] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.y * q.y;
-
-	matrix[0][3] = 0.0f;
-	matrix[1][3] = 0.0f;
-	matrix[2][3] = 0.0f;
 #else
    float wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
 
@@ -1923,20 +3808,32 @@ void QuaternionMatrix( const Quaternion &q, matrix3x4_t& matrix )
     matrix[0][0] = 1.0 - (yy + zz);
     matrix[0][1] = xy - wz;
 	matrix[0][2] = xz + wy;
-    matrix[0][3] = 0.0f;
-
+                           
     matrix[1][0] = xy + wz;
 	matrix[1][1] = 1.0 - (xx + zz);
     matrix[1][2] = yz - wx;
-	matrix[1][3] = 0.0f;
 
     matrix[2][0] = xz - wy;
 	matrix[2][1] = yz + wx;
     matrix[2][2] = 1.0 - (xx + yy);
-	matrix[2][3] = 0.0f;
 #endif
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Converts engine-format euler angles to a quaternion
+// Input  : angles - Right-handed Euler angles in degrees as follows:
+//				[0]: PITCH: Clockwise rotation around the Y axis.
+//				[1]: YAW:	Counterclockwise rotation around the Z axis.
+//				[2]: ROLL:	Counterclockwise rotation around the X axis.
+//			*outQuat - quaternion of form (i,j,k,real)
+//-----------------------------------------------------------------------------
+void AngleQuaternion( const QAngle &angles, Quaternion &outQuat )
+{
+	RadianEuler radians;
+	radians.Init( DEG2RAD( angles.z ), DEG2RAD( angles.x ), DEG2RAD( angles.y ) );
+
+	AngleQuaternion( radians, outQuat );
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Converts a quaternion into engine angles
@@ -2013,7 +3910,7 @@ void AxisAngleQuaternion( const Vector &axis, float angle, Quaternion &q )
 // Input  : *pfAngles - Right-handed Euler angles in radians
 //			*outQuat - quaternion of form (i,j,k,real)
 //-----------------------------------------------------------------------------
-void AngleQuaternion( const RadianEuler &angles, Quaternion &outQuat )
+void AngleQuaternion( RadianEuler const &angles, Quaternion &outQuat )
 {
 	Assert( s_bMathlibInitialized );
 //	Assert( angles.IsValid() );
@@ -2024,75 +3921,22 @@ void AngleQuaternion( const RadianEuler &angles, Quaternion &outQuat )
 
 	float sr, sp, sy, cr, cp, cy;
 
-#ifdef _X360
-	fltx4 radians, scale, sine, cosine;
-	radians = LoadUnaligned3SIMD( &angles.x );
-	scale = ReplicateX4( 0.5f ); 
-	radians = MulSIMD( radians, scale );
-	SinCos3SIMD( sine, cosine, radians ); 	
-
-	// NOTE: The ordering here is *different* from the AngleQuaternion below
-	// because p, y, r are not in the same locations in QAngle + RadianEuler. Yay!
-	sr = SubFloat( sine, 0 );	sp = SubFloat( sine, 1 );	sy = SubFloat( sine, 2 );	
-	cr = SubFloat( cosine, 0 );	cp = SubFloat( cosine, 1 );	cy = SubFloat( cosine, 2 );	
-#else
 	SinCos( angles.z * 0.5f, &sy, &cy );
 	SinCos( angles.y * 0.5f, &sp, &cp );
 	SinCos( angles.x * 0.5f, &sr, &cr );
-#endif
 
 	// NJS: for some reason VC6 wasn't recognizing the common subexpressions:
-	float srXcp = sr * cp, crXsp = cr * sp;
+	float srXcp = sr * cp,
+		  crXsp = cr * sp;
 	outQuat.x = srXcp*cy-crXsp*sy; // X
 	outQuat.y = crXsp*cy+srXcp*sy; // Y
 
-	float crXcp = cr * cp, srXsp = sr * sp;
+	float crXcp = cr * cp,
+		  srXsp = sr * sp;
 	outQuat.z = crXcp*sy-srXsp*cy; // Z
 	outQuat.w = crXcp*cy+srXsp*sy; // W (real component)
-}
 
-
-//-----------------------------------------------------------------------------
-// Purpose: Converts engine-format euler angles to a quaternion
-// Input  : angles - Right-handed Euler angles in degrees as follows:
-//				[0]: PITCH: Clockwise rotation around the Y axis.
-//				[1]: YAW:	Counterclockwise rotation around the Z axis.
-//				[2]: ROLL:	Counterclockwise rotation around the X axis.
-//			*outQuat - quaternion of form (i,j,k,real)
-//-----------------------------------------------------------------------------
-void AngleQuaternion( const QAngle &angles, Quaternion &outQuat )
-{
-#ifdef _VPROF_MATHLIB
-	VPROF_BUDGET( "AngleQuaternion", "Mathlib" );
-#endif
-
-	float sr, sp, sy, cr, cp, cy;
-
-#ifdef _X360
-	fltx4 radians, scale, sine, cosine;
-	radians = LoadUnaligned3SIMD( angles.Base() );
-	scale = ReplicateX4( 0.5f * M_PI_F / 180.f ); 
-	radians = MulSIMD( radians, scale );
-	SinCos3SIMD( sine, cosine, radians ); 	
-
-	// NOTE: The ordering here is *different* from the AngleQuaternion above
-	// because p, y, r are not in the same locations in QAngle + RadianEuler. Yay!
-	sp = SubFloat( sine, 0 );	sy = SubFloat( sine, 1 );	sr = SubFloat( sine, 2 );	
-	cp = SubFloat( cosine, 0 );	cy = SubFloat( cosine, 1 );	cr = SubFloat( cosine, 2 );	
-#else
-	SinCos( DEG2RAD( angles.y ) * 0.5f, &sy, &cy );
-	SinCos( DEG2RAD( angles.x ) * 0.5f, &sp, &cp );
-	SinCos( DEG2RAD( angles.z ) * 0.5f, &sr, &cr );
-#endif
-
-	// NJS: for some reason VC6 wasn't recognizing the common subexpressions:
-	float srXcp = sr * cp, crXsp = cr * sp;
-	outQuat.x = srXcp*cy-crXsp*sy; // X
-	outQuat.y = crXsp*cy+srXcp*sy; // Y
-
-	float crXcp = cr * cp, srXsp = sr * sp;
-	outQuat.z = crXcp*sy-srXsp*cy; // Z
-	outQuat.w = crXcp*cy+srXsp*sy; // W (real component)
+//	Assert( outQuat.IsValid() );
 }
 
 
@@ -2172,14 +4016,6 @@ void BasisToQuaternion( const Vector &vecForward, const Vector &vecRight, const 
 //	Assert( fabs(q.y - q2.y) < 1e-3 );
 //	Assert( fabs(q.z - q2.z) < 1e-3 );
 //	Assert( fabs(q.w - q2.w) < 1e-3 );
-}
-
-// FIXME: Optimize!
-void MatrixQuaternion( const matrix3x4_t &mat, Quaternion &q )
-{
-	QAngle angles;
-	MatrixAngles( mat, angles );
-	AngleQuaternion( angles, q );
 }
 
 
@@ -2348,34 +4184,6 @@ void Catmull_Rom_Spline_Tangent(
 	VectorAdd( b, output, output );
 }
 
-// area under the curve [0..t]
-void Catmull_Rom_Spline_Integral( 
-	const Vector &p1,
-	const Vector &p2,
-	const Vector &p3,
-	const Vector &p4,
-	float t, 
-	Vector& output )
-{
-	output = p2*t
-			-0.25f*(p1 - p3)*t*t 
-			+ (1.0f/6.0f)*(2.0f*p1 - 5.0f*p2 + 4.0f*p3 - p4)*t*t*t
-			- 0.125f*(p1 - 3.0f*p2 + 3.0f*p3 - p4)*t*t*t*t;
-}
-
-
-// area under the curve [0..1]
-void Catmull_Rom_Spline_Integral( 
-	const Vector &p1,
-	const Vector &p2,
-	const Vector &p3,
-	const Vector &p4,
-	Vector& output )
-{
-	output = (-0.25f * p1 + 3.25f * p2 + 3.25f * p3 - 0.25f * p4) * (1.0f / 6.0f);
-}
-
-
 void Catmull_Rom_Spline_Normalize(
 	const Vector &p1,
 	const Vector &p2,
@@ -2398,31 +4206,6 @@ void Catmull_Rom_Spline_Normalize(
 	VectorMA( p3, dt, p4n, p4n );
 	
 	Catmull_Rom_Spline( p1n, p2, p3, p4n, t, output );
-}
-
-
-void Catmull_Rom_Spline_Integral_Normalize(
-	const Vector &p1,
-	const Vector &p2,
-	const Vector &p3,
-	const Vector &p4,
-	float t, 
-	Vector& output )
-{
-	// Normalize p2->p1 and p3->p4 to be the same length as p2->p3
-	float dt = p3.DistTo(p2);
-
-	Vector p1n, p4n;
-	VectorSubtract( p1, p2, p1n );
-	VectorSubtract( p4, p3, p4n );
-
-	VectorNormalize( p1n );
-	VectorNormalize( p4n );
-
-	VectorMA( p2, dt, p1n, p1n );
-	VectorMA( p3, dt, p4n, p4n );
-	
-	Catmull_Rom_Spline_Integral( p1n, p2, p3, p4n, t, output );
 }
 
 
@@ -2860,12 +4643,6 @@ void Parabolic_Spline_NormalizeX(
 
 float RangeCompressor( float flValue, float flMin, float flMax, float flBase )
 {
-	// clamp base
-	if (flBase < flMin)
-		flBase = flMin;
-	if (flBase > flMax)
-		flBase = flMax;
-
 	flValue += flBase;
 
 	// convert to 0 to 1 value
@@ -3061,34 +4838,21 @@ float CalcSqrDistanceToAABB( const Vector &mins, const Vector &maxs, const Vecto
 
 void CalcClosestPointOnAABB( const Vector &mins, const Vector &maxs, const Vector &point, Vector &closestOut )
 {
-	closestOut.x = clamp( point.x, mins.x, maxs.x );
-	closestOut.y = clamp( point.y, mins.y, maxs.y );
-	closestOut.z = clamp( point.z, mins.z, maxs.z );
-}
-
-void CalcSqrDistAndClosestPointOnAABB( const Vector &mins, const Vector &maxs, const Vector &point, Vector &closestOut, float &distSqrOut )
-{
-	distSqrOut = 0.0f;
 	for ( int i = 0; i < 3; i++ )
 	{
 		if ( point[i] < mins[i] )
 		{
 			closestOut[i] = mins[i];
-			float flDelta = closestOut[i] - mins[i];
-			distSqrOut += flDelta * flDelta;
 		}
 		else if ( point[i] > maxs[i] )
 		{
 			closestOut[i] = maxs[i];
-			float flDelta = closestOut[i] - maxs[i];
-			distSqrOut += flDelta * flDelta;
 		}
 		else
 		{
 			closestOut[i] = point[i];
 		}
 	}
-
 }
 
 float CalcClosestPointToLineT( const Vector &P, const Vector &vLineA, const Vector &vLineB, Vector &vDir )
@@ -3139,7 +4903,7 @@ void CalcClosestPointOnLineSegment( const Vector &P, const Vector &vLineA, const
 {
 	Vector vDir;
 	float t = CalcClosestPointToLineT( P, vLineA, vLineB, vDir );
-	t = clamp( t, 0.f, 1.f );
+	t = clamp( t, 0, 1 );
 	if ( outT ) 
 	{
 		*outT = t;
@@ -3211,7 +4975,7 @@ void CalcClosestPointOnLineSegment2D( const Vector2D &P, const Vector2D &vLineA,
 {
 	Vector2D vDir;
 	float t = CalcClosestPointToLineT2D( P, vLineA, vLineB, vDir );
-	t = clamp( t, 0.f, 1.f );
+	t = clamp( t, 0, 1 );
 	if ( outT )
 	{
 		*outT = t;
@@ -3298,9 +5062,15 @@ bool CalcLineToLineIntersectionSegment(
 
 #pragma optimize( "", off )
 
+// stuff from windows.h
+#ifndef _XBOX
+typedef unsigned int DWORD;
+#endif
+
 #ifndef EXCEPTION_EXECUTE_HANDLER
 #define EXCEPTION_EXECUTE_HANDLER       1
 #endif
+
 
 #pragma optimize( "", on )
 
@@ -3311,15 +5081,16 @@ static bool s_bSSE2Enabled = false;
 
 void MathLib_Init( float gamma, float texGamma, float brightness, int overbright, bool bAllow3DNow, bool bAllowSSE, bool bAllowSSE2, bool bAllowMMX )
 {
-	if ( s_bMathlibInitialized )
+#ifdef _XBOX
+	if (s_bMathlibInitialized)
 		return;
-
+#endif
 	// FIXME: Hook SSE into VectorAligned + Vector4DAligned
 
-#if !defined( _X360 )
 	// Grab the processor information:
-	const CPUInformation& pi = *GetCPUInformation();
+	const CPUInformation& pi = GetCPUInformation();
 
+#ifndef _XBOX
 	// Select the default generic routines.
 	pfSqrt = _sqrtf;
 	pfRSqrt = _rsqrtf;
@@ -3329,6 +5100,7 @@ void MathLib_Init( float gamma, float texGamma, float brightness, int overbright
 	pfInvRSquared = _InvRSquared;
 	pfFastSinCos = SinCos;
 	pfFastCos = cosf;
+#endif
 
 	if ( bAllowMMX && pi.m_bMMX )
 	{
@@ -3341,9 +5113,9 @@ void MathLib_Init( float gamma, float texGamma, float brightness, int overbright
 		s_bMMXEnabled = false;
 	}
 
+#ifndef _XBOX
 	// SSE Generally performs better than 3DNow when present, so this is placed 
 	// first to allow SSE to override these settings.
-#if !defined( OSX ) && !defined( PLATFORM_WINDOWS_PC64 ) && !defined(LINUX)
 	if ( bAllow3DNow && pi.m_b3DNow )
 	{
 		s_b3DNowEnabled = true;
@@ -3357,17 +5129,18 @@ void MathLib_Init( float gamma, float texGamma, float brightness, int overbright
 		pfRSqrtFast = _3DNow_RSqrt;
 	}
 	else
-#endif
 	{
 		s_b3DNowEnabled = false;
 	}
+#endif
 
 	if ( bAllowSSE && pi.m_bSSE )
 	{
 		s_bSSEEnabled = true;
+#ifdef _XBOX
+		_MM_SET_FLUSH_ZERO_MODE( _MM_FLUSH_ZERO_ON );
+#endif
 
-#ifndef PLATFORM_WINDOWS_PC64
-		// These are not yet available.
 		// Select the SSE specific routines if available
 		pfVectorNormalize = _VectorNormalize;
 		pfVectorNormalizeFast = _SSE_VectorNormalizeFast;
@@ -3375,30 +5148,33 @@ void MathLib_Init( float gamma, float texGamma, float brightness, int overbright
 		pfSqrt = _SSE_Sqrt;
 		pfRSqrt = _SSE_RSqrtAccurate;
 		pfRSqrtFast = _SSE_RSqrtFast;
-#endif
-#ifdef PLATFORM_WINDOWS_PC32
+#ifdef _WIN32
 		pfFastSinCos = _SSE_SinCos;
 		pfFastCos = _SSE_cos;
 #endif
 	}
 	else
 	{
+#ifdef _XBOX
+		// sse expected
+		Assert(0);
+#endif
 		s_bSSEEnabled = false;
 	}
 
+#ifndef _XBOX
 	if ( bAllowSSE2 && pi.m_bSSE2 )
 	{
 		s_bSSE2Enabled = true;
-#ifdef PLATFORM_WINDOWS_PC32
+#ifdef _WIN32
 		pfFastSinCos = _SSE2_SinCos;
 		pfFastCos = _SSE2_cos;
 #endif
-	} 
-	else
+	} else
 	{
 		s_bSSE2Enabled = false;
 	}
-#endif // !_X360
+#endif
 
 	s_bMathlibInitialized = true;
 
@@ -3866,6 +5642,85 @@ int ClipPolyToPlane_Precise( double *inVerts, int vertCount, double *outVerts, c
 	return outCount;
 }
 
+void ColorRGBExp32ToVector( const ColorRGBExp32& in, Vector& out )
+{
+	Assert( s_bMathlibInitialized );
+	// FIXME: Why is there a factor of 255 built into this?
+	out.x = 255.0f * TexLightToLinear( in.r, in.exponent );
+	out.y = 255.0f * TexLightToLinear( in.g, in.exponent );
+	out.z = 255.0f * TexLightToLinear( in.b, in.exponent );
+}
+
+// assumes that the desired mantissa range is 0..255
+static int VectorToColorRGBExp32_CalcExponent( float in )
+{
+	int power = 0;
+	
+	if( in != 0.0f )
+	{
+		while( in > 255.0f )
+		{
+			power += 1;
+			in *= 0.5f;
+		}
+		
+		while( in < 127.0f )
+		{
+			power -= 1;
+			in *= 2.0f;
+		}
+	}
+
+	return power;
+}
+
+void VectorToColorRGBExp32( const Vector& vin, ColorRGBExp32 &c )
+{
+	Vector v = vin;
+	Assert( s_bMathlibInitialized );
+	Assert( v.x >= 0.0f && v.y >= 0.0f && v.z >= 0.0f );
+	int i;		
+	float max = v[0];				
+	for( i = 1; i < 3; i++ )
+	{
+		// Get the maximum value.
+		if( v[i] > max )
+		{
+			max = v[i];
+		}
+	}
+				
+	// figure out the exponent for this luxel.
+	int exponent = VectorToColorRGBExp32_CalcExponent( max );
+				
+	// make the exponent fits into a signed byte.
+	if( exponent < -128 )
+	{
+		exponent = -128;
+	}
+	else if( exponent > 127 )
+	{
+		exponent = 127;
+	}
+				
+	// undone: optimize with a table
+	float scalar = pow( 2.0f, -exponent );
+	// convert to mantissa x 2^exponent format
+	for( i = 0; i < 3; i++ )
+	{
+		v[i] *= scalar;
+		// clamp
+		if( v[i] > 255.0f )
+		{
+			v[i] = 255.0f;
+		}
+	}
+	c.r = ( unsigned char )v[0];
+	c.g = ( unsigned char )v[1];
+	c.b = ( unsigned char )v[2];
+	c.exponent = ( signed char )exponent;
+}
+
 int CeilPow2( int in )
 {
 	int retval;
@@ -3884,90 +5739,6 @@ int FloorPow2( int in )
 	while( retval < in )
 		retval <<= 1;
 	return retval >> 1;
-}
-
-
-//-----------------------------------------------------------------------------
-// Computes Y fov from an X fov and a screen aspect ratio
-//-----------------------------------------------------------------------------
-float CalcFovY( float flFovX, float flAspect )
-{
-	if ( flFovX < 1 || flFovX > 179)
-	{
-		flFovX = 90;	// error, set to 90
-	}
-
-	// The long, but illustrative version (more closely matches CShaderAPIDX8::PerspectiveX, which
-	// is what it's based on).
-	//
-	//float width = 2 * zNear * tan( DEG2RAD( fov_x / 2.0 ) );
-	//float height = width / screenaspect;
-	//float yRadians = atan( (height/2.0) / zNear );
-	//return RAD2DEG( yRadians ) * 2;
-
-	// The short and sweet version.
-	float val = atan( tan( DEG2RAD( flFovX ) * 0.5f ) / flAspect );
-	val = RAD2DEG( val ) * 2.0f;
-	return val;
-}
-
-float CalcFovX( float flFovY, float flAspect )
-{
-	return RAD2DEG( atan( tan( DEG2RAD( flFovY ) * 0.5f ) * flAspect ) ) * 2.0f;
-}
-
-
-//-----------------------------------------------------------------------------
-// Generate a frustum based on perspective view parameters
-//-----------------------------------------------------------------------------
-void GeneratePerspectiveFrustum( const Vector& origin, const Vector &forward, 
-	const Vector &right, const Vector &up, float flZNear, float flZFar, 
-	float flFovX, float flFovY, Frustum_t &frustum )
-{
-	float flIntercept = DotProduct( origin, forward );
-
-	// Setup the near and far planes.
-	frustum.SetPlane( FRUSTUM_FARZ, PLANE_ANYZ, -forward, -flZFar - flIntercept );
-	frustum.SetPlane( FRUSTUM_NEARZ, PLANE_ANYZ, forward, flZNear + flIntercept );
-
-	flFovX *= 0.5f;
-	flFovY *= 0.5f;
-
-	float flTanX = tan( DEG2RAD( flFovX ) );
-	float flTanY = tan( DEG2RAD( flFovY ) );
-
-	// OPTIMIZE: Normalizing these planes is not necessary for culling
-	Vector normalPos, normalNeg;
-
-	VectorMA( right, flTanX, forward, normalPos );
-	VectorMA( normalPos, -2.0f, right, normalNeg );
-
-	VectorNormalize( normalPos );
-	VectorNormalize( normalNeg );
-
-	frustum.SetPlane( FRUSTUM_LEFT, PLANE_ANYZ, normalPos, normalPos.Dot( origin ) );
-	frustum.SetPlane( FRUSTUM_RIGHT, PLANE_ANYZ, normalNeg, normalNeg.Dot( origin ) );
-
-	VectorMA( up, flTanY, forward, normalPos );
-	VectorMA( normalPos, -2.0f, up, normalNeg );
-
-	VectorNormalize( normalPos );
-	VectorNormalize( normalNeg );
-
-	frustum.SetPlane( FRUSTUM_BOTTOM, PLANE_ANYZ, normalPos, normalPos.Dot( origin ) );
-	frustum.SetPlane( FRUSTUM_TOP, PLANE_ANYZ, normalNeg, normalNeg.Dot( origin ) );
-}
-
-
-//-----------------------------------------------------------------------------
-// Version that accepts angles instead of vectors
-//-----------------------------------------------------------------------------
-void GeneratePerspectiveFrustum( const Vector& origin, const QAngle &angles, float flZNear, float flZFar, float flFovX, float flAspectRatio, Frustum_t &frustum )
-{
-	Vector vecForward, vecRight, vecUp;
-	AngleVectors( angles, &vecForward, &vecRight, &vecUp );
-	float flFovY = CalcFovY( flFovX, flAspectRatio );
-	GeneratePerspectiveFrustum( origin, vecForward, vecRight, vecUp, flZNear, flZFar, flFovX, flFovY, frustum );
 }
 
 bool R_CullBox( const Vector& mins, const Vector& maxs, const Frustum_t &frustum )
@@ -3989,315 +5760,4 @@ bool R_CullBoxSkipNear( const Vector& mins, const Vector& maxs, const Frustum_t 
 			( BoxOnPlaneSide( mins, maxs, frustum.GetPlane(FRUSTUM_FARZ) ) == 2 ) );
 }
 
-
-// NOTE: This routine was taken (and modified) from NVidia's BlinnReflection demo
-// Creates basis vectors, based on a vertex and index list.
-// See the NVidia white paper 'GDC2K PerPixel Lighting' for a description
-// of how this computation works
-#define SMALL_FLOAT 1e-12
-
-void CalcTriangleTangentSpace( const Vector &p0, const Vector &p1, const Vector &p2,
-							   const Vector2D &t0, const Vector2D &t1, const Vector2D& t2,
-							   Vector &sVect, Vector &tVect )
-{
-	/* Compute the partial derivatives of X, Y, and Z with respect to S and T. */
-	sVect.Init( 0.0f, 0.0f, 0.0f );
-	tVect.Init( 0.0f, 0.0f, 0.0f );
-
-	// x, s, t
-	Vector edge01( p1.x - p0.x, t1.x - t0.x, t1.y - t0.y );
-	Vector edge02( p2.x - p0.x, t2.x - t0.x, t2.y - t0.y );
-
-	Vector cross;
-	CrossProduct( edge01, edge02, cross );
-	if ( fabs( cross.x ) > SMALL_FLOAT )
-	{
-		sVect.x += -cross.y / cross.x;
-		tVect.x += -cross.z / cross.x;
-	}
-
-	// y, s, t
-	edge01.Init( p1.y - p0.y, t1.x - t0.x, t1.y - t0.y );
-	edge02.Init( p2.y - p0.y, t2.x - t0.x, t2.y - t0.y );
-
-	CrossProduct( edge01, edge02, cross );
-	if ( fabs( cross.x ) > SMALL_FLOAT )
-	{
-		sVect.y += -cross.y / cross.x;
-		tVect.y += -cross.z / cross.x;
-	}
-
-	// z, s, t
-	edge01.Init( p1.z - p0.z, t1.x - t0.x, t1.y - t0.y );
-	edge02.Init( p2.z - p0.z, t2.x - t0.x, t2.y - t0.y );
-
-	CrossProduct( edge01, edge02, cross );
-	if( fabs( cross.x ) > SMALL_FLOAT )
-	{
-		sVect.z += -cross.y / cross.x;
-		tVect.z += -cross.z / cross.x;
-	}
-
-	// Normalize sVect and tVect
-	VectorNormalize( sVect );
-	VectorNormalize( tVect );
-}
-
-
-//-----------------------------------------------------------------------------
-// Convert RGB to HSV
-//-----------------------------------------------------------------------------
-void RGBtoHSV( const Vector &rgb, Vector &hsv )
-{
-	float flMax = max( rgb.x, rgb.y );
-	flMax = max( flMax, rgb.z );
-	float flMin = min( rgb.x, rgb.y );
-	flMin = min( flMin, rgb.z );
-
-	// hsv.z is the value
-	hsv.z = flMax;
-
-	// hsv.y is the saturation
-	if (flMax != 0.0F)
-	{
-		hsv.y = (flMax - flMin) / flMax;
-	}
-	else
-	{
-		hsv.y = 0.0F;
-	}
-
-	// hsv.x is the hue
-	if (hsv.y == 0.0F)
-	{
-		hsv.x = -1.0f;
-	}
-	else
-	{
-		float32 d = flMax - flMin;
-		if (rgb.x == flMax)		
-		{
-			hsv.x = (rgb.y - rgb.z) / d;
-		}
-		else if (rgb.y == flMax)	
-		{
-			hsv.x = 2.0F + (rgb.z - rgb.x) / d;
-		}
-		else				
-		{
-			hsv.x = 4.0F + (rgb.x - rgb.y) / d;
-		}
-		hsv.x *= 60.0F;
-		if ( hsv.x < 0.0F ) 
-		{
-			hsv.x += 360.0F;
-		}
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// Convert HSV to RGB
-//-----------------------------------------------------------------------------
-void HSVtoRGB( const Vector &hsv, Vector &rgb )
-{         
-	if ( hsv.y == 0.0F )
-	{
-		rgb.Init( hsv.z, hsv.z, hsv.z );
-		return;
-	}
-
-	float32 hue = hsv.x;
-	if (hue == 360.0F) 
-	{	
-		hue = 0.0F;
-	}
-	hue /= 60.0F;
-	int     i = hue;        // integer part
-	float32 f = hue - i;    // fractional part
-	float32 p = hsv.z * (1.0F - hsv.y);
-	float32 q = hsv.z * (1.0F - hsv.y * f);
-	float32 t = hsv.z * (1.0F - hsv.y * (1.0F - f));
-	switch(i)
-	{
-	case 0: rgb.Init( hsv.z, t, p ); break;
-	case 1: rgb.Init( q, hsv.z, p ); break;
-	case 2: rgb.Init( p, hsv.z, t ); break;
-	case 3: rgb.Init( p, q, hsv.z ); break;
-	case 4: rgb.Init( t, p, hsv.z ); break;
-	case 5: rgb.Init( hsv.z, p, q ); break;
-	}
-}
-
-
-void GetInterpolationData( float const *pKnotPositions, 
-						   float const *pKnotValues,
-						   int nNumValuesinList,
-						   int nInterpolationRange,
-						   float flPositionToInterpolateAt,
-						   bool bWrap,
-						   float *pValueA, 
-						   float *pValueB,
-						   float *pInterpolationValue)
-{
-	// first, find the bracketting knots by looking for the first knot >= our index
-	
-	int idx;
-	for(idx = 0; idx < nNumValuesinList; idx++ )
-	{
-		if ( pKnotPositions[idx] >= flPositionToInterpolateAt )
-			break;
-	}
-	int nKnot1, nKnot2;
-	float flOffsetFromStartOfGap, flSizeOfGap;
-	if ( idx == 0)
-	{
-		if ( bWrap )
-		{
-			nKnot1 = nNumValuesinList-1;
-			nKnot2 = 0;
-			flSizeOfGap =
-				( pKnotPositions[nKnot2] + ( nInterpolationRange-pKnotPositions[nKnot1] ) );
-			flOffsetFromStartOfGap = 
-				flPositionToInterpolateAt + ( nInterpolationRange-pKnotPositions[nKnot1] );
-		}
-		else
-		{
-			*pValueA = *pValueB = pKnotValues[0];
-			*pInterpolationValue = 1.0;
-			return;
-		}
-	}
-	else if ( idx == nNumValuesinList )						// ran out of values
-	{
-		if ( bWrap )
-		{
-			nKnot1 = nNumValuesinList -1;
-			nKnot2 = 0;
-			flSizeOfGap = ( pKnotPositions[nKnot2] + 
-						 ( nInterpolationRange-pKnotPositions[nKnot1] ) );
-			flOffsetFromStartOfGap = flPositionToInterpolateAt - pKnotPositions[nKnot1];
-		}
-		else
-		{
-			*pValueA = *pValueB = pKnotValues[nNumValuesinList-1];
-			*pInterpolationValue = 1.0;
-			return;
-		}
-
-	}
-	else
-	{
-		nKnot1 = idx-1;
-		nKnot2 = idx;
-		flSizeOfGap = pKnotPositions[nKnot2]-pKnotPositions[nKnot1];
-		flOffsetFromStartOfGap = flPositionToInterpolateAt-pKnotPositions[nKnot1];
-	}
-
-	*pValueA = pKnotValues[nKnot1];
-	*pValueB = pKnotValues[nKnot2];
-	*pInterpolationValue = FLerp( 0, 1, 0, flSizeOfGap, flOffsetFromStartOfGap );
-	return;
-}
-
-float RandomVectorInUnitSphere( Vector *pVector )
-{
-	// Guarantee uniform random distribution within a sphere
-	// Graphics gems III contains this algorithm ("Nonuniform random point sets via warping")
-	float u = ((float)rand() / VALVE_RAND_MAX);
-	float v = ((float)rand() / VALVE_RAND_MAX);
-	float w = ((float)rand() / VALVE_RAND_MAX);
-
-	float flPhi = acos( 1 - 2 * u );
-	float flTheta = 2 * M_PI * v;
-	float flRadius = powf( w, 1.0f / 3.0f );
-
-	float flSinPhi, flCosPhi;
-	float flSinTheta, flCosTheta;
-	SinCos( flPhi, &flSinPhi, &flCosPhi );
-	SinCos( flTheta, &flSinTheta, &flCosTheta );
-
-	pVector->x = flRadius * flSinPhi * flCosTheta;
-	pVector->y = flRadius * flSinPhi * flSinTheta;
-	pVector->z = flRadius * flCosPhi;
-	return flRadius;
-}
-
-float RandomVectorInUnitCircle( Vector2D *pVector )
-{
-	// Guarantee uniform random distribution within a sphere
-	// Graphics gems III contains this algorithm ("Nonuniform random point sets via warping")
-	float u = ((float)rand() / VALVE_RAND_MAX);
-	float v = ((float)rand() / VALVE_RAND_MAX);
-
-	float flTheta = 2 * M_PI * v;
-	float flRadius = powf( u, 1.0f / 2.0f );
-
-	float flSinTheta, flCosTheta;
-	SinCos( flTheta, &flSinTheta, &flCosTheta );
-
-	pVector->x = flRadius * flCosTheta;
-	pVector->y = flRadius * flSinTheta;
-	return flRadius;
-}
-#ifdef FP_EXCEPTIONS_ENABLED
-#include <float.h> // For _clearfp and _controlfp_s
-#endif
-
-// FPExceptionDisable and FPExceptionEnabler taken from my blog post
-// at http://www.altdevblogaday.com/2012/04/20/exceptional-floating-point/
-
-#ifdef FP_EXCEPTIONS_ENABLED
-// These functions are all inlined NOPs if FP_EXCEPTIONS_ENABLED is not defined.
-FPExceptionDisabler::FPExceptionDisabler()
-{
-	// Retrieve the current state of the exception flags. This
-	// must be done before changing them. _MCW_EM is a bit
-	// mask representing all available exception masks.
-	_controlfp_s(&mOldValues, 0, 0);
-	// Set all of the exception flags, which suppresses FP
-	// exceptions on the x87 and SSE units.
-	_controlfp_s(0, _MCW_EM, _MCW_EM);
-}
-
-FPExceptionDisabler::~FPExceptionDisabler()
-{
-	// Clear any pending FP exceptions. This must be done
-	// prior to enabling FP exceptions since otherwise there
-	// may be a 'deferred crash' as soon the exceptions are
-	// enabled.
-	_clearfp();
-
-	// Reset (possibly enabling) the exception status.
-	_controlfp_s(0, mOldValues, _MCW_EM);
-}
-
-// Overflow, divide-by-zero, and invalid-operation are the FP
-// exceptions most frequently associated with bugs.
-FPExceptionEnabler::FPExceptionEnabler(unsigned int enableBits /*= _EM_OVERFLOW | _EM_ZERODIVIDE | _EM_INVALID*/)
-{
-	// Retrieve the current state of the exception flags. This
-	// must be done before changing them. _MCW_EM is a bit
-	// mask representing all available exception masks.
-	_controlfp_s(&mOldValues, 0, 0);
-
-	// Make sure no non-exception flags have been specified,
-	// to avoid accidental changing of rounding modes, etc.
-	enableBits &= _MCW_EM;
-
-	// Clear any pending FP exceptions. This must be done
-	// prior to enabling FP exceptions since otherwise there
-	// may be a 'deferred crash' as soon the exceptions are
-	// enabled.
-	_clearfp();
-
-	// Zero out the specified bits, leaving other bits alone.
-	_controlfp_s(0, ~enableBits, enableBits);
-}
-
-FPExceptionEnabler::~FPExceptionEnabler()
-{
-	// Reset the exception state.
-	_controlfp_s(0, mOldValues, _MCW_EM);
-}
-#endif
+#endif // !_STATIC_LINKED || _SHARED_LIB

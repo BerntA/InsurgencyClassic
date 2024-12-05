@@ -1,10 +1,10 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
-//===========================================================================//
+//=============================================================================//
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#ifdef _WIN32
 #include <windows.h>
 #include <direct.h>
 #include <io.h> // _chmod
@@ -14,9 +14,9 @@
 
 #include <stdio.h>
 #include <sys/stat.h>
-#include "tier1/strtools.h"
+#include "vstdlib/strtools.h"
 #include "filesystem_tools.h"
-#include "tier0/icommandline.h"
+#include "vstdlib/ICommandLine.h"
 #include "KeyValues.h"
 #include "tier2/tier2.h"
 
@@ -52,27 +52,6 @@ char		qdir[1024];
 // This is the base engine + mod-specific game dir (e.g. "c:\tf2\mytfmod\")
 char		gamedir[1024];	
 
-void FileSystem_SetupStandardDirectories( const char *pFilename, const char *pGameInfoPath )
-{
-	// Set qdir.
-	if ( !pFilename )
-	{
-		pFilename = ".";
-	}
-
-	Q_MakeAbsolutePath( qdir, sizeof( qdir ), pFilename, NULL );
-	Q_StripFilename( qdir );
-	Q_strlower( qdir );
-	if ( qdir[0] != 0 )
-	{
-		Q_AppendSlash( qdir, sizeof( qdir ) );
-	}
-
-	// Set gamedir.
-	Q_MakeAbsolutePath( gamedir, sizeof( gamedir ), pGameInfoPath );
-	Q_AppendSlash( gamedir, sizeof( gamedir ) );
-}
-
 
 bool FileSystem_Init_Normal( const char *pFilename, FSInitType_t initType, bool bOnlyUseDirectoryName )
 {
@@ -83,6 +62,9 @@ bool FileSystem_Init_Normal( const char *pFilename, FSInitType_t initType, bool 
 		bool bSteam;
 		if ( FileSystem_GetFileSystemDLLName( fileSystemDLLName, MAX_PATH, bSteam ) != FS_OK )
 			return false;
+
+		// If we're under Steam we need extra setup to let us find the proper modules
+		FileSystem_SetupSteamInstallPath();
 
 		// Next, load the module, call Connect/Init.
 		CFSLoadModuleInfo loadModuleInfo;
@@ -116,7 +98,19 @@ bool FileSystem_Init_Normal( const char *pFilename, FSInitType_t initType, bool 
 
 		FileSystem_AddSearchPath_Platform( g_pFullFileSystem, loadModuleInfo.m_GameInfoPath );
 
-		FileSystem_SetupStandardDirectories( pFilename, loadModuleInfo.m_GameInfoPath );
+		// Set qdir.
+		if ( !pFilename )
+			pFilename = ".";
+
+		Q_MakeAbsolutePath( qdir, sizeof( qdir ), pFilename, NULL );
+		Q_StripFilename( qdir );
+		strlwr( qdir );
+		if ( qdir[0] != 0 )
+			Q_AppendSlash( qdir, sizeof( qdir ) );
+
+		// Set gamedir.
+		Q_MakeAbsolutePath( gamedir, sizeof( gamedir ), loadModuleInfo.m_GameInfoPath );
+		Q_AppendSlash( gamedir, sizeof( gamedir ) );
 	}
 	else
 	{
@@ -204,3 +198,17 @@ CreateInterfaceFn FileSystem_GetFactory()
 #endif
 	return Sys_GetFactory( g_pFullFileSystemModule );
 }
+
+
+bool FileSystem_SetGame( const char *szModDir )
+{
+	g_pFullFileSystem->RemoveAllSearchPaths();
+	if ( FileSystem_SetBasePaths( g_pFullFileSystem ) != FS_OK )
+		return false;
+
+	CFSSearchPathsInit fsInit;
+	fsInit.m_pDirectoryName = szModDir;
+	fsInit.m_pFileSystem = g_pFullFileSystem;
+	return ( FileSystem_LoadSearchPaths( fsInit ) == FS_OK );
+}
+

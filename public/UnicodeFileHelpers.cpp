@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -14,7 +14,7 @@
 //-----------------------------------------------------------------------------
 // Purpose: Advances until non-whitespace hit
 //-----------------------------------------------------------------------------
-ucs2 *AdvanceOverWhitespace(ucs2 *Start)
+wchar_t *AdvanceOverWhitespace(wchar_t *Start)
 {
 	while (*Start != 0 && iswspace(*Start))
 	{
@@ -27,7 +27,7 @@ ucs2 *AdvanceOverWhitespace(ucs2 *Start)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-ucs2 *ReadUnicodeToken(ucs2 *start, ucs2 *token, int tokenBufferSize, bool &quoted)
+wchar_t *ReadUnicodeToken(wchar_t *start, wchar_t *token, int tokenBufferSize, bool &quoted)
 {
 	// skip over any whitespace
 	start = AdvanceOverWhitespace(start);
@@ -46,7 +46,7 @@ ucs2 *ReadUnicodeToken(ucs2 *start, ucs2 *token, int tokenBufferSize, bool &quot
 		// copy out the string until we hit an end quote
 		start++;
 		int count = 0;
-		while (*start && *start != '\"' && count < tokenBufferSize-1)
+		while (*start && *start != '\"' && count < tokenBufferSize)
 		{
 			// check for special characters
 			if (*start == '\\' && *(start+1) == 'n')
@@ -78,7 +78,7 @@ ucs2 *ReadUnicodeToken(ucs2 *start, ucs2 *token, int tokenBufferSize, bool &quot
 	{
 		// copy out the string until we hit a whitespace
 		int count = 0;
-		while (*start && !iswspace(*start) && count < tokenBufferSize-1)
+		while (*start && !iswspace(*start) && count < tokenBufferSize)
 		{
 			// no checking for special characters if it's not a quoted string
 			*token = *start;
@@ -96,7 +96,7 @@ ucs2 *ReadUnicodeToken(ucs2 *start, ucs2 *token, int tokenBufferSize, bool &quot
 //-----------------------------------------------------------------------------
 // Purpose: Same as above but no translation of \n
 //-----------------------------------------------------------------------------
-ucs2 *ReadUnicodeTokenNoSpecial(ucs2 *start, ucs2 *token, int tokenBufferSize, bool &quoted)
+wchar_t *ReadUnicodeTokenNoSpecial(wchar_t *start, wchar_t *token, int tokenBufferSize, bool &quoted)
 {
 	// skip over any whitespace
 	start = AdvanceOverWhitespace(start);
@@ -115,7 +115,7 @@ ucs2 *ReadUnicodeTokenNoSpecial(ucs2 *start, ucs2 *token, int tokenBufferSize, b
 		// copy out the string until we hit an end quote
 		start++;
 		int count = 0;
-		while (*start && *start != '\"' && count < tokenBufferSize-1)
+		while (*start && *start != '\"' && count < tokenBufferSize)
 		{
 			// check for special characters
 			/*
@@ -150,7 +150,7 @@ ucs2 *ReadUnicodeTokenNoSpecial(ucs2 *start, ucs2 *token, int tokenBufferSize, b
 	{
 		// copy out the string until we hit a whitespace
 		int count = 0;
-		while (*start && !iswspace(*start) && count < tokenBufferSize-1)
+		while (*start && !iswspace(*start) && count < tokenBufferSize)
 		{
 			// no checking for special characters if it's not a quoted string
 			*token = *start;
@@ -168,7 +168,7 @@ ucs2 *ReadUnicodeTokenNoSpecial(ucs2 *start, ucs2 *token, int tokenBufferSize, b
 //-----------------------------------------------------------------------------
 // Purpose: Returns the first character after the next EOL characters
 //-----------------------------------------------------------------------------
-ucs2 *ReadToEndOfLine(ucs2 *start)
+wchar_t *ReadToEndOfLine(wchar_t *start)
 {
 	if (!*start)
 		return start;

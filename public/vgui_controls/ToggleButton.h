@@ -1,9 +1,9 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 // $NoKeywords: $
-//===========================================================================//
+//=============================================================================//
 
 #ifndef TOGGLEBUTTON_H
 #define TOGGLEBUTTON_H
@@ -12,11 +12,13 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
-#include <vgui_controls/Button.h>
+#include <vgui/vgui.h>
+#include <vgui_controls/button.h>
 
 namespace vgui
 {
+
+enum MouseCode;
 
 //-----------------------------------------------------------------------------
 // Purpose: Type of button that when pressed stays selected & depressed until pressed again

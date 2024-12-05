@@ -1,13 +1,13 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
 //=============================================================================
 #include "basetypes.h"
-#include "tier1/strtools.h"
+#include "vstdlib/strtools.h"
 #include "interpolatortypes.h"
 #include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
+#include "mathlib.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -434,72 +434,6 @@ void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
 	case INTERPOLATE_HOLD:
 		{
 			vOut.y = vStart.y;
-		}
-		break;
-	}
-}
-
-
-void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
-												 const Quaternion &vPre,
-												 const Quaternion &vStart,
-												 const Quaternion &vEnd,
-												 const Quaternion &vNext,
-												 float f,
-												 Quaternion &vOut )
-{
-	vOut.Init();
-
-	switch ( interpolationType )
-	{
-	default:
-		Warning( "Unknown interpolation type %d\n",
-			(int)interpolationType );
-		// break; // Fall through and use catmull_rom as default
-	case INTERPOLATE_CATMULL_ROM_NORMALIZEX:
-	case INTERPOLATE_DEFAULT:
-	case INTERPOLATE_CATMULL_ROM:
-	case INTERPOLATE_CATMULL_ROM_NORMALIZE:
-	case INTERPOLATE_CATMULL_ROM_TANGENT:
-	case INTERPOLATE_KOCHANEK_BARTELS:
-	case INTERPOLATE_KOCHANEK_BARTELS_EARLY:
-	case INTERPOLATE_KOCHANEK_BARTELS_LATE:
-	case INTERPOLATE_SIMPLE_CUBIC:
-	case INTERPOLATE_BSPLINE:
-		// FIXME, since this ignores vPre and vNext we could omit computing them aove
-		QuaternionSlerp( vStart, vEnd, f, vOut );
-		break;
-	case INTERPOLATE_EASE_IN:
-		{
-			f = sin( M_PI * f * 0.5f );
-			// Fixme, since this ignores vPre and vNext we could omit computing them aove
-			QuaternionSlerp( vStart, vEnd, f, vOut );
-		}
-		break;
-	case INTERPOLATE_EASE_OUT:
-		{
-			f = 1.0f - sin( M_PI * f * 0.5f + 0.5f * M_PI );
-			// Fixme, since this ignores vPre and vNext we could omit computing them aove
-			QuaternionSlerp( vStart, vEnd, f, vOut );
-		}
-		break;
-	case INTERPOLATE_EASE_INOUT:
-		{
-			f = SimpleSpline( f );
-			// Fixme, since this ignores vPre and vNext we could omit computing them aove
-			QuaternionSlerp( vStart, vEnd, f, vOut );
-		}
-		break;
-	case INTERPOLATE_LINEAR_INTERP:
-		// Fixme, since this ignores vPre and vNext we could omit computing them aove
-		QuaternionSlerp( vStart, vEnd, f, vOut );
-		break;
-	case INTERPOLATE_EXPONENTIAL_DECAY:
-		vOut.Init();
-		break;
-	case INTERPOLATE_HOLD:
-		{
-			vOut = vStart;
 		}
 		break;
 	}

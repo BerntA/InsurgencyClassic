@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -27,7 +27,6 @@ public:
 	virtual void EnableDebugTextureList( bool bEnable ) = 0;
 	
 	// If this is on, then it will return all textures that exist, not just the ones that were bound in the last frame.
-	// It is required to enable debug texture list to get this.
 	virtual void EnableGetAllTextures( bool bEnable ) = 0;
 
 	// Use this to get the results of the texture list.
@@ -38,31 +37,11 @@ public:
 	//    Format - ImageFormat of the texture
 	//    Width  - Width of the texture
 	//    Height - Height of the texture
-	// It is required to enable debug texture list to get this.
 	virtual KeyValues* GetDebugTextureList() = 0;
 
-	// Texture memory usage
-	enum TextureMemoryType
-	{
-		MEMORY_RESERVED_MIN = 0,
-		MEMORY_BOUND_LAST_FRAME,		// sums up textures bound last frame
-		MEMORY_TOTAL_LOADED,			// total texture memory used
-		MEMORY_ESTIMATE_PICMIP_1,		// estimate of running with "picmip 1"
-		MEMORY_ESTIMATE_PICMIP_2,		// estimate of running with "picmip 2"
-		MEMORY_RESERVED_MAX
-	};
-
-	// This returns how much memory was used.
-	virtual int GetTextureMemoryUsed( TextureMemoryType eTextureMemory ) = 0;
-
-	// Use this to determine if texture debug info was computed within last numFramesAllowed frames.
-	virtual bool IsDebugTextureListFresh( int numFramesAllowed = 1 ) = 0;
-
-	// Enable debug texture rendering when texture binds should not count towards textures
-	// used during a frame. Returns the old state of debug texture rendering flag to use
-	// it for restoring the mode.
-	virtual bool SetDebugTextureRendering( bool bEnable ) = 0;
-
+	// This returns how much memory was used the last frame. It is not necessary to
+	// enable any mode to get this - it is always available.
+	virtual int GetTextureMemoryUsedLastFrame() = 0;
 };
 
 

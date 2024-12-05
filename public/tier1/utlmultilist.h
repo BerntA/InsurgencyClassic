@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Multiple linked list container class 
 //
@@ -19,6 +19,10 @@
 #include "tier0/memdbgon.h"
 
 
+// This is a useful macro to iterate from head to tail in a linked list.
+#define FOR_EACH_LL( listName, iteratorName ) \
+	for( int iteratorName=listName.Head(); iteratorName != listName.InvalidIndex(); iteratorName = listName.Next( iteratorName ) )
+
 //-----------------------------------------------------------------------------
 // class CUtlMultiList:
 // description:
@@ -29,23 +33,6 @@
 template <class T, class I> 
 class CUtlMultiList
 {
-protected:
-	// What the linked list element looks like
-	struct ListElem_t
-	{
-		T m_Element;
-		I m_Previous;
-		I m_Next;
-	};
-	
-	struct List_t
-	{
-		I m_Head;
-		I m_Tail;
-		I m_Count;
-	};
-
-	typedef CUtlMemory<ListElem_t> M; // Keep naming similar to CUtlLinkedList
 public:
 	typedef I ListHandle_t;
 
@@ -106,7 +93,6 @@ public:
 
 	// invalid index
 	static I	InvalidIndex()		{ return (I)~0; }
-	static bool	IndexInRange( int index );
 	static size_t ElementSize()		{ return sizeof(ListElem_t); }
 
 	// list statistics
@@ -125,6 +111,21 @@ public:
 	bool  IsInList( I i ) const;
    
 protected:
+	// What the linked list element looks like
+	struct ListElem_t
+	{
+		T m_Element;
+		I m_Previous;
+		I m_Next;
+	};
+	
+	struct List_t
+	{
+		I m_Head;
+		I m_Tail;
+		I m_Count;
+	};
+
 	// constructs the class
 	void ConstructList( );
 	
@@ -138,14 +139,15 @@ protected:
 	// copy constructors not allowed
 	CUtlMultiList( CUtlMultiList<T, I> const& list ) { Assert(0); }
 	   
-	M							m_Memory;
+	CUtlMemory<ListElem_t>		m_Memory;
 	CUtlLinkedList<List_t, I>	m_List;
 	I*	m_pElementList;
 
 	I	m_FirstFree;
 	I	m_TotalElements;	
-	int	m_MaxElementIndex;	// The number allocated (use int so we can catch overflow)
+	I	m_MaxElementIndex;	// The number allocated
 
+#if !defined(_XBOX) || defined(_DEBUG)
 	void ResetDbgInfo()
 	{
 		m_pElements = m_Memory.Base();
@@ -169,6 +171,9 @@ protected:
 	// For debugging purposes; 
 	// it's in release builds so this can be used in libraries correctly
 	ListElem_t  *m_pElements;
+#else
+	void ResetDbgInfo() {}
+#endif
 };
    
    
@@ -321,41 +326,17 @@ inline I  CUtlMultiList<T,I>::Next( I i ) const
 //-----------------------------------------------------------------------------
 // Are nodes in the list or valid?
 //-----------------------------------------------------------------------------
-
-template <class T, class I>
-inline bool CUtlMultiList<T,I>::IndexInRange( int index ) // Static method
-{
-	// Since I is not necessarily the type returned by M (int), we need to check that M returns
-	// indices which are representable by I. A common case is 'I === unsigned short', in which case
-	// case CUtlMemory will have 'InvalidIndex == (int)-1' (which casts to 65535 in I), and will
-	// happily return elements at index 65535 and above.
-
-	// Do a couple of static checks here: the invalid index should be (I)~0 given how we use m_MaxElementIndex,
-	// and 'I' should be unsigned (to avoid signed arithmetic errors for plausibly exhaustible ranges).
-	COMPILE_TIME_ASSERT( (I)M::INVALID_INDEX == (I)~0 );
-	COMPILE_TIME_ASSERT( ( sizeof(I) > 2 ) || ( ( (I)-1 ) > 0 ) );
-
-	return ( ( (I)index == index ) && ( (I)index != InvalidIndex() ) );
-}
-
 template <class T, class I>
 inline bool CUtlMultiList<T,I>::IsValidIndex( I i ) const  
 { 
-	// GCC warns if I is an unsigned type and we do a ">= 0" against it (since the comparison is always 0).
-	// We get the warning even if we cast inside the expression. It only goes away if we assign to another variable.
-	long x = i;
-
- 	return (i < m_MaxElementIndex) && (x >= 0) &&
+	return (i < m_MaxElementIndex) && (i >= 0) &&
 		((m_Memory[i].m_Previous != i) || (m_Memory[i].m_Next == i));
 }
 
 template <class T, class I>
 inline bool CUtlMultiList<T,I>::IsInList( I i ) const
 {
-	// GCC warns if I is an unsigned type and we do a ">= 0" against it (since the comparison is always 0).
-	// We get the warning even if we cast inside the expression. It only goes away if we assign to another variable.
-	long x = i;
-	return (i < m_MaxElementIndex) && (x >= 0) && (Previous(i) != i);
+	return (i < m_MaxElementIndex) && (i >= 0) && (Previous(i) != i);
 }
 
 
@@ -396,14 +377,6 @@ I CUtlMultiList<T,I>::Alloc( )
 	I elem;
 	if (m_FirstFree == InvalidIndex())
 	{
-		// We can overflow before the utlmemory overflows, since we have have I != int
-		if ( !IndexInRange( m_MaxElementIndex ) )
-		{
-			// We rarely if ever handle alloc failure. Continuing leads to corruption.
-			Error( "CUtlMultiList overflow! (exhausted index range)\n" );
-			return InvalidIndex();
-		}
-
 		// Nothing in the free list; add.
 		// Since nothing is in the free list, m_TotalElements == total # of elements
 		// the list knows about.
@@ -411,15 +384,8 @@ I CUtlMultiList<T,I>::Alloc( )
 		{
 			m_Memory.Grow();
 			ResetDbgInfo();
-			
-			if ( m_MaxElementIndex >= m_Memory.NumAllocated() )
-			{
-				// We rarely if ever handle alloc failure. Continuing leads to corruption.
-				Error( "CUtlMultiList overflow! (exhausted memory allocator)\n" );
-				return InvalidIndex();
-			}
 		}
-		
+
 		elem = (I)m_MaxElementIndex;
 		++m_MaxElementIndex;
 	}
@@ -610,9 +576,7 @@ I CUtlMultiList<T,I>::InsertBefore( ListHandle_t list, I before )
 {
 	// Make a new node
 	I   newNode = Alloc();
-	if ( newNode == InvalidIndex() )
-		return newNode;
-
+	
 	// Link it in
 	LinkBefore( list, before, newNode );
 	
@@ -627,9 +591,7 @@ I CUtlMultiList<T,I>::InsertAfter( ListHandle_t list, I after )
 {
 	// Make a new node
 	I   newNode = Alloc();
-	if ( newNode == InvalidIndex() )
-		return newNode;
-
+	
 	// Link it in
 	LinkAfter( list, after, newNode );
 	
@@ -660,9 +622,7 @@ I CUtlMultiList<T,I>::InsertBefore( ListHandle_t list, I before, T const& src )
 {
 	// Make a new node
 	I   newNode = Alloc();
-	if ( newNode == InvalidIndex() )
-		return newNode;
-
+	
 	// Link it in
 	LinkBefore( list, before, newNode );
 	
@@ -677,9 +637,7 @@ I CUtlMultiList<T,I>::InsertAfter( ListHandle_t list, I after, T const& src )
 {
 	// Make a new node
 	I   newNode = Alloc();
-	if ( newNode == InvalidIndex() )
-		return newNode;
-
+	
 	// Link it in
 	LinkAfter( list, after, newNode );
 	

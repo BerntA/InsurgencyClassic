@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,8 +12,7 @@
 
 
 #include "tier0/dbg.h"
-#include "tier0/threadtools.h"
-#include "mathlib/vector.h"
+#include "vector.h"
 #include <float.h>
 
 
@@ -31,7 +30,7 @@ inline void RangeCheck( const T &value, int minValue, int maxValue )
 {
 #ifdef _DEBUG
 	extern bool g_bDoRangeChecks;
-	if ( ThreadInMainThread() && g_bDoRangeChecks )
+	if ( g_bDoRangeChecks )
 	{
 		// Ignore the min/max stuff for now.. just make sure it's not a NAN.
 		Assert( _finite( value ) );
@@ -62,11 +61,6 @@ public:
 	inline CRangeCheckedVar( const T &value )
 	{
 		*this = value;
-	}
-
-	T GetRaw() const
-	{
-		return m_Val;
 	}
 
 	// Clamp the value to its limits. Interpolation code uses this after interpolating.

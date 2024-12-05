@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2004, Valve Corporation, All rights reserved. =======
 //
 // Defines entity interface between engine and DLLs.
 // This header file included by engine files and DLL files.
@@ -21,6 +21,8 @@
 #include "convar.h"
 #include "icvar.h"
 #include "edict.h"
+#include "terrainmod.h"
+#include "vplane.h"
 #include "iserverentity.h"
 #include "engine/ivmodelinfo.h"
 #include "soundflags.h"
@@ -58,82 +60,6 @@ class	INetChannelInfo;
 class	ISpatialPartition;
 class IScratchPad3D;
 class CStandardSendProxiesV1;
-
-
-// Terrain Modification Types
-enum TerrainModType
-{
-	TMod_Sphere = 0,			// sphere that pushes all vertices out along their normal.
-	TMod_Suck,
-	TMod_AABB
-};
-
-class CTerrainModParams
-{
-public:
-
-	// Flags for m_Flags.
-	enum
-	{
-		TMOD_SUCKTONORMAL	   = ( 1 << 0 ),	// For TMod_Suck, suck into m_Normal rather than on +Z.
-		TMOD_STAYABOVEORIGINAL = ( 1 << 1 )		// For TMod_Suck, don't go below the original vert on Z.
-	};
-
-	CTerrainModParams() { m_Flags = 0; }		// people always forget to init this
-
-	Vector		m_vCenter;
-	Vector		m_vNormal;						// If TMod_Suck and TMOD_SUCKTONORMAL is set.
-	int			m_Flags;						// Combination of TMOD_ flags.
-	float		m_flRadius;
-	Vector		m_vecMin;						// Bounding box.
-	Vector		m_vecMax;
-	float		m_flStrength;					// for TMod_Suck
-	float		m_flMorphTime;					// time over which the morph takes place
-};
-
-class CSpeculativeTerrainModVert
-{
-public:
-	Vector		m_vOriginal;		// vertex position before any mods
-	Vector		m_vCurrent;			// current vertex position
-	Vector		m_vNew;				// vertex position if the mod were applied
-};
-
-//-----------------------------------------------------------------------------
-// Terrain modification interface
-//-----------------------------------------------------------------------------
-class ITerrainMod
-{
-public:
-
-	//---------------------------------------------------------------------
-	// Initialize the terrain modifier.
-	//---------------------------------------------------------------------
-	virtual void	Init( const CTerrainModParams &params ) = 0;
-
-	//---------------------------------------------------------------------
-	// Apply the terrain modifier to the surface.  The vertex should be
-	// moved from its original position to the target position.
-	// Return true if the position is modified.
-	//---------------------------------------------------------------------
-	virtual bool	ApplyMod( Vector &vecTargetPos, Vector const &vecOriginalPos ) = 0;
-
-	//---------------------------------------------------------------------
-	// Apply the terrain modifier to the surface.  The vertex should from 
-	// its original position toward the target position bassed on the
-	// morph time.
-	// Return true if the posistion is modified.
-	//---------------------------------------------------------------------
-	virtual	bool	ApplyModAtMorphTime( Vector &vecTargetPos, const Vector&vecOriginalPos, 
-		                                 float flCurrentTime, float flMorphTime ) = 0;
-
-	//---------------------------------------------------------------------
-	// Get the bounding box for things that this mod can affect (note that
-	// it CAN move things outside of this bounding box).
-	//---------------------------------------------------------------------
-	virtual void	GetBBox( Vector &vecBBMin, Vector &vecBBMax ) = 0;
-};
-
 
 
 //-----------------------------------------------------------------------------
@@ -237,7 +163,7 @@ public:
 	// Execute any commands currently in the command parser immediately (instead of once per frame)
 	virtual void		ServerExecute( void ) = 0;
 	// Issue the specified command to the specified client (mimics that client typing the command at the console).
-	virtual void		ClientCommand( edict_t *pEdict, PRINTF_FORMAT_STRING const char *szFmt, ... ) = 0;
+	virtual void		ClientCommand( edict_t *pEdict, const char *szFmt, ... ) = 0;
 
 	// Set the lightstyle to the specified value and network the change to any connected clients.  Note that val must not 
 	//  change place in memory (use MAKE_STRING) for anything that's not compiled into your mod.
@@ -262,10 +188,10 @@ public:
 	// SINGLE PLAYER/LISTEN SERVER ONLY (just matching the client .dll api for this)
 	// Prints the formatted string to the notification area of the screen ( down the right hand edge
 	//  numbered lines starting at position 0
-	virtual void		Con_NPrintf( int pos, PRINTF_FORMAT_STRING const char *fmt, ... ) = 0;
+	virtual void		Con_NPrintf( int pos, const char *fmt, ... ) = 0;
 	// SINGLE PLAYER/LISTEN SERVER ONLY(just matching the client .dll api for this)
 	// Similar to Con_NPrintf, but allows specifying custom text color and duration information
-	virtual void		Con_NXPrintf( const struct con_nprint_s *info, PRINTF_FORMAT_STRING const char *fmt, ... ) = 0;
+	virtual void		Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... ) = 0;
 
 	// For ConCommand parsing or parsing client commands issued by players typing at their console
 	// Retrieves the raw command string (untokenized)
@@ -573,7 +499,7 @@ public:
 								int dropped_packets, bool ignore, bool paused ) = 0;
 	
 	// Let the game .dll do stuff after messages have been sent to all of the clients once the server frame is complete
-	virtual void			PostClientMessagesSent_DEPRECIATED( void ) = 0;
+	virtual void			PostClientMessagesSent( void ) = 0;
 
 	// For players, looks up the CPlayerState structure corresponding to the player
 	virtual CPlayerState	*GetPlayerState( edict_t *player ) = 0;

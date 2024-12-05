@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======//
 //
 // Purpose: 
 //
@@ -12,8 +12,8 @@
 #endif
 
 #include "convar.h"
-#include "mathlib/vector.h"
-#include "materialsystem/MaterialSystemUtil.h"
+#include "vector.h"
+#include "materialsystem/materialsystemutil.h"
 
 
 //-----------------------------------------------------------------------------
@@ -24,17 +24,6 @@ enum ClearFlags_t
 	VIEW_CLEAR_COLOR = 0x1,
 	VIEW_CLEAR_DEPTH = 0x2,
 	VIEW_CLEAR_FULL_TARGET = 0x4,
-	VIEW_NO_DRAW = 0x8,
-	VIEW_CLEAR_OBEY_STENCIL = 0x10, // Draws a quad allowing stencil test to clear through portals
-	VIEW_CLEAR_STENCIL = 0x20,
-};
-
-enum StereoEye_t
-{
-	STEREO_EYE_MONO = 0,
-	STEREO_EYE_LEFT = 1,
-	STEREO_EYE_RIGHT = 2,
-	STEREO_EYE_MAX = 3,
 };
 
 
@@ -49,30 +38,24 @@ public:
 		m_flAspectRatio = 0.0f;
 		m_bRenderToSubrectOfLargerScreen = false;
 		m_bDoBloomAndToneMapping = true;
-		m_bOrtho = false;
 		m_bOffCenter = false;
 		m_bCacheFullSceneState = false;
 //		m_bUseExplicitViewVector = false;
-        m_bViewToProjectionOverride = false;
-		m_eStereoEye = STEREO_EYE_MONO;
 	}
 
 // shared by 2D & 3D views
 
+	// User specified context
+	int			context;			
+
 	// left side of view window
 	int			x;					
-	int			m_nUnscaledX;
 	// top side of view window
 	int			y;					
-	int			m_nUnscaledY;
 	// width of view window
 	int			width;				
-	int			m_nUnscaledWidth;
 	// height of view window
 	int			height;				
-	// which eye are we rendering?
-	StereoEye_t m_eStereoEye;
-	int			m_nUnscaledHeight;
 
 // the rest are only used by 3D views
 
@@ -91,7 +74,11 @@ public:
 
 	// 3D origin of camera
 	Vector		origin;					
-
+	// Origin gets reflected on the water surface, but things like
+	// displacement LOD need to be calculated from the viewer's 
+	// real position.		
+	Vector		m_vUnreflectedOrigin;																			
+	
 	// heading of camera (pitch, yaw, roll)
 	QAngle		angles;				
 	// local Z coordinate of near plane of camera
@@ -124,11 +111,6 @@ public:
 
 	// Cached mode for certain full-scene per-frame varying state such as sun entity coverage
 	bool		m_bCacheFullSceneState;
-
-    // If using VR, the headset calibration will feed you a projection matrix per-eye.
-	// This does NOT override the Z range - that will be set up as normal (i.e. the values in this matrix will be ignored).
-    bool        m_bViewToProjectionOverride;
-    VMatrix     m_ViewToProjection;
 };
 
 

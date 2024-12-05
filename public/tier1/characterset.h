@@ -1,25 +1,25 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Shared code for parsing / searching for characters in a string
 //			using lookup tables
 //
 // $Workfile:     $
 // $Date:         $
+//
+//-----------------------------------------------------------------------------
+// $Log: $
+//
 // $NoKeywords: $
-//===========================================================================//
+//=============================================================================//
 
 #ifndef CHARACTERSET_H
 #define CHARACTERSET_H
-
-#ifdef _WIN32
 #pragma once
-#endif
 
-
-struct characterset_t
+typedef struct characterset_s
 {
 	char set[256];
-};
+} characterset_t;
 
 
 // This is essentially a strpbrk() using a precalculated lookup table
@@ -37,7 +37,7 @@ extern void CharacterSetBuild( characterset_t *pSetBuffer, const char *pSetStrin
 //			character - character to lookup
 // Output : int - 1 if the character was in the set
 //-----------------------------------------------------------------------------
-#define IN_CHARACTERSET( SetBuffer, character )		((SetBuffer).set[ (unsigned char) (character) ])
+#define IN_CHARACTERSET( SetBuffer, character )		((SetBuffer).set[(character)])
 
 
 #endif // CHARACTERSET_H

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,13 +12,10 @@
 #pragma once
 
 #include <assert.h>
-#include <limits.h>
 #include "utlmemory.h"
 #include "utlvector.h"
-#include "utllinkedlist.h"
-#include "utllinkedlist.h"
+#include "utlfixedlinkedlist.h"
 #include "commonmacros.h"
-#include "generichash.h"
 
 typedef unsigned int UtlHashHandle_t;
 
@@ -40,7 +37,7 @@ public:
 	bool IsValidHandle( UtlHashHandle_t handle ) const;
 
 	// size
-	int Count( void ) const;
+	int Count( void );
 
 	// memory
 	void Purge( void );
@@ -55,7 +52,7 @@ public:
 	void RemoveAll();
 
 	// retrieval methods
-	UtlHashHandle_t Find( Data const &src ) const;
+	UtlHashHandle_t Find( Data const &src );
 
 	Data &Element( UtlHashHandle_t handle );
 	Data const &Element( UtlHashHandle_t handle ) const;
@@ -74,7 +71,7 @@ protected:
 	int GetKeyDataIndex( UtlHashHandle_t handle ) const;
 	UtlHashHandle_t BuildHandle( int ndxBucket, int ndxKeyData ) const;
 
-	bool DoFind( Data const &src, unsigned int *pBucket, int *pIndex ) const;
+	bool DoFind( Data const &src, unsigned int *pBucket, int *pIndex );
 
 protected:
 
@@ -130,13 +127,9 @@ inline bool CUtlHash<Data, C, K>::IsValidHandle( UtlHashHandle_t handle ) const
 	int ndxBucket = GetBucketIndex( handle );
 	int ndxKeyData = GetKeyDataIndex( handle );
 
-	// ndxBucket and ndxKeyData can't possibly be less than zero -- take a 
-	// look at the definition of the Get..Index functions for why. However,
-	// if you override those functions, you will need to override this one
-	// as well. 
-	if( /*( ndxBucket >= 0 ) && */      ( ndxBucket < m_Buckets.Count() ) )
+	if( ( ndxBucket >= 0 ) && ( ndxBucket < 65536 ) )
 	{
-		if( /*( ndxKeyData >= 0 ) && */ ( ndxKeyData < m_Buckets[ndxBucket].Count() ) )
+		if( ( ndxKeyData >= 0 ) &&  ( ndxKeyData < 65536 ) )
 			return true;
 	}
 	
@@ -146,7 +139,7 @@ inline bool CUtlHash<Data, C, K>::IsValidHandle( UtlHashHandle_t handle ) const
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template<class Data, typename C, typename K>
-inline int CUtlHash<Data, C, K>::Count( void ) const
+inline int CUtlHash<Data, C, K>::Count( void )
 {
 	int count = 0;
 
@@ -208,7 +201,7 @@ inline void CUtlHash<Data, C, K>::Purge( void )
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template<class Data, typename C, typename K>
-inline bool CUtlHash<Data, C, K>::DoFind( Data const &src, unsigned int *pBucket, int *pIndex ) const
+inline bool CUtlHash<Data, C, K>::DoFind( Data const &src, unsigned int *pBucket, int *pIndex )
 {
 	// generate the data "key"
 	unsigned int key = m_KeyFunc( src );
@@ -226,7 +219,7 @@ inline bool CUtlHash<Data, C, K>::DoFind( Data const &src, unsigned int *pBucket
 	}
 
 	int ndxKeyData;
-	const CUtlVector<Data> &bucket = m_Buckets[ndxBucket];
+	CUtlVector<Data> &bucket = m_Buckets[ndxBucket];
 	int keyDataCount = bucket.Count();
 	for( ndxKeyData = 0; ndxKeyData < keyDataCount; ndxKeyData++ )
 	{
@@ -245,7 +238,7 @@ inline bool CUtlHash<Data, C, K>::DoFind( Data const &src, unsigned int *pBucket
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template<class Data, typename C, typename K>
-inline UtlHashHandle_t CUtlHash<Data, C, K>::Find( Data const &src ) const
+inline UtlHashHandle_t CUtlHash<Data, C, K>::Find( Data const &src )
 {
 	unsigned int ndxBucket;
 	int ndxKeyData;
@@ -465,26 +458,7 @@ typedef int UtlHashFastHandle_t;
 
 #define UTLHASH_POOL_SCALAR		2
 
-class CUtlHashFastNoHash
-{
-public:
-	static int Hash( int key, int bucketMask )
-	{
-		return ( key & bucketMask );
-	}
-};
-
-class CUtlHashFastGenericHash
-{
-public:
-	static int Hash( int key, int bucketMask )
-	{
-		return ( HashIntConventional( key ) & bucketMask );
-	}
-};
-
-template<class Data, class HashFuncs = CUtlHashFastNoHash > 
-class CUtlHashFast
+template<class Data> class CUtlHashFast
 {
 public:
 
@@ -540,7 +514,7 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> CUtlHashFast<Data,HashFuncs>::CUtlHashFast()
+template<class Data> CUtlHashFast<Data>::CUtlHashFast()
 {
 	Purge();
 }
@@ -548,7 +522,7 @@ template<class Data, class HashFuncs> CUtlHashFast<Data,HashFuncs>::CUtlHashFast
 //-----------------------------------------------------------------------------
 // Purpose: Deconstructor
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> CUtlHashFast<Data,HashFuncs>::~CUtlHashFast()
+template<class Data> CUtlHashFast<Data>::~CUtlHashFast()
 {
 	Purge();
 }
@@ -556,7 +530,7 @@ template<class Data, class HashFuncs> CUtlHashFast<Data,HashFuncs>::~CUtlHashFas
 //-----------------------------------------------------------------------------
 // Purpose: Destroy dynamically allocated hash data.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline void CUtlHashFast<Data,HashFuncs>::Purge( void )
+template<class Data> inline void CUtlHashFast<Data>::Purge( void )
 {
 	m_aBuckets.Purge();
 	m_aDataPool.Purge();
@@ -565,7 +539,7 @@ template<class Data, class HashFuncs> inline void CUtlHashFast<Data,HashFuncs>::
 //-----------------------------------------------------------------------------
 // Purpose: Initialize the hash - set bucket count and hash grow amount.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> bool CUtlHashFast<Data,HashFuncs>::Init( int nBucketCount )
+template<class Data> bool CUtlHashFast<Data>::Init( int nBucketCount )
 {
 	// Verify the bucket count is power of 2.
 	if ( !IsPowerOfTwo( nBucketCount ) )
@@ -591,7 +565,7 @@ template<class Data, class HashFuncs> bool CUtlHashFast<Data,HashFuncs>::Init( i
 //-----------------------------------------------------------------------------
 // Purpose: Return the number of elements in the hash.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline int CUtlHashFast<Data,HashFuncs>::Count( void )
+template<class Data> inline int CUtlHashFast<Data>::Count( void )
 {
 	return m_aDataPool.Count();
 }
@@ -600,7 +574,7 @@ template<class Data, class HashFuncs> inline int CUtlHashFast<Data,HashFuncs>::C
 // Purpose: Insert data into the hash table given its key (unsigned int), with
 //          a check to see if the element already exists within the tree.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline UtlHashFastHandle_t CUtlHashFast<Data,HashFuncs>::Insert( unsigned int uiKey, const Data &data )
+template<class Data> inline UtlHashFastHandle_t CUtlHashFast<Data>::Insert( unsigned int uiKey, const Data &data )
 {
 	// Check to see if that key already exists in the buckets (should be unique).
 	UtlHashFastHandle_t hHash = Find( uiKey );
@@ -614,7 +588,7 @@ template<class Data, class HashFuncs> inline UtlHashFastHandle_t CUtlHashFast<Da
 // Purpose: Insert data into the hash table given its key (unsigned int),
 //          without a check to see if the element already exists within the tree.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline UtlHashFastHandle_t CUtlHashFast<Data,HashFuncs>::FastInsert( unsigned int uiKey, const Data &data )
+template<class Data> inline UtlHashFastHandle_t CUtlHashFast<Data>::FastInsert( unsigned int uiKey, const Data &data )
 {
 	// Get a new element from the pool.
 	int iHashData = m_aDataPool.Alloc( true );
@@ -627,7 +601,7 @@ template<class Data, class HashFuncs> inline UtlHashFastHandle_t CUtlHashFast<Da
 	pHashData->m_Data = data;
 				
 	// Link element.
-	int iBucket = HashFuncs::Hash( uiKey, m_uiBucketMask );
+	int iBucket = ( uiKey & m_uiBucketMask );
 	m_aDataPool.LinkBefore( m_aBuckets[iBucket], iHashData );
 	m_aBuckets[iBucket] = iHashData;
 	
@@ -637,9 +611,9 @@ template<class Data, class HashFuncs> inline UtlHashFastHandle_t CUtlHashFast<Da
 //-----------------------------------------------------------------------------
 // Purpose: Remove a given element from the hash.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline void CUtlHashFast<Data,HashFuncs>::Remove( UtlHashFastHandle_t hHash )
+template<class Data> inline void CUtlHashFast<Data>::Remove( UtlHashFastHandle_t hHash )
 {
-	int iBucket = HashFuncs::Hash( m_aDataPool[hHash].m_uiKey, m_uiBucketMask );
+	int iBucket = ( m_aDataPool[hHash].m_uiKey & m_uiBucketMask );
 	if ( m_aBuckets[iBucket] == hHash )
 	{
 		// It is a bucket head.
@@ -658,7 +632,7 @@ template<class Data, class HashFuncs> inline void CUtlHashFast<Data,HashFuncs>::
 //-----------------------------------------------------------------------------
 // Purpose: Remove all elements from the hash
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline void CUtlHashFast<Data,HashFuncs>::RemoveAll( void )
+template<class Data> inline void CUtlHashFast<Data>::RemoveAll( void )
 {
 	m_aBuckets.RemoveAll();
 	m_aDataPool.RemoveAll();
@@ -666,10 +640,12 @@ template<class Data, class HashFuncs> inline void CUtlHashFast<Data,HashFuncs>::
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline UtlHashFastHandle_t CUtlHashFast<Data,HashFuncs>::Find( unsigned int uiKey )
+template<class Data> inline UtlHashFastHandle_t CUtlHashFast<Data>::Find( unsigned int uiKey )
 {
 	// hash the "key" - get the correct hash table "bucket"
-	int iBucket = HashFuncs::Hash( uiKey, m_uiBucketMask );
+	int iBucket = ( uiKey & m_uiBucketMask );
+	if ( m_aBuckets[iBucket] == m_aDataPool.InvalidIndex() )
+		return InvalidHandle();
 
 	for ( int iElement = m_aBuckets[iBucket]; iElement != m_aDataPool.InvalidIndex(); iElement = m_aDataPool.Next( iElement ) )
 	{
@@ -683,7 +659,7 @@ template<class Data, class HashFuncs> inline UtlHashFastHandle_t CUtlHashFast<Da
 //-----------------------------------------------------------------------------
 // Purpose: Return data given a hash handle.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline Data &CUtlHashFast<Data,HashFuncs>::Element( UtlHashFastHandle_t hHash )
+template<class Data> inline Data &CUtlHashFast<Data>::Element( UtlHashFastHandle_t hHash )
 {
 	return ( m_aDataPool[hHash].m_Data );
 }
@@ -691,7 +667,7 @@ template<class Data, class HashFuncs> inline Data &CUtlHashFast<Data,HashFuncs>:
 //-----------------------------------------------------------------------------
 // Purpose: Return data given a hash handle.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline Data const &CUtlHashFast<Data,HashFuncs>::Element( UtlHashFastHandle_t hHash ) const
+template<class Data> inline Data const &CUtlHashFast<Data>::Element( UtlHashFastHandle_t hHash ) const
 {
 	return ( m_aDataPool[hHash].m_Data );
 }
@@ -699,7 +675,7 @@ template<class Data, class HashFuncs> inline Data const &CUtlHashFast<Data,HashF
 //-----------------------------------------------------------------------------
 // Purpose: Return data given a hash handle.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline Data &CUtlHashFast<Data,HashFuncs>::operator[]( UtlHashFastHandle_t hHash )
+template<class Data> inline Data &CUtlHashFast<Data>::operator[]( UtlHashFastHandle_t hHash )
 {
 	return ( m_aDataPool[hHash].m_Data );
 }
@@ -707,230 +683,9 @@ template<class Data, class HashFuncs> inline Data &CUtlHashFast<Data,HashFuncs>:
 //-----------------------------------------------------------------------------
 // Purpose: Return data given a hash handle.
 //-----------------------------------------------------------------------------
-template<class Data, class HashFuncs> inline Data const &CUtlHashFast<Data,HashFuncs>::operator[]( UtlHashFastHandle_t hHash ) const
+template<class Data> inline Data const &CUtlHashFast<Data>::operator[]( UtlHashFastHandle_t hHash ) const
 {
 	return ( m_aDataPool[hHash].m_Data );
-}
-
-//=============================================================================
-// 
-// Fixed Hash
-//
-// Number of buckets must be a power of 2.
-// Key must be 32-bits (unsigned int).
-//
-typedef int UtlHashFixedHandle_t;
-
-template <int NUM_BUCKETS>
-class CUtlHashFixedGenericHash
-{
-public:
-	static int Hash( int key, int bucketMask )
-	{
-		int hash = HashIntConventional( key );
-		if ( NUM_BUCKETS <= USHRT_MAX )
-		{
-			hash ^= ( hash >> 16 );
-		}
-		if ( NUM_BUCKETS <= UCHAR_MAX )
-		{
-			hash ^= ( hash >> 8 );
-		}
-		return ( hash & bucketMask );
-	}
-};
-
-template<class Data, int NUM_BUCKETS, class CHashFuncs = CUtlHashFastNoHash > 
-class CUtlHashFixed
-{
-public:
-
-	// Constructor/Deconstructor.
-	CUtlHashFixed();
-	~CUtlHashFixed();
-
-	// Memory.
-	void Purge( void );
-
-	// Invalid handle.
-	static UtlHashFixedHandle_t InvalidHandle( void )	{ return ( UtlHashFixedHandle_t )~0; }
-
-	// Size.
-	int Count( void );
-
-	// Insertion.
-	UtlHashFixedHandle_t Insert( unsigned int uiKey, const Data &data );
-	UtlHashFixedHandle_t FastInsert( unsigned int uiKey, const Data &data );
-
-	// Removal.
-	void Remove( UtlHashFixedHandle_t hHash );
-	void RemoveAll( void );
-
-	// Retrieval.
-	UtlHashFixedHandle_t Find( unsigned int uiKey );
-
-	Data &Element( UtlHashFixedHandle_t hHash );
-	Data const &Element( UtlHashFixedHandle_t hHash ) const;
-	Data &operator[]( UtlHashFixedHandle_t hHash );
-	Data const &operator[]( UtlHashFixedHandle_t hHash ) const;
-
-	//protected:
-
-	// Templatized for memory tracking purposes
-	template <typename Data_t>
-	struct HashFixedData_t_
-	{
-		unsigned int	m_uiKey;
-		Data_t			m_Data;
-	};
-
-	typedef HashFixedData_t_<Data> HashFixedData_t;
-
-	enum
-	{
-		BUCKET_MASK = NUM_BUCKETS - 1
-	};
-	CUtlPtrLinkedList<HashFixedData_t> m_aBuckets[NUM_BUCKETS];
-	int m_nElements;
-};
-
-//-----------------------------------------------------------------------------
-// Purpose: Constructor
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::CUtlHashFixed()
-{
-	Purge();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Deconstructor
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::~CUtlHashFixed()
-{
-	Purge();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Destroy dynamically allocated hash data.
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline void CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::Purge( void )
-{
-	RemoveAll();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Return the number of elements in the hash.
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline int CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::Count( void )
-{
-	return m_nElements;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Insert data into the hash table given its key (unsigned int), with
-//          a check to see if the element already exists within the tree.
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline UtlHashFixedHandle_t CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::Insert( unsigned int uiKey, const Data &data )
-{
-	// Check to see if that key already exists in the buckets (should be unique).
-	UtlHashFixedHandle_t hHash = Find( uiKey );
-	if( hHash != InvalidHandle() )
-		return hHash;
-
-	return FastInsert( uiKey, data );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Insert data into the hash table given its key (unsigned int),
-//          without a check to see if the element already exists within the tree.
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline UtlHashFixedHandle_t CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::FastInsert( unsigned int uiKey, const Data &data )
-{
-	int iBucket = HashFuncs::Hash( uiKey, NUM_BUCKETS - 1 );
-	UtlPtrLinkedListIndex_t iElem = m_aBuckets[iBucket].AddToHead();
-
-	HashFixedData_t *pHashData = &m_aBuckets[iBucket][iElem];
-
-	Assert( (UtlPtrLinkedListIndex_t)pHashData == iElem );
-
-	// Add data to new element.
-	pHashData->m_uiKey = uiKey;
-	pHashData->m_Data = data;
-
-	m_nElements++;
-	return (UtlHashFixedHandle_t)pHashData;	
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Remove a given element from the hash.
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline void CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::Remove( UtlHashFixedHandle_t hHash )
-{
-	HashFixedData_t *pHashData = (HashFixedData_t *)hHash;
-	Assert( Find(pHashData->m_uiKey) != InvalidHandle() );
-	int iBucket = HashFuncs::Hash( pHashData->m_uiKey, NUM_BUCKETS - 1 );
-	m_aBuckets[iBucket].Remove( (UtlPtrLinkedListIndex_t)pHashData );
-	m_nElements--;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Remove all elements from the hash
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline void CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::RemoveAll( void )
-{
-	for ( int i = 0; i < NUM_BUCKETS; i++ )
-	{
-		m_aBuckets[i].RemoveAll();
-	}
-	m_nElements = 0;
-}
-
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline UtlHashFixedHandle_t CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::Find( unsigned int uiKey )
-{
-	int iBucket = HashFuncs::Hash( uiKey, NUM_BUCKETS - 1 );
-	CUtlPtrLinkedList<HashFixedData_t> &bucket = m_aBuckets[iBucket];
-
-	for ( UtlPtrLinkedListIndex_t iElement = bucket.Head(); iElement != bucket.InvalidIndex(); iElement = bucket.Next( iElement ) )
-	{
-		if ( bucket[iElement].m_uiKey == uiKey )
-			return (UtlHashFixedHandle_t)iElement;
-	}
-
-	return InvalidHandle();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Return data given a hash handle.
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline Data &CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::Element( UtlHashFixedHandle_t hHash )
-{
-	return ((HashFixedData_t *)hHash)->m_Data;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Return data given a hash handle.
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline Data const &CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::Element( UtlHashFixedHandle_t hHash ) const
-{
-	return ((HashFixedData_t *)hHash)->m_Data;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Return data given a hash handle.
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline Data &CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::operator[]( UtlHashFixedHandle_t hHash )
-{
-	return ((HashFixedData_t *)hHash)->m_Data;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Return data given a hash handle.
-//-----------------------------------------------------------------------------
-template<class Data, int NUM_BUCKETS, class HashFuncs> inline Data const &CUtlHashFixed<Data,NUM_BUCKETS,HashFuncs>::operator[]( UtlHashFixedHandle_t hHash ) const
-{
-	return ((HashFixedData_t *)hHash)->m_Data;
 }
 
 #endif // UTLHASH_H

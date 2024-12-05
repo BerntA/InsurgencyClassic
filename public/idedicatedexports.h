@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,7 +12,7 @@
 #endif
 
 #include "interface.h"
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 
 
 abstract_class IDedicatedExports : public IAppSystem

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,9 +12,9 @@
 #pragma once
 #endif
 
-#include "tier1/interface.h"
-#include <vgui/VGUI.h>
-#include <vgui/KeyCode.h>
+#include "interface.h"
+#include <vgui/vgui.h>
+#include <vgui/keycode.h>
 
 #ifdef PlaySound
 #undef PlaySound
@@ -113,17 +113,6 @@ public:
 	virtual bool DeleteRegistryKey(const char *keyName) = 0;
 
 	virtual const char *GetDesktopFolderPath() = 0;
-
-	// use this with the "open" command to launch web browsers/explorer windows, eg. ShellExecute("open", "www.valvesoftware.com")
-	virtual void ShellExecuteEx( const char *command, const char *file, const char *pParams ) = 0;
-
-	// Copy a portion of the application client area to the clipboard
-	//  (x1,y1) specifies the top-left corner of the client rect to copy
-	//  (x2,y2) specifies the bottom-right corner of the client rect to copy
-	// Requires: x2 > x1 && y2 > y1
-	// Dimensions of the copied rectangle are (x2 - x1) x (y2 - y1)
-	// Pixel at (x1,y1) is copied, pixels at column x2 and row y2 are *not* copied
-	virtual void SetClipboardImage( void *pWnd, int x1, int y1, int x2, int y2 ) = 0;
 };
 
 }

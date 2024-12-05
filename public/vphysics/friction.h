@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -43,7 +43,6 @@ public:
 
 	// Move to the next friction data for this object
 	virtual void NextFrictionData() = 0;
-	virtual float GetFrictionCoefficient() = 0;
 };
 
 

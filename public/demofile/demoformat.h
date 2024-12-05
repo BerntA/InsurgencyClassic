@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2004, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -10,7 +10,7 @@
 #pragma once
 #endif
 
-#include "mathlib/vector.h"
+#include "vector.h"
 #include "utlvector.h"
 #include "tier0/platform.h"
 
@@ -39,10 +39,8 @@ enum
 	// end of time.
 	dem_stop,
 
-	dem_stringtables,
-
 	// Last command
-	dem_lastcmd		= dem_stringtables
+	dem_lastcmd		= dem_stop
 };
 
 struct demoheader_t
@@ -57,18 +55,8 @@ struct demoheader_t
 	float	playback_time;					// Time of track
 	int     playback_ticks;					// # of ticks in track
 	int     playback_frames;				// # of frames in track
-	int		signonlength;					// length of sigondata in bytes
+	int		signonlength;					// lenght of sigondata in bytes
 };
-
-inline void ByteSwap_demoheader_t( demoheader_t &swap )
-{
-	swap.demoprotocol = LittleDWord( swap.demoprotocol );
-	swap.networkprotocol = LittleDWord( swap.networkprotocol );
-	LittleFloat( &swap.playback_time, &swap.playback_time );
-	swap.playback_ticks = LittleDWord( swap.playback_ticks );
-	swap.playback_frames = LittleDWord( swap.playback_frames );
-	swap.signonlength = LittleDWord( swap.signonlength );
-}
 
 #define FDEMO_NORMAL		0
 #define FDEMO_USE_ORIGIN2	(1<<0)

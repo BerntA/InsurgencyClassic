@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======
 //
 // Baked Bitmap fonts
 //
@@ -6,8 +6,6 @@
 
 #ifndef _BITMAPFONTFILE_H_
 #define _BITMAPFONTFILE_H_
-
-#include "datamap.h"
 
 #define BITMAPFONT_ID		(('T'<<24)|('N'<<16)|('F'<<8)|('V'))
 #define BITMAPFONT_VERSION	3
@@ -22,10 +20,10 @@
 #define BF_ANTIALIASED	0x0040
 #define BF_CUSTOM		0x0080
 
-#pragma pack(1) //X360TBD
-typedef struct BitmapGlyph_s
+#pragma pack(1)
+
+typedef struct 
 {
-	DECLARE_BYTESWAP_DATADESC();
 	short	x;
 	short	y;
 	short	w;
@@ -35,9 +33,8 @@ typedef struct BitmapGlyph_s
 	short	c;
 } BitmapGlyph_t;
 
-typedef struct BitmapFont_s
+typedef struct 
 {
-	DECLARE_BYTESWAP_DATADESC();
 	int				m_id;
 	int				m_Version;
 	short			m_PageWidth;
@@ -49,6 +46,7 @@ typedef struct BitmapFont_s
 	short			m_NumGlyphs;
 	unsigned char	m_TranslateTable[256];
 } BitmapFont_t;
+
 #pragma pack()
 
 #endif

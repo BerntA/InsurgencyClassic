@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -6,12 +6,12 @@
 //=============================================================================//
 
 #include <windows.h>
-#include <dbghelp.h>
 #include "tier0/minidump.h"
 #include "tools_minidump.h"
 
+
 static bool g_bToolsWriteFullMinidumps = false;
-static ToolsExceptionHandler g_pCustomExceptionHandler = NULL;
+static ToolsExceptionHandler g_pCustomExceptionHandler = false;
 
 
 // --------------------------------------------------------------------------------- //
@@ -33,7 +33,7 @@ static LONG __stdcall ToolsExceptionFilter( struct _EXCEPTION_POINTERS *Exceptio
 static LONG __stdcall ToolsExceptionFilter_Custom( struct _EXCEPTION_POINTERS *ExceptionInfo )
 {
 	// Run their custom handler.
-	g_pCustomExceptionHandler( ExceptionInfo->ExceptionRecord->ExceptionCode, ExceptionInfo );
+	g_pCustomExceptionHandler( ExceptionInfo->ExceptionRecord->ExceptionCode );
 	return EXCEPTION_EXECUTE_HANDLER; // (never gets here anyway)
 }
 

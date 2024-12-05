@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -16,7 +16,7 @@
 
 
 #include "tier0/dbg.h"
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 
 class IDataCache;
 
@@ -50,11 +50,11 @@ typedef memhandle_t DataCacheHandle_t;
 //---------------------------------------------------------
 struct DataCacheLimits_t
 {
-	DataCacheLimits_t( unsigned _nMaxBytes = (unsigned)-1, unsigned _nMaxItems = (unsigned)-1, unsigned _nMinBytes = 0, unsigned _nMinItems = 0 )
-		: nMaxBytes(_nMaxBytes), 
-		nMaxItems(_nMaxItems), 
-		nMinBytes(_nMinBytes),
-		nMinItems(_nMinItems)
+	DataCacheLimits_t( unsigned nMaxBytes = (unsigned)-1, unsigned nMaxItems = (unsigned)-1, unsigned nMinBytes = 0, unsigned nMinItems = 0 )
+		: nMaxBytes(nMaxBytes), 
+		nMaxItems(nMaxItems), 
+		nMinBytes(nMinBytes),
+		nMinItems(nMinItems)
 	{
 	}
 
@@ -248,10 +248,10 @@ public:
 	// Purpose: "Frame locking" (not game frame). A crude way to manage locks over relatively 
 	//			short periods. Does not affect normal locks/unlocks
 	//--------------------------------------------------------
-	virtual int BeginFrameLocking() = 0;
+	virtual void BeginFrameLocking() = 0;
 	virtual bool IsFrameLocking() = 0;
 	virtual void *FrameLock( DataCacheHandle_t handle ) = 0;
-	virtual int EndFrameLocking() = 0;
+	virtual void EndFrameLocking() = 0;
 	virtual int *GetFrameUnlockCounterPtr() = 0;
 
 
@@ -345,7 +345,6 @@ public:
 		case DC_AGE_DISCARD:
 		case DC_FLUSH_DISCARD:
 		case DC_REMOVED:
-		default:
 			Assert ( 0 );
 			return false;
 		}
@@ -512,14 +511,12 @@ public:
 		case DC_AGE_DISCARD:
 		case DC_FLUSH_DISCARD:
 		case DC_REMOVED:
-			{
-				STORAGE_TYPE *p = (STORAGE_TYPE *)notification.clientId;
-				p->DestroyResource();
-			}
+			STORAGE_TYPE *p = (STORAGE_TYPE *)notification.clientId;
+			p->DestroyResource();
 			return true;
-		default:
-			return CDefaultDataCacheClient::HandleCacheNotification( notification );
 		}
+
+		return CDefaultDataCacheClient::HandleCacheNotification( notification );
 	}
 
 

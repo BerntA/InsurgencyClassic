@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,8 +12,8 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
-#include <vgui_controls/Label.h>
+#include <vgui/vgui.h>
+#include <vgui_controls/label.h>
 
 namespace vgui
 {
@@ -35,8 +35,6 @@ protected:
 	virtual void GetSettings( KeyValues *outResourceData );
 	virtual void ApplySchemeSettings(IScheme *pScheme);
 	virtual const char *GetDescription( void );
-
-	const char *GetURL( void ) { return m_pszURL; }
 
 private:
     char    *m_pszURL;

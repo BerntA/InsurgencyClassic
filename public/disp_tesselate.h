@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -175,7 +175,7 @@ public:
 
 	
 	// Set these before calling TesselateDisplacement.
-	uint32 *m_pActiveVerts;		// These bits control the tesselation.
+	unsigned long *m_pActiveVerts;		// These bits control the tesselation.
 	const CPowerInfo *m_pPowerInfo;								// Lots of precalculated data about a displacement this size.
 	
 	

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,11 +10,11 @@
 #pragma once
 #endif
 
-#include <vgui_controls/Panel.h>
-#include <vgui_controls/PHandle.h>
+#include <vgui_controls/panel.h>
+#include <vgui_controls/phandle.h>
 
-#include "tier1/utlsymbol.h"
-#include "tier1/utlvector.h"
+#include "utlsymbol.h"
+#include "utlvector.h"
 
 namespace vgui
 {
@@ -39,10 +39,6 @@ public:
 
 	// runs a frame of animation (time is passed in so slow motion, etc. works)
 	void UpdateAnimations( float curtime );
-	
-	int	 GetNumActiveAnimations( void ) { return m_ActiveAnimations.Count(); }
-
-	bool IsPanelBeingAnimated(Panel *pPanel);
 
 	// plays all animations to completion instantly
 	void RunAllAnimationsToCompletion();
@@ -52,10 +48,6 @@ public:
 
 	// starts an animation sequence script
 	bool StartAnimationSequence(const char *sequenceName);
-	bool StartAnimationSequence(Panel *pWithinParent, const char *sequenceName);
-
-	bool StopAnimationSequence( Panel *pWithinParent, const char *sequenceName );
-	void CancelAnimationsForPanel( Panel *pWithinParent );
 
 	// gets the length of an animation sequence, in seconds
 	float GetAnimationSequenceLength(const char *sequenceName);
@@ -72,7 +64,6 @@ public:
 		INTERPOLATOR_PULSE,
 		INTERPOLATOR_FLICKER,
 		INTERPOLATOR_SIMPLESPLINE, // ease in / out
-		INTERPOLATOR_BOUNCE,	   // gravitational bounce
 	};
 
 	// runs the specific animation command (doesn't use script file at all)
@@ -101,9 +92,6 @@ private:
 		CMD_SETFONT,
 		CMD_SETTEXTURE,
 		CMD_SETSTRING,
-		CMD_RUNEVENTCHILD,
-		CMD_FIRECOMMAND,
-		CMD_SETVISIBLE,
 	};
 
 	enum RelativeAlignment
@@ -213,38 +201,25 @@ private:
 		UtlSymId_t variable;
 		UtlSymId_t variable2;
 		float startTime;
-		PHandle parent;
 	};
 	CUtlVector<PostedMessage_t> m_PostedMessages;
-
-	struct RanEvent_t
-	{
-		UtlSymId_t event;
-		Panel *pParent;
-	
-		bool operator==( const RanEvent_t &other ) const
-		{
-			return ( event == other.event && pParent == other.pParent );
-		}
-	};
 
 	// variable names
 	UtlSymId_t m_sPosition, m_sSize, m_sFgColor, m_sBgColor;
 	UtlSymId_t m_sXPos, m_sYPos, m_sWide, m_sTall;
-	UtlSymId_t m_sModelPos;
 
 	// file name
-	CUtlVector<UtlSymId_t>	m_ScriptFileNames;
+	UtlSymId_t m_sScriptFileName;
 
 	// runs a single line of the script
-	void ExecAnimationCommand(UtlSymId_t seqName, AnimCommand_t &animCommand, Panel *pWithinParent);
+	void ExecAnimationCommand(UtlSymId_t seqName, AnimCommand_t &animCommand);
 	// removes all commands belonging to a script
-	void RemoveQueuedAnimationCommands(UtlSymId_t seqName, vgui::Panel *panel = NULL);
+	void RemoveQueuedAnimationCommands(UtlSymId_t seqName);
 	// removes an existing instance of a command
 	void RemoveQueuedAnimationByType(vgui::Panel *panel, UtlSymId_t variable, UtlSymId_t sequenceToIgnore);
 
 	// handlers
-	void StartCmd_Animate(UtlSymId_t seqName, AnimCmdAnimate_t &cmd, Panel *pWithinParent);
+	void StartCmd_Animate(UtlSymId_t seqName, AnimCmdAnimate_t &cmd);
 	void StartCmd_Animate(Panel *panel, UtlSymId_t seqName, AnimCmdAnimate_t &cmd);
 	void RunCmd_RunEvent(PostedMessage_t &msg);
 	void RunCmd_StopEvent(PostedMessage_t &msg);

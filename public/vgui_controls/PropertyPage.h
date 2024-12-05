@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,8 +12,8 @@
 #pragma once
 #endif
 
-#include <vgui_controls/EditablePanel.h>
-#include <vgui_controls/PHandle.h>
+#include <vgui_controls/editablepanel.h>
+#include <vgui_controls/phandle.h>
 
 namespace vgui
 {
@@ -42,9 +42,9 @@ public:
 	virtual void OnKeyCodeTyped(KeyCode code);
 	virtual bool HasUserConfigSettings() { return true; }
 
+protected:
 	virtual void SetVisible(bool state);
 
-protected:
 	// called to be notified of the tab button used to Activate this page
 	// if overridden this must be chained back to
 	MESSAGE_FUNC_PTR( OnPageTabActivated, "PageTabActivated", panel );

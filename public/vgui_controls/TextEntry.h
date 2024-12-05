@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: A Class to create a window that you can type and edit text in.
 //          Window can hold single line or multiline text. 
@@ -15,11 +15,11 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
-#include <Color.h>
-#include <vgui_controls/Panel.h>
-#include <vgui_controls/Label.h>
-#include <vgui_controls/ListPanel.h>
+#include <vgui/vgui.h>
+#include <color.h>
+#include <vgui_controls/panel.h>
+#include <vgui_controls/label.h>
+#include <vgui_controls/listpanel.h>
 
 #include <utlvector.h>
 
@@ -92,8 +92,8 @@ public:
 
 	virtual void SetText(const wchar_t *wszText);
 	virtual void SetText(const char *text);
-	virtual void GetText(OUT_Z_BYTECAP(bufLenInBytes) char *buf, int bufLenInBytes);
-	virtual void GetText(OUT_Z_BYTECAP(bufLenInBytes) wchar_t *buf, int bufLenInBytes);
+	virtual void GetText(char *buf, int bufLen);
+	virtual void GetText(wchar_t *buf, int bufLen);
 	virtual int GetTextLength() const;
 	virtual bool IsTextFullySelected() const;
 
@@ -111,7 +111,7 @@ public:
 
 	virtual void InsertChar(wchar_t ch);
 	virtual void InsertString(const char *text);
-	virtual void InsertString(const wchar_t *wszText);
+	virtual void InsertString(wchar_t *wszText);
 	virtual void Backspace();								   
 	virtual void Delete();
 	virtual void SelectNone();
@@ -146,7 +146,6 @@ public:
 	
 	// set whether the box handles more than one line of entry
 	virtual void SetMultiline(bool state);
-	virtual bool IsMultiline();
 
 	// sets visibility of scrollbar
 	virtual void SetVerticalScrollbar(bool state);
@@ -227,9 +226,6 @@ public:
 	void SetSelectionTextColor( const Color& clr );
 	void SetSelectionBgColor( const Color& clr );
 	void SetSelectionUnfocusedBgColor( const Color& clr );
-
-	void SetUseFallbackFont( bool bState, HFont hFallback );
-
 protected:
 	virtual void ResetCursorBlink();
 	virtual void PerformLayout();  // layout the text in the window
@@ -254,7 +250,6 @@ protected:
 	MESSAGE_FUNC( OnSliderMoved, "ScrollBarSliderMoved" ); // respond to scroll bar events
 	virtual void OnKillFocus();
 	virtual void OnMouseWheeled(int delta);	// respond to mouse wheel events
-	virtual void OnKeyCodePressed(KeyCode code); //respond to keyboard events
 	virtual void OnKeyCodeTyped(KeyCode code);	//respond to keyboard events
 	virtual	void OnKeyTyped(wchar_t unichar);	//respond to keyboard events
 
@@ -274,13 +269,7 @@ protected:
 
 	// Returns the character index the drawing should Start at
 	virtual int GetStartDrawIndex(int &lineBreakIndexIndex);
-
-public:
-	// helper accessors for common gets
-	virtual float GetValueAsFloat();
-	virtual int GetValueAsInt();
-
-protected:
+	
     void ScrollRight(); // scroll to right until cursor is visible
     void ScrollLeft();  // scroll to left 
 	bool IsCursorOffRightSideOfWindow(int cursorPos); // check if cursor is off right side of window
@@ -290,8 +279,6 @@ protected:
 	void OnSetFocus();
 	// Change keyboard layout type
 	void OnChangeIME( bool forward );
-
-	bool NeedsEllipses( HFont font, int *pIndex );
 
 private:
 	MESSAGE_FUNC_INT( OnSetState, "SetState", state );
@@ -305,15 +292,7 @@ private:
 	void CalcBreakIndex(); // calculate _recalculateLineBreaksIndex
 	void CreateEditMenu(); // create copy/cut/paste menu
 
-public:
-	Menu *GetEditMenu(); // retrieve copy/cut/paste menu
-
-private:
 	void	FlipToLastIME();
-
-public:
-	virtual void GetTextRange( wchar_t *buf, int from, int numchars );	// copy a portion of the text to the buffer and add zero-termination
-	virtual void GetTextRange( char *buf, int from, int numchars );	// copy a portion of the text to the buffer and add zero-termination
 
 private:
 
@@ -380,9 +359,6 @@ private:
 	int					m_hPreviousIME;
 	bool				m_bDrawLanguageIDAtLeft;
 	int					m_nLangInset;
-
-	bool				m_bUseFallbackFont : 1;
-	HFont				m_hFallbackFont;
 };
 
 }

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
 //
 // The copyright to the contents herein is the property of Valve, L.L.C.
 // The contents may be used and/or copied only with the written permission of
@@ -19,7 +19,9 @@
 #pragma once
 #endif
 
-#include "appframework/IAppSystem.h"
+
+#include "appframework/iappsystem.h"
+
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -61,7 +63,6 @@ enum MDLCacheDataType_t
 	MDLCACHE_ANIMBLOCK,
 	MDLCACHE_VIRTUALMODEL,
 	MDLCACHE_VERTEXES,
-	MDLCACHE_DECODEDANIMBLOCK,
 };
 
 abstract_class IMDLCacheNotify
@@ -170,7 +171,6 @@ abstract_class IMDLCache : public IAppSystem
 {
 public:
 	// Used to install callbacks for when data is loaded + unloaded
-	// Returns the prior notify
 	virtual void SetCacheNotify( IMDLCacheNotify *pNotify ) = 0;
 
 	// NOTE: This assumes the "GAME" path if you don't use
@@ -181,7 +181,6 @@ public:
 	// Reference counting
 	virtual int AddRef( MDLHandle_t handle ) = 0;
 	virtual int Release( MDLHandle_t handle ) = 0;
-	virtual int GetRef( MDLHandle_t handle ) = 0;
 
 	// Gets at the various data associated with a MDL
 	virtual studiohdr_t *GetStudioHdr( MDLHandle_t handle ) = 0;
@@ -203,7 +202,7 @@ public:
 	virtual bool IsErrorModel( MDLHandle_t handle ) = 0;
 
 	// Flushes the cache, force a full discard
-	virtual void Flush( MDLCacheFlush_t nFlushFlags = MDLCACHE_FLUSH_ALL ) = 0;
+	virtual void Flush( int nFlushFlags = MDLCACHE_FLUSH_ALL ) = 0;
 
 	// Flushes a particular model out of memory
 	virtual void Flush( MDLHandle_t handle, int nFlushFlags = MDLCACHE_FLUSH_ALL ) = 0;
@@ -243,18 +242,6 @@ public:
 	virtual bool IsDataLoaded( MDLHandle_t handle, MDLCacheDataType_t type ) = 0;
 
 	virtual int *GetFrameUnlockCounterPtr( MDLCacheDataType_t type ) = 0;
-
-	virtual studiohdr_t *LockStudioHdr( MDLHandle_t handle ) = 0;
-	virtual void UnlockStudioHdr( MDLHandle_t handle ) = 0;
-
-	virtual bool PreloadModel( MDLHandle_t handle ) = 0;
-
-	// Hammer uses this. If a model has an error loading in GetStudioHdr, then it is flagged
-	// as an error model and any further attempts to load it will just get the error model.
-	// That is, until you call this function. Then it will load the correct model.
-	virtual void ResetErrorModelStatus( MDLHandle_t handle ) = 0;
-
-	virtual void MarkFrame() = 0;
 };
 
 
@@ -278,20 +265,8 @@ private:
 	IMDLCache *m_pCache;
 };
 
-#define MDCACHE_FINE_GRAINED 1
-
-#if defined(MDCACHE_FINE_GRAINED)
 #define MDLCACHE_CRITICAL_SECTION_( pCache ) CMDLCacheCriticalSection cacheCriticalSection(pCache)
-#define MDLCACHE_COARSE_LOCK_( pCache ) ((void)(0))
-#elif defined(MDLCACHE_LEVEL_LOCKED)
-#define MDLCACHE_CRITICAL_SECTION_( pCache )  ((void)(0))
-#define MDLCACHE_COARSE_LOCK_( pCache ) ((void)(0))
-#else
-#define MDLCACHE_CRITICAL_SECTION_( pCache ) ((void)(0))
-#define MDLCACHE_COARSE_LOCK_( pCache ) CMDLCacheCriticalSection cacheCriticalSection(pCache)
-#endif
 #define MDLCACHE_CRITICAL_SECTION() MDLCACHE_CRITICAL_SECTION_(mdlcache)
-#define MDLCACHE_COARSE_LOCK() MDLCACHE_COARSE_LOCK_(mdlcache)
 
 #endif // IMDLCACHE_H
 

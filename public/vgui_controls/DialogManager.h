@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,8 +13,8 @@
 #endif
 
 #include <utllinkedlist.h>
-#include <KeyValues.h>
-#include <vgui_controls/PHandle.h>
+#include <keyvalues.h>
+#include <vgui_controls/phandle.h>
 
 namespace vgui
 {

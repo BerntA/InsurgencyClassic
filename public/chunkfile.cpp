@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Implements an interface for reading and writing heirarchical
 //			text files of key value pairs. The format of the file is as follows:
@@ -33,21 +33,25 @@
 //=============================================================================//
 
 #include <fcntl.h>
-#ifdef _WIN32
 #include <io.h>
-#endif
 #include <math.h>
-#include <sys/stat.h>
+#include <sys\stat.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "chunkfile.h"
-#include "mathlib/vector.h"
-#include "mathlib/vector4d.h"
-#include "tier1/strtools.h"
+#include "vector.h"
+#include "vector4d.h"
+#include "vstdlib/strtools.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+
+//
+// Fixes an infinite loop that occurs when loading certain VMFs. The bug
+// occurs with Worldcraft built with DevStudio SP4.
+//
+#pragma optimize("g", off)
 
 
 //-----------------------------------------------------------------------------
@@ -688,9 +692,9 @@ bool CChunkFile::ReadKeyValueColor(const char *pszValue, unsigned char &chRed, u
 {
 	if (pszValue != NULL)
 	{
-		int r = 0;
-		int g = 0;
-		int b = 0;
+		int r;
+		int g;
+		int b;
 		
 		if (sscanf(pszValue, "%d %d %d", &r, &g, &b) == 3)
 		{

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -38,7 +38,6 @@ struct vehicle_controlparams_t
 	bool	handbrakeRight;
 	bool	brakepedal;
 	bool	bHasBrakePedal;
-	bool	bAnalogSteering;
 };
 
 struct vehicle_operatingparams_t
@@ -50,12 +49,8 @@ struct vehicle_operatingparams_t
 	int		gear;
 	float	boostDelay;
 	int		boostTimeLeft;
-	float	skidSpeed;
-	int		skidMaterial;
-	float	steeringAngle;
-	int		wheelsNotInContact;
-	int		wheelsInContact;
-	bool	isTorqueBoosting;
+	bool	skidding;
+	float	wheelSkidValue[VEHICLE_MAX_WHEEL_COUNT];
 };
 
 // Debug!
@@ -85,7 +80,8 @@ public:
 	virtual float UpdateBooster(float dt) = 0;
 	virtual int GetWheelCount(void) = 0;
 	virtual IPhysicsObject *GetWheel(int index) = 0;
-	virtual bool GetWheelContactPoint( int index, Vector *pContactPoint, int *pSurfaceProps ) = 0;
+	virtual void GetWheelContactPoint( int index, Vector &contact ) = 0;
+	virtual float GetWheelSkidDeltaTime( int index ) = 0;
 	virtual void SetSpringLength(int wheelIndex, float length) = 0;
 	virtual void SetWheelFriction(int wheelIndex, float friction) = 0;
 
@@ -97,7 +93,6 @@ public:
 
 	// Debug
 	virtual void GetCarSystemDebugData( vehicle_debugcarsystem_t &debugCarSystem ) = 0;
-	virtual void VehicleDataReload() = 0;
 };
 
 
@@ -113,7 +108,6 @@ struct vehicle_bodyparams_t
 	float		tiltForceHeight;		// where the tilt force pulls relative to center of mass
 	float		counterTorqueFactor;
 	float		keepUprightTorque;
-	float		maxAngularVelocity;		// clamp the car angular velocity separately from other objects to keep stable
 };
 
 // wheel objects are created by vphysics, these are the parameters for those objects
@@ -165,24 +159,12 @@ struct vehicle_steeringparams_t
 {
 	DECLARE_SIMPLE_DATADESC();
 
-	float		degreesSlow;			// angle in degrees of steering at slow speed
-	float		degreesFast;			// angle in degrees of steering at fast speed
-	float		degreesBoost;			// angle in degrees of steering at fast speed
+	float		degrees;				// angle in degrees of steering
 	float		steeringRateSlow;		// this is the speed the wheels are steered when the vehicle is slow
 	float		steeringRateFast;		// this is the speed the wheels are steered when the vehicle is "fast"
-	float		steeringRestRateSlow;	// this is the speed at which the wheels move toward their resting state (straight ahead) at slow speed
-	float		steeringRestRateFast;	// this is the speed at which the wheels move toward their resting state (straight ahead) at fast speed
+	float		steeringRestFactor;		// this is the speed at which the wheels move toward their resting state (straight ahead)
 	float		speedSlow;				// this is the max speed of "slow"
 	float		speedFast;				// this is the min speed of "fast"
-	float		turnThrottleReduceSlow;		// this is the amount of throttle reduction to apply at the maximum steering angle
-	float		turnThrottleReduceFast;		// this is the amount of throttle reduction to apply at the maximum steering angle
-	float		brakeSteeringRateFactor;	// this scales the steering rate when the brake/handbrake is down
-	float		throttleSteeringRestRateFactor;	// this scales the steering rest rate when the throttle is down
-	float		powerSlideAccel;		// scale of speed to acceleration
-	float		boostSteeringRestRateFactor;	// this scales the steering rest rate when boosting
-	float		boostSteeringRateFactor;	// this scales the steering rest rate when boosting
-	float		steeringExponent;		// this makes the steering response non-linear.  The steering function is linear, then raised to this power
-
 	bool		isSkidAllowed;			// true/false skid flag
 	bool		dustCloud;				// flag for creating a dustcloud behind vehicle
 };
@@ -199,6 +181,7 @@ struct vehicle_engineparams_t
 	float		throttleTime;			// time to reach full throttle in seconds
 
 	// transmission
+	bool		isAutoTransmission;		// true for auto, false for manual
 	int			gearCount;				// gear count - max 10
 	float		gearRatio[VEHICLE_MAX_GEAR_COUNT];	// ratio for each gear
 
@@ -209,10 +192,7 @@ struct vehicle_engineparams_t
 	float		boostDuration;
 	float		boostDelay;
 	float		boostMaxSpeed;
-	float		autobrakeSpeedGain;
-	float		autobrakeSpeedFactor;
 	bool		torqueBoost;
-	bool		isAutoTransmission;		// true for auto, false for manual
 };
 
 struct vehicleparams_t

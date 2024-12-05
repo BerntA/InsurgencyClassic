@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -39,10 +39,6 @@ public:
 	// The server uses this to call into the tools to get the actual
 	// entities to spawn on startup
 	virtual const char* GetEntityData( const char *pActualEntityData ) = 0;
-
-	virtual void PreSetupVisibilityAllTools() = 0;
-
-	virtual bool InToolMode() = 0;
 };
 
 #define VSERVERENGINETOOLS_INTERFACE_VERSION "VSERVERENGINETOOLS001"

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -11,7 +11,7 @@
 #endif
 
 #include "interface.h"
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 
 
 #define VENGINE_HLDS_API_VERSION "VENGINE_HLDS_API_VERSION002"
@@ -29,7 +29,7 @@ struct ModInfo_t
 
 
 //-----------------------------------------------------------------------------
-// Purpose: This is the interface exported by the engine.dll to allow a dedicated server front end
+// Purpose: This is the interface exported by the engine.dll to llow a dedicated server front end
 //  application to host it.
 //-----------------------------------------------------------------------------
 class IDedicatedServerAPI : public IAppSystem
@@ -44,10 +44,8 @@ public:
 	virtual bool		RunFrame( void ) = 0;
 	// Insert text into console
 	virtual void		AddConsoleText( char *text ) = 0;
-	// Get current status to display in the hlds UI (console window title bar, e.g. )
+	// Get current status to dispaly in the hlds UI (console window title bar, e.g. )
 	virtual void		UpdateStatus(float *fps, int *nActive, int *nMaxPlayers, char *pszMap, int maxlen ) = 0;
-	// Get current Hostname to display in the hlds UI (console window title bar, e.g. )
-	virtual void		UpdateHostname(char *pszHostname, int maxlen) = 0;
 };
 
 #endif // ENGINE_HLDS_API_H

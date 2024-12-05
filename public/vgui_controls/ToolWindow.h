@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -10,8 +10,8 @@
 #pragma once
 #endif
 
-#include <vgui/VGUI.h>
-#include <vgui_controls/Frame.h>
+#include <vgui/vgui.h>
+#include <vgui_controls/frame.h>
 
 namespace vgui
 {
@@ -40,13 +40,12 @@ public:
 	virtual bool IsDraggableTabContainer() const;
 
 	// returns a pointer to the PropertySheet this dialog encapsulates 
-	PropertySheet *GetPropertySheet();
+	virtual PropertySheet *GetPropertySheet();
 
 	// wrapper for PropertySheet interface
-	void AddPage(Panel *page, const char *title, bool contextMenu );
-	void RemovePage( Panel *page );
-	Panel *GetActivePage();
-	void SetActivePage( Panel *page );
+	virtual void AddPage(Panel *page, const char *title, bool contextMenu );
+	virtual void RemovePage( Panel *page );
+	virtual Panel *GetActivePage();
 
 	void SetToolWindowFactory( IToolWindowFactory *factory );
 	IToolWindowFactory *GetToolWindowFactory();

@@ -1,4 +1,3 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
 /*
  *   Copyright (c) 1997-8  S3 Inc.  All Rights Reserved.
  *
@@ -18,7 +17,7 @@
 #ifndef NVTC_H
 #define NVTC_H
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined(_WIN32) && !defined(_XBOX)
 #include <ddraw.h>
 #endif
 
@@ -35,7 +34,7 @@
 #define _S3TC_ENCODE_ALPHA_MASK			0xff00
 
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined(_WIN32) && !defined(_XBOX)
 // common encoding types
 //@@@TBD
 
@@ -82,6 +81,5 @@ void S3TCdecode(DDSURFACEDESC *lpSrc,		// [in]
 				void *lpDestBuf				// [in]
 				);
 
-#endif // _WIN32
-
 #endif // NVTC_H
+#endif

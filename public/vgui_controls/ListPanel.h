@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -15,8 +15,8 @@
 #include <utllinkedlist.h>
 #include <utlvector.h>
 #include <utlrbtree.h>
-#include <vgui/VGUI.h>
-#include <vgui_controls/Panel.h>
+#include <vgui/vgui.h>
+#include <vgui_controls/panel.h>
 
 class KeyValues;
 
@@ -68,7 +68,6 @@ typedef int __cdecl SortFunc(
 class ListPanel : public Panel
 {
 	DECLARE_CLASS_SIMPLE( ListPanel, Panel );
-
 public:
 	ListPanel(Panel *parent, const char *panelName);
 	~ListPanel();
@@ -107,7 +106,6 @@ public:
 	virtual void SortList( void );
 	virtual void SetColumnSortable(int column, bool sortable);
 	virtual void SetColumnVisible(int column, bool visible);
-	int GetSortColumn() const;
 
 	// sets whether the user can add/remove columns (defaults to off)
 	virtual void SetAllowUserModificationOfColumns(bool allowed);
@@ -133,7 +131,7 @@ public:
 	virtual void RemoveAll();		// clears and deletes all the memory used by the data items
 	virtual void DeleteAllItems();	// obselete, use RemoveAll();
 
-	virtual void GetCellText(int itemID, int column, OUT_Z_BYTECAP(bufferSizeInBytes) wchar_t *buffer, int bufferSizeInBytes); // returns the data held by a specific cell
+	virtual void GetCellText(int itemID, int column, wchar_t *buffer, int bufferSize); // returns the data held by a specific cell
 	virtual IImage *GetCellImage(int itemID, int column); //, ImagePanel *&buffer); // returns the image held by a specific cell
 
 	// Use these until they return InvalidItemID to iterate all the items.
@@ -166,13 +164,11 @@ public:
 	// sets no item as selected
 	virtual void ClearSelectedItems();
 
-	virtual bool IsItemSelected( int itemID );
-
 	// adds a item to the select list
-	virtual void AddSelectedItem( int itemID );
+	virtual void AddSelectedItem(int itemID);
 
 	// sets this single item as the only selected item
-	virtual void SetSingleSelectedItem( int itemID );
+	virtual void SetSingleSelectedItem(int itemID);
 
 	// returns the selected column, -1 for particular column selected
 	virtual int GetSelectedColumn();
@@ -214,14 +210,6 @@ public:
 
 	MESSAGE_FUNC_INT( ResizeColumnToContents, "ResizeColumnToContents", column );
 
-#ifdef _X360
-	virtual void NavigateTo();
-#endif
-	/// Version number for file format of user config.  This defaults to 1,
-	/// and if you rearrange columns you can increment it to cause any old
-	/// user configs (which will be screwed up) to be discarded.
-	int m_nUserConfigFileVersion;
-
 protected:
 	// PAINTING
 	virtual Panel *GetCellRenderer(int row, int column);
@@ -233,13 +221,9 @@ protected:
 	virtual void Paint();
 	virtual void PaintBackground();
 	virtual void ApplySchemeSettings(IScheme *pScheme);
-	virtual void OnMousePressed( MouseCode code );
-	virtual void OnMouseDoublePressed( MouseCode code );
-#ifdef _X360
-	virtual void OnKeyCodePressed(KeyCode code);
-#else
-	virtual void OnKeyCodePressed( KeyCode code );
-#endif
+	virtual void OnMousePressed(enum MouseCode code);
+	virtual void OnMouseDoublePressed(enum MouseCode code);
+	virtual void OnKeyCodeTyped(enum KeyCode code);
 	MESSAGE_FUNC( OnSliderMoved, "ScrollBarSliderMoved" );
 	MESSAGE_FUNC_INT_INT( OnColumnResized, "ColumnResized", column, delta );
 	MESSAGE_FUNC_INT( OnSetSortColumn, "SetSortColumn", column );
@@ -255,12 +239,7 @@ protected:
 
 	/* MESSAGES SENT
 		"ItemSelected" - query which items are selected
-		"ItemDeselected" - query which items are selected
 	*/
-
-public:
-	virtual void SetSortColumnEx( int iPrimarySortColumn, int iSecondarySortColumn, bool bSortAscending );
-	void GetSortColumnEx( int &iPrimarySortColumn, int &iSecondarySortColumn, bool &bSortAscending ) const;
 
 private:
 	// Cleans up allocations associated with a particular item

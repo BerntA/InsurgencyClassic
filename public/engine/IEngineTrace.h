@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -14,7 +14,7 @@
 
 #include "basehandle.h"
 #include "utlvector.h" //need CUtlVector for IEngineTrace::GetBrushesIn*()
-#include "mathlib/vector4d.h"
+
 
 class Vector;
 class IHandleEntity;
@@ -179,7 +179,7 @@ public:
 	virtual CPhysCollide* GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs ) = 0;
 
 	//retrieve brush planes and contents, returns true if data is being returned in the output pointers, false if the brush doesn't exist
-	virtual bool GetBrushInfo( int iBrush, CUtlVector<Vector4D> *pPlanesOut, int *pContentsOut ) = 0;
+	virtual bool GetBrushInfo( int iBrush, CUtlVector<const cplane_t *> *pPlanesOut, int *pContentsOut ) = 0;
 
 	virtual bool PointOutsideWorld( const Vector &ptTest ) = 0; //Tests a point to see if it's outside any playable area
 

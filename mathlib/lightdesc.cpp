@@ -1,16 +1,11 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// $Id$
 
 #include <ssemath.h>
 #include <lightdesc.h>
-#include "mathlib.h"
 
 void LightDesc_t::RecalculateDerivedValues(void)
 {
-	m_Flags = LIGHTTYPE_OPTIMIZATIONFLAGS_DERIVED_VALUES_CALCED;
+	m_Flags=0;
 	if (m_Attenuation0)
 		m_Flags|=LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION0;
 	if (m_Attenuation1)
@@ -35,37 +30,9 @@ void LightDesc_t::RecalculateDerivedValues(void)
 			OneOver_ThetaDot_Minus_PhiDot=1.0;
 		}				
 	}	
-	if (m_Type==MATERIAL_LIGHT_DIRECTIONAL)
-	{
-		// set position to be real far away in the right direction
-		m_Position=m_Direction;
-		m_Position *= 2.0e6;
-	}
-	
 	m_RangeSquared=m_Range*m_Range;
 
 }
-
-void LightDesc_t::ComputeLightAtPointsForDirectional(
-	const FourVectors &pos, const FourVectors &normal,
-	FourVectors &color, bool DoHalfLambert ) const
-{
-	FourVectors delta;
-	delta.DuplicateVector(m_Direction);
-//	delta.VectorNormalizeFast();
-	fltx4 strength=delta*normal;
-	if (DoHalfLambert)
-	{
-		strength=AddSIMD(MulSIMD(strength,Four_PointFives),Four_PointFives);
-	}
-	else
-		strength=MaxSIMD(Four_Zeros,delta*normal);
-		
-	color.x=AddSIMD(color.x,MulSIMD(strength,ReplicateX4(m_Color.x)));
-	color.y=AddSIMD(color.y,MulSIMD(strength,ReplicateX4(m_Color.y)));
-	color.z=AddSIMD(color.z,MulSIMD(strength,ReplicateX4(m_Color.z)));
-}
-
 
 void LightDesc_t::ComputeLightAtPoints( const FourVectors &pos, const FourVectors &normal,
 										FourVectors &color, bool DoHalfLambert ) const
@@ -81,50 +48,49 @@ void LightDesc_t::ComputeLightAtPoints( const FourVectors &pos, const FourVector
 			break;
 				
 		case MATERIAL_LIGHT_DIRECTIONAL:
-			ComputeLightAtPointsForDirectional( pos, normal, color, DoHalfLambert );
-			return;
+			delta.DuplicateVector(m_Direction);
+			delta*=-1.0;
+			break;
 	}
 
-	fltx4 dist2 = delta*delta;
+	__m128 dist2 = delta*delta;
 
-	dist2=MaxSIMD( Four_Ones, dist2 );
-
-	fltx4 falloff;
+	__m128 falloff;
 
 	if( m_Flags & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION0 )
 	{
-		falloff = ReplicateX4(m_Attenuation0);
+		falloff = MMReplicate(m_Attenuation0);
 	}
 	else
 		falloff= Four_Epsilons;
 
 	if( m_Flags & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION1 )
 	{
-		falloff=AddSIMD(falloff,MulSIMD(ReplicateX4(m_Attenuation1),SqrtEstSIMD(dist2)));
+		falloff=_mm_add_ps(falloff,_mm_mul_ps(MMReplicate(m_Attenuation1),_mm_sqrt_ps(dist2)));
 	}
 
 	if( m_Flags & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION2 )
 	{
-		falloff=AddSIMD(falloff,MulSIMD(ReplicateX4(m_Attenuation2),dist2));
+		falloff=_mm_add_ps(falloff,_mm_mul_ps(MMReplicate(m_Attenuation2),dist2));
 	}
 
-	falloff=ReciprocalEstSIMD(falloff);
+	falloff=_mm_rcp_ps(falloff);
 	// Cull out light beyond this radius
 	// now, zero out elements for which dist2 was > range^2. !!speed!! lights should store dist^2 in sse format
 	if (m_Range != 0.f)
 	{
-		fltx4 RangeSquared=ReplicateX4(m_RangeSquared); // !!speed!!
-		falloff=AndSIMD(falloff,CmpLtSIMD(dist2,RangeSquared));
+		__m128 RangeSquared=MMReplicate(m_RangeSquared); // !!speed!!
+		falloff=_mm_and_ps(falloff,_mm_cmplt_ps(dist2,RangeSquared));
 	}
 
 	delta.VectorNormalizeFast();
-	fltx4 strength=delta*normal;
+	__m128 strength=delta*normal;
 	if (DoHalfLambert)
 	{
-		strength=AddSIMD(MulSIMD(strength,Four_PointFives),Four_PointFives);
+		strength=_mm_add_ps(_mm_mul_ps(strength,Four_PointFives),Four_PointFives);
 	}
 	else
-		strength=MaxSIMD(Four_Zeros,delta*normal);
+		strength=_mm_max_ps(Four_Zeros,delta*normal);
 		
 	switch(m_Type)
 	{
@@ -134,179 +100,33 @@ void LightDesc_t::ComputeLightAtPoints( const FourVectors &pos, const FourVector
 				
 		case MATERIAL_LIGHT_SPOT:
 		{
-			fltx4 dot2=SubSIMD(Four_Zeros,delta*m_Direction); // dot position with spot light dir for cone falloff
+			__m128 dot2=_mm_sub_ps(Four_Zeros,delta*m_Direction); // dot position with spot light dir for cone falloff
 
 
-			fltx4 cone_falloff_scale=MulSIMD(ReplicateX4(OneOver_ThetaDot_Minus_PhiDot),
-												 SubSIMD(dot2,ReplicateX4(m_PhiDot)));
-			cone_falloff_scale=MinSIMD(cone_falloff_scale,Four_Ones);
+			__m128 cone_falloff_scale=_mm_mul_ps(MMReplicate(OneOver_ThetaDot_Minus_PhiDot),
+												 _mm_sub_ps(dot2,MMReplicate(m_PhiDot)));
+			cone_falloff_scale=_mm_min_ps(cone_falloff_scale,Four_Ones);
 			
 			if ((m_Falloff!=0.0) && (m_Falloff!=1.0))
 			{
-				// !!speed!! could compute integer exponent needed by powsimd and store in light
-				cone_falloff_scale=PowSIMD(cone_falloff_scale,m_Falloff);
+				// !!speed!! could compute integer exponent needed by powsse and store in light
+				cone_falloff_scale=PowSSE(cone_falloff_scale,m_Falloff);
 			}
-			strength=MulSIMD(cone_falloff_scale,strength);
+			strength=_mm_mul_ps(cone_falloff_scale,strength);
 
 			// now, zero out lighting where dot2<phidot. This will mask out any invalid results
 			// from pow function, etc
-			fltx4 OutsideMask=CmpGtSIMD(dot2,ReplicateX4(m_PhiDot)); // outside light cone?
-			strength=AndSIMD(OutsideMask,strength);
+			__m128 OutsideMask=_mm_cmpgt_ps(dot2,MMReplicate(m_PhiDot)); // outside light cone?
+			strength=_mm_and_ps(OutsideMask,strength);
 		}
 		break;
 			
-
-	}
-	strength=MulSIMD(strength,falloff);
-	color.x=AddSIMD(color.x,MulSIMD(strength,ReplicateX4(m_Color.x)));
-	color.y=AddSIMD(color.y,MulSIMD(strength,ReplicateX4(m_Color.y)));
-	color.z=AddSIMD(color.z,MulSIMD(strength,ReplicateX4(m_Color.z)));
-}
-
-
-
-void LightDesc_t::ComputeNonincidenceLightAtPoints( const FourVectors &pos, FourVectors &color ) const
-{
-	FourVectors delta;
-	Assert((m_Type==MATERIAL_LIGHT_POINT) || (m_Type==MATERIAL_LIGHT_SPOT) || (m_Type==MATERIAL_LIGHT_DIRECTIONAL));
-	switch (m_Type)
-	{
-		case MATERIAL_LIGHT_POINT:
-		case MATERIAL_LIGHT_SPOT:
-			delta.DuplicateVector(m_Position);
-			delta-=pos;
-			break;
-				
 		case MATERIAL_LIGHT_DIRECTIONAL:
-			return;
-	}
-
-	fltx4 dist2 = delta*delta;
-
-	dist2=MaxSIMD( Four_Ones, dist2 );
-
-	fltx4 falloff;
-
-	if( m_Flags & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION0 )
-	{
-		falloff = ReplicateX4(m_Attenuation0);
-	}
-	else
-		falloff= Four_Epsilons;
-
-	if( m_Flags & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION1 )
-	{
-		falloff=AddSIMD(falloff,MulSIMD(ReplicateX4(m_Attenuation1),SqrtEstSIMD(dist2)));
-	}
-
-	if( m_Flags & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION2 )
-	{
-		falloff=AddSIMD(falloff,MulSIMD(ReplicateX4(m_Attenuation2),dist2));
-	}
-
-	falloff=ReciprocalEstSIMD(falloff);
-	// Cull out light beyond this radius
-	// now, zero out elements for which dist2 was > range^2. !!speed!! lights should store dist^2 in sse format
-	if (m_Range != 0.f)
-	{
-		fltx4 RangeSquared=ReplicateX4(m_RangeSquared); // !!speed!!
-		falloff=AndSIMD(falloff,CmpLtSIMD(dist2,RangeSquared));
-	}
-
-	delta.VectorNormalizeFast();
-	fltx4 strength = Four_Ones;
-	//fltx4 strength=delta;
-	//fltx4 strength = MaxSIMD(Four_Zeros,delta);
-		
-	switch(m_Type)
-	{
-		case MATERIAL_LIGHT_POINT:
-			// half-lambert
 			break;
-				
-		case MATERIAL_LIGHT_SPOT:
-		{
-			fltx4 dot2=SubSIMD(Four_Zeros,delta*m_Direction); // dot position with spot light dir for cone falloff
-
-
-			fltx4 cone_falloff_scale=MulSIMD(ReplicateX4(OneOver_ThetaDot_Minus_PhiDot),
-												 SubSIMD(dot2,ReplicateX4(m_PhiDot)));
-			cone_falloff_scale=MinSIMD(cone_falloff_scale,Four_Ones);
-			
-			if ((m_Falloff!=0.0) && (m_Falloff!=1.0))
-			{
-				// !!speed!! could compute integer exponent needed by powsimd and store in light
-				cone_falloff_scale=PowSIMD(cone_falloff_scale,m_Falloff);
-			}
-			strength=MulSIMD(cone_falloff_scale,strength);
-
-			// now, zero out lighting where dot2<phidot. This will mask out any invalid results
-			// from pow function, etc
-			fltx4 OutsideMask=CmpGtSIMD(dot2,ReplicateX4(m_PhiDot)); // outside light cone?
-			strength=AndSIMD(OutsideMask,strength);
-		}
-		break;
-			
 
 	}
-	strength=MulSIMD(strength,falloff);
-	color.x=AddSIMD(color.x,MulSIMD(strength,ReplicateX4(m_Color.x)));
-	color.y=AddSIMD(color.y,MulSIMD(strength,ReplicateX4(m_Color.y)));
-	color.z=AddSIMD(color.z,MulSIMD(strength,ReplicateX4(m_Color.z)));
+	strength=_mm_mul_ps(strength,falloff);
+	color.x=_mm_add_ps(color.x,_mm_mul_ps(strength,MMReplicate(m_Color.x)));
+	color.y=_mm_add_ps(color.y,_mm_mul_ps(strength,MMReplicate(m_Color.y)));
+	color.z=_mm_add_ps(color.z,_mm_mul_ps(strength,MMReplicate(m_Color.z)));
 }
-
-
-
-void LightDesc_t::SetupOldStyleAttenuation( float fQuadraticAttn, float fLinearAttn, float fConstantAttn )
-{
-	// old-style manually typed quadrtiac coefficients
-	if ( fQuadraticAttn < EQUAL_EPSILON )
-		fQuadraticAttn = 0;
-	
-	if ( fLinearAttn < EQUAL_EPSILON)
-		fLinearAttn = 0;
-	
-	if ( fConstantAttn < EQUAL_EPSILON)
-		fConstantAttn = 0;
-	
-	if ( ( fConstantAttn < EQUAL_EPSILON ) && 
-		 ( fLinearAttn < EQUAL_EPSILON ) && 
-		 ( fQuadraticAttn < EQUAL_EPSILON ) )
-		fConstantAttn = 1;
-
-	m_Attenuation2=fQuadraticAttn;
-	m_Attenuation1=fLinearAttn;
-	m_Attenuation0=fConstantAttn;
-	float fScaleFactor = fQuadraticAttn * 10000 + fLinearAttn * 100 + fConstantAttn;
-	
-	if ( fScaleFactor > 0 )
-		m_Color *= fScaleFactor;
-}
-
-void LightDesc_t::SetupNewStyleAttenuation( float fFiftyPercentDistance, 
-											float fZeroPercentDistance )
-{
-	// new style storing 50% and 0% distances
-	float d50=fFiftyPercentDistance;
-	float d0=fZeroPercentDistance;
-	if (d0<d50)
-	{
-		// !!warning in lib code???!!!
-		Warning("light has _fifty_percent_distance of %f but no zero_percent_distance\n",d50);
-		d0=2.0*d50;
-	}
-	float a=0,b=1,c=0;
-	if (! SolveInverseQuadraticMonotonic(0,1.0,d50,2.0,d0,256.0,a,b,c))
-	{
-		Warning("can't solve quadratic for light %f %f\n",d50,d0);
-	}
-	float v50=c+d50*(b+d50*a);
-	float scale=2.0/v50;
-	a*=scale;
-	b*=scale;
-	c*=scale;
-	m_Attenuation2=a;
-	m_Attenuation1=b;
-	m_Attenuation0=c;
-}
-

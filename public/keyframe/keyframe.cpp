@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -16,13 +16,16 @@ typedef unsigned char byte;
 #pragma warning(disable:4244)
 
 #include "tier0/dbg.h"
-#include "mathlib/vector.h"
+#include "vector.h"
 #include "keyframe.h"
-#include "mathlib/mathlib.h"
+#include "mathlib.h"
 #include "rope_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+
+#define ARRAYSIZE(p)		(sizeof(p)/sizeof(p[0]))
+
 
 //-----------------------------------------------------------------------------
 //
@@ -72,7 +75,7 @@ typedef float (*TimeModifierFunc_t)(float);
 
 typedef struct 
 {
-	const char *szName;
+	char *szName;
 	TimeModifierFunc_t pFunc;
 
 } TimeModifier_t;
@@ -104,7 +107,7 @@ int Motion_GetNumberOfTimeModifiers( void )
 	return ARRAYSIZE(g_TimeModifiers);
 }
 
-bool Motion_GetTimeModifierDetails( int timeInterpNum, const char **outName )
+bool Motion_GetTimeModifierDetails( int timeInterpNum, char **outName )
 {
 	if ( timeInterpNum < 0 || timeInterpNum >= Motion_GetNumberOfTimeModifiers() )
 	{

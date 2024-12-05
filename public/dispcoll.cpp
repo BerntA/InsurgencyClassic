@@ -1,12 +1,12 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 // $NoKeywords: $
 //=============================================================================//
 
-#include "BuildDisp.h"
-#include "DispColl.h"
+#include "builddisp.h"
+#include "dispcoll.h"
 #include "tier0/dbg.h"
 
 //=============================================================================

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -11,7 +11,6 @@
 #endif
 
 class Vector;
-#include "utlsymbol.h"
 
 //-----------------------------------------------------------------------------
 // Purpose:  Client side only 
@@ -20,7 +19,7 @@ struct SndInfo_t
 {
 	// Sound Guid
 	int			m_nGuid;
-	FileNameHandle_t m_filenameHandle;		// filesystem filename handle - call IFilesystem to conver this to a string
+	char const	*m_pszName;
 	int			m_nSoundSource;
 	int			m_nChannel;
 	// If a sound is being played through a speaker entity (e.g., on a monitor,), this is the
@@ -42,8 +41,6 @@ struct SndInfo_t
 	bool		m_bDryMix;
 	// true if sound is playing through in-game speaker entity.
 	bool		m_bSpeaker;
-	// true if sound is playing with special DSP effect
-	bool		m_bSpecialDSP;
 	// for snd_show, networked sounds get colored differently than local sounds
 	bool		m_bFromServer;
 };

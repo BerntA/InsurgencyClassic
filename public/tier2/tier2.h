@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 2005-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: A higher level link library for general use in the game and tools.
 //
@@ -23,12 +23,8 @@ class IMaterialSystem;
 class IColorCorrectionSystem;
 class IMaterialSystemHardwareConfig;
 class IDebugTextureInfo;
-class IVBAllocTracker;
 class IInputSystem;
 class INetworkSystem;
-class IP4;
-class IMdlLib;
-class IQueuedLoader;
 
 
 //-----------------------------------------------------------------------------
@@ -44,11 +40,8 @@ extern IInputSystem *g_pInputSystem;
 extern INetworkSystem *g_pNetworkSystem;
 extern IMaterialSystemHardwareConfig *g_pMaterialSystemHardwareConfig;
 extern IDebugTextureInfo *g_pMaterialSystemDebugTextureInfo;
-extern IVBAllocTracker *g_VBAllocTracker;
 extern IColorCorrectionSystem *colorcorrection;
-extern IP4 *p4;
-extern IMdlLib *mdllib;
-extern IQueuedLoader *g_pQueuedLoader;
+extern IColorCorrectionSystem *g_pColorCorrectionSystem;
 
 
 //-----------------------------------------------------------------------------
@@ -82,7 +75,7 @@ class CTier2AppSystem : public CTier1AppSystem< IInterface, ConVarFlag >
 	typedef CTier1AppSystem< IInterface, ConVarFlag > BaseClass;
 
 public:
-	CTier2AppSystem( bool bIsPrimaryAppSystem = true ) : BaseClass( bIsPrimaryAppSystem )
+	CTier2AppSystem( bool bIsPrimaryAppSystem = true ) : BaseClass(	bIsPrimaryAppSystem )
 	{
 	}
 
@@ -91,31 +84,16 @@ public:
 		if ( !BaseClass::Connect( factory ) )
 			return false;
 
-		if ( BaseClass::IsPrimaryAppSystem() )
+		if ( IsPrimaryAppSystem() )
 		{
 			ConnectTier2Libraries( &factory, 1 );
 		}
-
 		return true;
-	}
-
-	virtual InitReturnVal_t Init()
-	{
-		InitReturnVal_t nRetVal = BaseClass::Init();
-		if ( nRetVal != INIT_OK )
-			return nRetVal;
-
-		return INIT_OK;
-	}
-
-	virtual void Shutdown()
-	{
-		BaseClass::Shutdown();
 	}
 
 	virtual void Disconnect() 
 	{
-		if ( BaseClass::IsPrimaryAppSystem() )
+		if ( IsPrimaryAppSystem() )
 		{
 			DisconnectTier2Libraries();
 		}

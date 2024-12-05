@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,7 +10,7 @@
 #pragma once
 #endif
 
-#include <vgui_controls/EditablePanel.h>
+#include <vgui_controls/editablepanel.h>
 #include "utlvector.h"
 
 namespace vgui
@@ -67,6 +67,7 @@ private:
 	};
 	CUtlVector<CheckItem_t> m_CheckItems;
 	vgui::ScrollBar *m_pScrollBar;
+	bool m_bIgnoreCheckSignals;
 };
 
 }

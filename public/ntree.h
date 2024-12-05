@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -8,8 +8,8 @@
 #ifndef __TREE_H__
 #define __TREE_H__
 
-#include "List.h"
-#include "ArrayStack.h"
+#include "list.h"
+#include "arraystack.h"
 
 // NTreeNode: Class decleration and definition
 template <class T> class NTreeNode

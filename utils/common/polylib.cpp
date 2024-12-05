@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -8,7 +8,7 @@
 //=============================================================================//
 
 #include "cmdlib.h"
-#include "mathlib/mathlib.h"
+#include "mathlib.h"
 #include "polylib.h"
 #include "worldsize.h"
 #include "threads.h"

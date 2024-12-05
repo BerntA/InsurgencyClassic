@@ -1,12 +1,15 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 //=============================================================================//
 
-#if defined(_WIN32) && !defined(_X360)
+#if !defined(_STATIC_LINKED) || defined(_SHARED_LIB)
+
+
+#if defined(_WIN32) && !defined(_XBOX)
 #include <winsock.h>
-#elif POSIX
+#elif _LINUX
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
 #include <sys/types.h>
@@ -14,6 +17,9 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #define closesocket close
+#elif defined(_XBOX)
+#include "xbox/xbox_platform.h"
+#include "xbox/xbox_win32stubs.h"
 #endif
 
 #include "blockingudpsocket.h"
@@ -62,7 +68,7 @@ bool CBlockingUDPSocket::CreateSocket (void)
 	{
 		m_pImpl->m_SocketIP.sin_addr.S_un.S_addr = 0L;
 	}		
-#elif POSIX
+#elif _LINUX
 	if ( m_pImpl->m_SocketIP.sin_addr.s_addr == INADDR_ANY )
 	{
 		m_pImpl->m_SocketIP.sin_addr.s_addr = 0L;
@@ -148,3 +154,5 @@ bool CBlockingUDPSocket::SendSocketMessage( const struct sockaddr_in & rRecipien
 
 	return true;
 }
+
+#endif // !_STATIC_LINKED || _SHARED_LIB

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//======= Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -15,7 +15,7 @@
 
 #include <tier0/platform.h>
 #include "tier0/dbg.h"
-#include <mathlib/mathlib.h>
+#include <mathlib.h>
 
 struct PixRGBAF 
 {
@@ -25,43 +25,7 @@ struct PixRGBAF
 	float Alpha;
 };
 
-struct PixRGBA8
-{
-	unsigned char Red;
-	unsigned char Green;
-	unsigned char Blue;
-	unsigned char Alpha;
-};
-
-inline PixRGBAF PixRGBA8_to_F( PixRGBA8 const &x )
-{
-	PixRGBAF f;
-	f.Red = x.Red / float( 255.0f );
-	f.Green = x.Green / float( 255.0f );
-	f.Blue = x.Blue / float( 255.0f );
-	f.Alpha = x.Alpha / float( 255.0f );
-	return f;
-}
-
-inline PixRGBA8 PixRGBAF_to_8( PixRGBAF const &f )
-{
-	PixRGBA8 x;
-	x.Red = max( 0, min( 255.0,255.0*f.Red ) );
-	x.Green = max( 0, min( 255.0,255.0*f.Green ) );
-	x.Blue = max( 0, min( 255.0,255.0*f.Blue ) );
-	x.Alpha = max( 0, min( 255.0,255.0*f.Alpha ) );
-	return x;
-}
-
 #define SPFLAGS_MAXGRADIENT 1
-
-// bit flag options for ComputeSelfShadowedBumpmapFromHeightInAlphaChannel:
-#define SSBUMP_OPTION_NONDIRECTIONAL 1						// generate ambient occlusion only
-#define SSBUMP_MOD2X_DETAIL_TEXTURE 2						// scale so that a flat unshadowed
-                                                            // value is 0.5, and bake rgb luminance
-                                                            // in.
-
-
 
 class FloatBitMap_t 
 {
@@ -81,10 +45,10 @@ public:
 	FloatBitMap_t(char const *filename);                   // read one from a file (tga or pfm)
 	FloatBitMap_t(FloatBitMap_t const *orig);
 	// quantize one to 8 bits
-	bool WriteTGAFile(char const *filename) const;
+	void WriteTGAFile(char const *filename) const;
 
 	bool LoadFromPFM(char const *filename);					// load from floating point pixmap (.pfm) file
-	bool WritePFM(char const *filename);					// save to floating point pixmap (.pfm) file
+	void WritePFM(char const *filename);					// save to floating point pixmap (.pfm) file
 
 
 	void InitializeWithRandomPixelsFromAnotherFloatBM(FloatBitMap_t const &other);
@@ -180,6 +144,9 @@ public:
 
 	void ReSize(int NewXSize, int NewYSize);
 
+	void LoadBRC(char const *filename);
+
+
 	// find the bounds of the area that has non-zero alpha.
 	void GetAlphaBounds(int &minx, int &miny, int &maxx,int &maxy);
 
@@ -218,29 +185,6 @@ public:
 	void Clear(float r, float g, float b, float alpha);		// set all pixels to speicifed values (0..1 nominal)
 
 	void ScaleRGB(float scale_factor);						// for all pixels, r,g,b*=scale_factor
-
-	// given a bitmap with height stored in the alpha channel, generate vector positions and normals
-	void ComputeVertexPositionsAndNormals( float flHeightScale, Vector **ppPosOut, Vector **ppNormalOut ) const;
-
-	// generate a normal map with height stored in alpha.  uses hl2 tangent basis to support baked
-	// self shadowing.  the bump scale maps the height of a pixel relative to the edges of the
-	// pixel. This function may take a while - many millions of rays may be traced.  applications
-	// using this method need to link w/ raytrace.lib
-	FloatBitMap_t *ComputeSelfShadowedBumpmapFromHeightInAlphaChannel(
-		float bump_scale, int nrays_to_trace_per_pixel=100, 
-		uint32 nOptionFlags = 0								// SSBUMP_OPTION_XXX
-		) const;
-
-
-	// generate a conventional normal map from a source with height stored in alpha.
-	FloatBitMap_t *ComputeBumpmapFromHeightInAlphaChannel( float bump_scale ) const ;
-
-
-	// bilateral (edge preserving) smoothing filter. edge_threshold_value defines the difference in
-	// values over which filtering will not occur. Each channel is filtered independently. large
-	// radii will run slow, since the bilateral filter is neither separable, nor is it a
-	// convolution that can be done via fft.
-	void TileableBilateralFilter( int radius_in_pixels, float edge_threshold_value );
 
 	~FloatBitMap_t();
 
@@ -302,15 +246,7 @@ public:
 	}
 
 
-	// resample a cubemap to one of possibly a lower resolution, using a given phong exponent.
-	// dot-product weighting will be used for the filtering operation.
-	void Resample(FloatCubeMap_t &dest, float flPhongExponent);
-
-	// returns the normalized direciton vector through a given pixel of a given face
 	Vector PixelDirection(int face, int x, int y);
-
-	// returns the direction vector throught the center of a cubemap face
-	Vector FaceNormal( int nFaceNumber );
 };
 
 
@@ -349,7 +285,6 @@ public:
 	FloatBitMap_t *Level(int lvl) const
 	{
 		Assert(lvl<m_nLevels);
-		Assert(lvl<ARRAYSIZE(m_pLevels));
 		return m_pLevels[lvl];
 	}
 	// rebuild all levels above the specified level

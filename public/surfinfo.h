@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,9 +10,9 @@
 #pragma once
 #endif
 
-#include "mathlib/vplane.h"
+#include "vplane.h"
 
-//#include "mathlib/vector.h"
+//#include "vector.h"
 #define MAX_SURFINFO_VERTS	16
 class SurfInfo
 {

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -15,19 +15,14 @@
 
 #include "basetypes.h"
 #include "tier0/dbg.h"
-#include "tier1/strtools.h"
+#include "vstdlib/strtools.h"
 #include <stddef.h>
-
-#ifdef LINUX
-#undef offsetof
-#define offsetof(s,m)	(size_t)&(((s *)0)->m)
-#endif
 
 // Max number of properties in a datatable and its children.
 #define MAX_DATATABLES		1024	// must be a power of 2.
-#define MAX_DATATABLE_PROPS	4096
+#define MAX_DATATABLE_PROPS	1024
 
-#define MAX_ARRAY_ELEMENTS	2048		// a network array should have more that 1024 elements
+#define MAX_ARRAY_ELEMENTS	256		// a network array should have more that 128 elements
 
 #define HIGH_DEFAULT		-121121.121121f
 
@@ -76,20 +71,8 @@
 										// In this case, it can get rid of this SendPropDataTable altogether and spare the
 										// trouble of walking the hierarchy more than necessary.
 
-#define SPROP_COORD_MP					(1<<13) // Like SPROP_COORD, but special handling for multiplayer games
-#define SPROP_COORD_MP_LOWPRECISION 	(1<<14) // Like SPROP_COORD, but special handling for multiplayer games where the fractional component only gets a 3 bits instead of 5
-#define SPROP_COORD_MP_INTEGRAL			(1<<15) // SPROP_COORD_MP, but coordinates are rounded to integral boundaries
+#define SPROP_NUMFLAGBITS		13
 
-#define SPROP_VARINT					SPROP_NORMAL	// reuse existing flag so we don't break demo. note you want to include SPROP_UNSIGNED if needed, its more efficient
-
-#define SPROP_NUMFLAGBITS_NETWORKED		16
-
-// This is server side only, it's used to mark properties whose SendProxy_* functions encode against gpGlobals->tickcount (the only ones that currently do this are
-//  m_flAnimTime and m_flSimulationTime.  MODs shouldn't need to mess with this probably
-#define SPROP_ENCODED_AGAINST_TICKCOUNT	(1<<16)
-
-// See SPROP_NUMFLAGBITS_NETWORKED for the ones which are networked
-#define SPROP_NUMFLAGBITS				17
 
 // Used by the SendProp and RecvProp functions to disable debug checks on type sizes.
 #define SIZEOF_IGNORE		-1
@@ -105,28 +88,19 @@
 
 class SendProp;
 
-// The day we do this, we break all mods until they recompile.
-//#define SUPPORTS_INT64
 
 typedef enum
 {
 	DPT_Int=0,
 	DPT_Float,
 	DPT_Vector,
-	DPT_VectorXY, // Only encodes the XY of a vector, ignores Z
 	DPT_String,
 	DPT_Array,	// An array of the base types (can't be of datatables).
 	DPT_DataTable,
 #if 0 // We can't ship this since it changes the size of DTVariant to be 20 bytes instead of 16 and that breaks MODs!!!
 	DPT_Quaternion,
 #endif
-
-#ifdef SUPPORTS_INT64
-	DPT_Int64,
-#endif
-
 	DPT_NUMSendPropTypes
-
 } SendPropType;
 
 
@@ -152,10 +126,6 @@ public:
 							Q_snprintf( text, sizeof(text), "(%.3f,%.3f,%.3f)", 
 								m_Vector[0], m_Vector[1], m_Vector[2] );
 							break;
-						case DPT_VectorXY :
-							Q_snprintf( text, sizeof(text), "(%.3f,%.3f)", 
-								m_Vector[0], m_Vector[1] );
-							break;
 #if 0 // We can't ship this since it changes the size of DTVariant to be 20 bytes instead of 16 and that breaks MODs!!!
 						case DPT_Quaternion :
 							Q_snprintf( text, sizeof(text), "(%.3f,%.3f,%.3f %.3f)", 
@@ -174,11 +144,6 @@ public:
 						case DPT_DataTable :
 							Q_snprintf( text, sizeof(text), "DataTable" ); 
 							break;
-#ifdef SUPPORTS_INT64
-						case DPT_Int64:
-							Q_snprintf( text, sizeof(text), "%I64d", m_Int64 );
-							break;
-#endif
 						default :
 							Q_snprintf( text, sizeof(text), "DVariant type %i unknown", m_Type ); 
 							break;
@@ -190,17 +155,13 @@ public:
 	union
 	{
 		float	m_Float;
-		int		m_Int;
-		const char	*m_pString;
+		long	m_Int;
+		char	*m_pString;
 		void	*m_pData;	// For DataTables.
 #if 0 // We can't ship this since it changes the size of DTVariant to be 20 bytes instead of 16 and that breaks MODs!!!
 		float	m_Vector[4];
 #else
 		float	m_Vector[3];
-#endif
-
-#ifdef SUPPORTS_INT64
-		int64	m_Int64;
 #endif
 	};
 	SendPropType	m_Type;

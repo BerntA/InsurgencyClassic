@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -41,20 +41,19 @@ public:
 	
 	bool	CompareAdr (const netadr_s &a, bool onlyBase = false) const;
 	bool	CompareClassBAdr (const netadr_s &a) const;
-	bool	CompareClassCAdr (const netadr_s &a) const;
 
 	netadrtype_t	GetType() const;
 	unsigned short	GetPort() const;
 	const char*		ToString( bool onlyBase = false ) const; // returns xxx.xxx.xxx.xxx:ppppp
 	void			ToSockadr(struct sockaddr *s) const;
-	unsigned int	GetIPHostByteOrder() const;
-	unsigned int	GetIPNetworkByteOrder() const;
+	unsigned int	GetIP() const;
 
 	bool	IsLocalhost() const; // true, if this is the localhost IP 
 	bool	IsLoopback() const;	// true if engine loopback buffers are used
 	bool	IsReservedAdr() const; // true, if this is a private LAN IP
 	bool	IsValid() const;	// ip & port != 0
 	void    SetFromSocket( int hSocket );
+
 	bool operator==(const netadr_s &netadr) const {return ( CompareAdr( netadr ) );}
 	bool operator<(const netadr_s &netadr) const;
 

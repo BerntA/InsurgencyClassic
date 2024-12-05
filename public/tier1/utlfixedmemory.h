@@ -1,11 +1,14 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 // $NoKeywords: $
 //
-// A growable memory class.
-//===========================================================================//
+// A growable memory class. This memory class does *not* store all
+// of its memory in a contiguous block, and but it does guarantee to not
+// reallocate it. Note the strange interface... ints are used instead of void*s
+// to make this look as similar as possible to CUtlMemory.
+//=============================================================================//
 
 #ifndef UTLFIXEDMEMORY_H
 #define UTLFIXEDMEMORY_H
@@ -15,28 +18,19 @@
 #endif
 
 #include "tier0/dbg.h"
+#include <string.h>
+#include <new.h>
 #include "tier0/platform.h"
 
-#include "tier0/memalloc.h"
 #include "tier0/memdbgon.h"
 
 #pragma warning (disable:4100)
 #pragma warning (disable:4514)
 
-//-----------------------------------------------------------------------------
-
-#ifdef UTLFIXEDMEMORY_TRACK
-#define UTLFIXEDMEMORY_TRACK_ALLOC()		MemAlloc_RegisterAllocation( "Sum of all UtlFixedMemory", 0, NumAllocated() * sizeof(T), NumAllocated() * sizeof(T), 0 )
-#define UTLFIXEDMEMORY_TRACK_FREE()		if ( !m_pMemory ) ; else MemAlloc_RegisterDeallocation( "Sum of all UtlFixedMemory", 0, NumAllocated() * sizeof(T), NumAllocated() * sizeof(T), 0 )
-#else
-#define UTLFIXEDMEMORY_TRACK_ALLOC()		((void)0)
-#define UTLFIXEDMEMORY_TRACK_FREE()		((void)0)
-#endif
-
 
 //-----------------------------------------------------------------------------
 // The CUtlFixedMemory class:
-// A growable memory class that allocates non-sequential blocks, but is indexed sequentially
+// A growable memory class which doubles in size by default.
 //-----------------------------------------------------------------------------
 template< class T >
 class CUtlFixedMemory
@@ -46,86 +40,22 @@ public:
 	CUtlFixedMemory( int nGrowSize = 0, int nInitSize = 0 );
 	~CUtlFixedMemory();
 
-	// Set the size by which the memory grows
-	void Init( int nGrowSize = 0, int nInitSize = 0 );
-
-	// here to match CUtlMemory, but only used by ResetDbgInfo, so it can just return NULL
-	T* Base() { return NULL; }
-	const T* Base() const { return NULL; }
-
-protected:
-	struct BlockHeader_t;
-
-public:
-	class Iterator_t
-	{
-	public:
-		Iterator_t( BlockHeader_t *p, int i ) : m_pBlockHeader( p ), m_nIndex( i ) {}
-		BlockHeader_t *m_pBlockHeader;
-		intp m_nIndex;
-
-		bool operator==( const Iterator_t it ) const	{ return m_pBlockHeader == it.m_pBlockHeader && m_nIndex == it.m_nIndex; }
-		bool operator!=( const Iterator_t it ) const	{ return m_pBlockHeader != it.m_pBlockHeader || m_nIndex != it.m_nIndex; }
-	};
-	Iterator_t First() const							{ return m_pBlocks ? Iterator_t( m_pBlocks, 0 ) : InvalidIterator(); }
-	Iterator_t Next( const Iterator_t &it ) const
-	{
-		Assert( IsValidIterator( it ) );
-		if ( !IsValidIterator( it ) )
-			return InvalidIterator();
-
-		BlockHeader_t * RESTRICT pHeader = it.m_pBlockHeader;
-		if ( it.m_nIndex + 1 < pHeader->m_nBlockSize )
-			return Iterator_t( pHeader, it.m_nIndex + 1 );
-
-		return pHeader->m_pNext ? Iterator_t( pHeader->m_pNext, 0 ) : InvalidIterator();
-	}
-	intp GetIndex( const Iterator_t &it ) const
-	{
-		Assert( IsValidIterator( it ) );
-		if ( !IsValidIterator( it ) )
-			return InvalidIndex();
-
-		return ( intp )( HeaderToBlock( it.m_pBlockHeader ) + it.m_nIndex );
-	}
-	bool IsIdxAfter( intp i, const Iterator_t &it ) const
-	{
-		Assert( IsValidIterator( it ) );
-		if ( !IsValidIterator( it ) )
-			return false;
-
-		if ( IsInBlock( i, it.m_pBlockHeader ) )
-			return i > GetIndex( it );
-
-		for ( BlockHeader_t * RESTRICT  pbh = it.m_pBlockHeader->m_pNext; pbh; pbh = pbh->m_pNext )
-		{
-			if ( IsInBlock( i, pbh ) )
-				return true;
-		}
-		return false;
-	}
-	bool IsValidIterator( const Iterator_t &it ) const	{ return it.m_pBlockHeader && it.m_nIndex >= 0 && it.m_nIndex < it.m_pBlockHeader->m_nBlockSize; }
-	Iterator_t InvalidIterator() const					{ return Iterator_t( NULL, INVALID_INDEX ); }
-
 	// element access
-	T& operator[]( intp i );
-	const T& operator[]( intp i ) const;
-	T& Element( intp i );
-	const T& Element( intp i ) const;
+	T& operator[]( int i );
+	T const& operator[]( int i ) const;
+	T& Element( int i );
+	T const& Element( int i ) const;
 
 	// Can we use this index?
-	bool IsIdxValid( intp i ) const;
-
-	// Specify the invalid ('null') index that we'll only return on failure
-	static const intp INVALID_INDEX = 0; // For use with COMPILE_TIME_ASSERT
-	static intp InvalidIndex() { return INVALID_INDEX; }
+	bool IsIdxValid( int i ) const;
 
 	// Size
-	int NumAllocated() const;
-	int Count() const { return NumAllocated(); }
+	int AllocationCount() const;
 
-	// Grows memory by max(num,growsize), and returns the allocation index/ptr
-	void Grow( int num = 1 );
+	// Allocate, free a single element
+	int Alloc();
+	void Remove( int i );
+	void RemoveAll( );
 
 	// Makes sure we've got at least this much memory
 	void EnsureCapacity( int num );
@@ -133,40 +63,60 @@ public:
 	// Memory deallocation
 	void Purge();
 
-protected:
-	// Fast swap - WARNING: Swap invalidates all ptr-based indices!!!
-	void Swap( CUtlFixedMemory< T > &mem );
+	// is the memory externally allocated?
+	bool IsExternallyAllocated() const;
 
-	bool IsInBlock( intp i, BlockHeader_t *pBlockHeader ) const
+	// Set the size by which the memory grows
+	void SetGrowSize( int size );
+
+	// Used to iterate over all elements
+	int FirstElement();
+	int NextElement( int i );
+
+private:
+	enum
 	{
-		T *p = ( T* )i;
-		const T *p0 = HeaderToBlock( pBlockHeader );
-		return p >= p0 && p < p0 + pBlockHeader->m_nBlockSize;
-	}
+		EXTERNAL_BUFFER_MARKER = -1,
+	};
 
 	struct BlockHeader_t
 	{
 		BlockHeader_t *m_pNext;
-		intp m_nBlockSize;
+		int m_nBlockCount;
 	};
 
-	const T *HeaderToBlock( const BlockHeader_t *pHeader ) const { return ( T* )( pHeader + 1 ); }
-	const BlockHeader_t *BlockToHeader( const T *pBlock ) const { return ( BlockHeader_t* )( pBlock ) - 1; }
+private:
+	void SetupFreeList( BlockHeader_t *pHeader );
+	void Grow( int num = 1 );
 
-	BlockHeader_t* m_pBlocks;
+
+private:
+	BlockHeader_t *m_pMemory;
 	int m_nAllocationCount;
 	int m_nGrowSize;
+	T *m_pFirstFree;
 };
+
 
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
-
 template< class T >
-CUtlFixedMemory<T>::CUtlFixedMemory( int nGrowSize, int nInitAllocationCount )
-: m_pBlocks( 0 ), m_nAllocationCount( 0 ), m_nGrowSize( 0 )
+CUtlFixedMemory<T>::CUtlFixedMemory( int nGrowSize, int nInitAllocationCount ) : m_pMemory(0), m_pFirstFree(0), 
+	m_nAllocationCount( nInitAllocationCount ), m_nGrowSize( nGrowSize )
 {
-	Init( nGrowSize, nInitAllocationCount );
+	// T must be at least as big as a pointer or the free list fails
+	COMPILE_TIME_ASSERT( sizeof(T) >= 4 );
+
+	Assert( (nGrowSize >= 0) && (nGrowSize != EXTERNAL_BUFFER_MARKER) );
+	if (m_nAllocationCount)
+	{
+		MEM_ALLOC_CREDIT_CLASS();
+		m_pMemory = (BlockHeader_t*)malloc( sizeof(BlockHeader_t) + m_nAllocationCount * sizeof(T) );
+		m_pMemory->m_pNext = NULL;
+		m_pMemory->m_nBlockCount = m_nAllocationCount;
+		SetupFreeList( m_pMemory );
+	}
 }
 
 template< class T >
@@ -177,67 +127,105 @@ CUtlFixedMemory<T>::~CUtlFixedMemory()
 
 
 //-----------------------------------------------------------------------------
-// Fast swap - WARNING: Swap invalidates all ptr-based indices!!!
+// Sets up the free list
 //-----------------------------------------------------------------------------
 template< class T >
-void CUtlFixedMemory<T>::Swap( CUtlFixedMemory< T > &mem )
+void CUtlFixedMemory<T>::SetupFreeList( BlockHeader_t *pHeader )
 {
-	V_swap( m_pBlocks, mem.m_pBlocks );
-	V_swap( m_nAllocationCount, mem.m_nAllocationCount );
-	V_swap( m_nGrowSize, mem.m_nGrowSize );
+	T* pPrev = m_pFirstFree;
+	m_pFirstFree = (T*)( pHeader + 1 );
+	T* pCurr = m_pFirstFree + pHeader->m_nBlockCount;
+	while ( --pCurr >= m_pFirstFree )
+	{
+		// Treat the first four
+		*((T**)pCurr) = pPrev;
+		pPrev = pCurr;
+	}
 }
 
 
 //-----------------------------------------------------------------------------
-// Set the size by which the memory grows - round up to the next power of 2
+// Used to iterate over all elements. Not particularly fast.
 //-----------------------------------------------------------------------------
 template< class T >
-void CUtlFixedMemory<T>::Init( int nGrowSize /* = 0 */, int nInitSize /* = 0 */ )
+int CUtlFixedMemory<T>::FirstElement()
 {
-	Purge();
-
-	m_nGrowSize = nGrowSize;
-
-	Grow( nInitSize );
+	return m_pMemory ? (int)(m_pMemory + 1) : 0;
 }
+
+
+template< class T >
+int CUtlFixedMemory<T>::NextElement( int i )
+{
+	T* pTest = (T*)i;
+	BlockHeader_t *pCheck = m_pMemory;
+	while (pCheck)
+	{
+		T* pBase = (T*)(pCheck + 1);
+		T* pLast = pBase + pCheck->m_nBlockCount;
+		if ( (i >= (int)pBase) && ( i < (int)pLast ) )
+		{
+			++pTest;
+			if ( pTest >= pLast )
+			{
+				pTest = (T*)(pCheck->m_pNext + 1);
+				return (int)pTest;
+			}
+		}
+		pCheck = pCheck->m_pNext;
+	}
+
+	return 0;
+}
+
 
 //-----------------------------------------------------------------------------
 // element access
 //-----------------------------------------------------------------------------
 template< class T >
-inline T& CUtlFixedMemory<T>::operator[]( intp i )
+inline T& CUtlFixedMemory<T>::operator[]( int i )
 {
-	Assert( IsIdxValid(i) );
-	return *( T* )i;
+	// Indices are actually pointers here
+	return *(T*)i;
 }
 
 template< class T >
-inline const T& CUtlFixedMemory<T>::operator[]( intp i ) const
+inline T const& CUtlFixedMemory<T>::operator[]( int i ) const
 {
-	Assert( IsIdxValid(i) );
-	return *( T* )i;
+	return *(T*)i;
 }
 
 template< class T >
-inline T& CUtlFixedMemory<T>::Element( intp i )
+inline T& CUtlFixedMemory<T>::Element( int i )
 {
-	Assert( IsIdxValid(i) );
-	return *( T* )i;
+	// Indices are actually pointers here
+	return *(T*)i;
 }
 
 template< class T >
-inline const T& CUtlFixedMemory<T>::Element( intp i ) const
+inline T const& CUtlFixedMemory<T>::Element( int i ) const
 {
-	Assert( IsIdxValid(i) );
-	return *( T* )i;
+	// Indices are actually pointers here
+	return *(T*)i;
 }
 
 
 //-----------------------------------------------------------------------------
-// Size
+// Sets the grow size
 //-----------------------------------------------------------------------------
 template< class T >
-inline int CUtlFixedMemory<T>::NumAllocated() const
+void CUtlFixedMemory<T>::SetGrowSize( int nSize )
+{
+	Assert( nSize >= 0 );
+	m_nGrowSize = nSize;
+}
+
+
+//-----------------------------------------------------------------------------
+// Number allocated
+//-----------------------------------------------------------------------------
+template< class T >
+inline int CUtlFixedMemory<T>::AllocationCount() const
 {
 	return m_nAllocationCount;
 }
@@ -247,76 +235,104 @@ inline int CUtlFixedMemory<T>::NumAllocated() const
 // Is element index valid?
 //-----------------------------------------------------------------------------
 template< class T >
-inline bool CUtlFixedMemory<T>::IsIdxValid( intp i ) const
+inline bool CUtlFixedMemory<T>::IsIdxValid( int i ) const
 {
 #ifdef _DEBUG
-	for ( BlockHeader_t *pbh = m_pBlocks; pbh; pbh = pbh->m_pNext )
+	BlockHeader_t *pCheck = m_pMemory;
+	while (pCheck)
 	{
-		if ( IsInBlock( i, pbh ) )
+		T* pBase = &pCheck->m_Data;
+		T* pLast = pBase + pCheck->m_nBlockCount;
+		if ( (i >= (int)pBase) && ( i < (int)pLast ) )
 			return true;
+
+		pCheck = pCheck->m_pNext;
 	}
-	return false;
-#else
-	return i != InvalidIndex();
 #endif
+
+	return ( i != 0 );
+}
+ 
+
+//-----------------------------------------------------------------------------
+// Allocate, free a single element
+//-----------------------------------------------------------------------------
+template< class T >
+int CUtlFixedMemory<T>::Alloc( )
+{
+	if (!m_pFirstFree)
+	{
+		Grow();
+	}
+
+	int nRetVal = (int)m_pFirstFree;
+	m_pFirstFree = *((T**)m_pFirstFree);
+	return nRetVal;
 }
 
 template< class T >
+void CUtlFixedMemory<T>::Remove( int i )
+{
+	Assert( IsIdxValid(i) );
+	*((T**)i) = m_pFirstFree;
+	m_pFirstFree = (T*)i;
+}
+
+template< class T >
+void CUtlFixedMemory<T>::RemoveAll( )
+{
+	m_pFirstFree = 0;
+
+	BlockHeader_t *pHeader;
+	for ( pHeader = m_pMemory; pHeader; pHeader = pHeader->m_pNext )
+	{
+		SetupFreeList( pHeader );
+	}
+}
+
+
+//-----------------------------------------------------------------------------
+// Grows the memory
+//-----------------------------------------------------------------------------
+template< class T >
 void CUtlFixedMemory<T>::Grow( int num )
 {
-	if ( num <= 0 )
-		return;
-
-	int nBlockSize = m_nGrowSize;
-	if ( nBlockSize == 0 )
+	int nOldAllocation = m_nAllocationCount;
+	int nAllocationRequested = m_nAllocationCount + num;
+	while (m_nAllocationCount < nAllocationRequested)
 	{
-		if ( m_nAllocationCount )
+		if (m_nGrowSize)
 		{
-			nBlockSize = m_nAllocationCount;
+			m_nAllocationCount += m_nGrowSize;
 		}
 		else
 		{
-			// Compute an allocation which is at least as big as a cache line...
-			nBlockSize = ( 31 + sizeof( T ) ) / sizeof( T );
-			Assert( nBlockSize );
+			if ( m_nAllocationCount != 0 )
+			{
+				m_nAllocationCount += m_nAllocationCount;
+			}
+			else
+			{
+				// Compute an allocation which is at least as big as a cache line...
+				m_nAllocationCount = (31 + sizeof(T)) / sizeof(T);
+				Assert(m_nAllocationCount != 0);
+			}
 		}
 	}
-	if ( nBlockSize < num )
-	{
-		int n = ( num + nBlockSize -1 ) / nBlockSize;
-		Assert( n * nBlockSize >= num );
-		Assert( ( n - 1 ) * nBlockSize < num );
-		nBlockSize *= n;
-	}
-	m_nAllocationCount += nBlockSize;
+
+	// Make sure we have at least numallocated + num allocations.
+	// Use the grow rules specified for this memory (in m_nGrowSize)
+	int nNewAllocationCount = m_nAllocationCount - nOldAllocation;
 
 	MEM_ALLOC_CREDIT_CLASS();
-	BlockHeader_t *  RESTRICT pBlockHeader = ( BlockHeader_t* )malloc( sizeof( BlockHeader_t ) + nBlockSize * sizeof( T ) );
-	if ( !pBlockHeader )
-	{
-		Error( "CUtlFixedMemory overflow!\n" );
-	}
-	pBlockHeader->m_pNext = NULL;
-	pBlockHeader->m_nBlockSize = nBlockSize;
 
-	if ( !m_pBlocks )
-	{
-		m_pBlocks = pBlockHeader;
-	}
-	else
-	{
-#if 1	// IsIdxAfter assumes that newly allocated blocks are at the end
-		BlockHeader_t *  RESTRICT  pbh = m_pBlocks;
-		while ( pbh->m_pNext )
-		{
-			pbh = pbh->m_pNext;
-		}
-		pbh->m_pNext = pBlockHeader;
-#else
-		pBlockHeader = m_pBlocks;
-		pBlockHeader->m_pNext = m_pBlocks;
-#endif
-	}
+	BlockHeader_t *pHeader = (BlockHeader_t*)malloc( sizeof(BlockHeader_t) + nNewAllocationCount * sizeof(T) );
+	pHeader->m_pNext = NULL;
+	pHeader->m_nBlockCount = nNewAllocationCount;
+	SetupFreeList( pHeader );
+
+	pHeader->m_pNext = m_pMemory;
+	m_pMemory = pHeader;
 }
 
 
@@ -326,7 +342,10 @@ void CUtlFixedMemory<T>::Grow( int num )
 template< class T >
 inline void CUtlFixedMemory<T>::EnsureCapacity( int num )
 {
-	Grow( num - NumAllocated() );
+	if (m_nAllocationCount < num)
+	{
+		Grow( num - m_nAllocationCount );
+	}
 }
 
 
@@ -336,18 +355,18 @@ inline void CUtlFixedMemory<T>::EnsureCapacity( int num )
 template< class T >
 void CUtlFixedMemory<T>::Purge()
 {
-	if ( !m_pBlocks )
-		return;
-
-	for ( BlockHeader_t *pbh = m_pBlocks; pbh; )
+	BlockHeader_t *pHeader, *pNext;
+	for ( pHeader = m_pMemory; pHeader; pHeader = pNext )
 	{
-		BlockHeader_t *pFree = pbh;
-		pbh = pbh->m_pNext;
-		free( pFree );
+		pNext = pHeader->m_pNext;
+		free( pHeader );
 	}
-	m_pBlocks = NULL;
+
+	m_pMemory = NULL;
+	m_pFirstFree = NULL;
 	m_nAllocationCount = 0;
 }
+
 
 #include "tier0/memdbgoff.h"
 

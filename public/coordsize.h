@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -17,12 +17,6 @@
 #define COORD_FRACTIONAL_BITS		5
 #define COORD_DENOMINATOR			(1<<(COORD_FRACTIONAL_BITS))
 #define COORD_RESOLUTION			(1.0/(COORD_DENOMINATOR))
-
-// Special threshold for networking multiplayer origins
-#define COORD_INTEGER_BITS_MP		11
-#define COORD_FRACTIONAL_BITS_MP_LOWPRECISION 3
-#define COORD_DENOMINATOR_LOWPRECISION			(1<<(COORD_FRACTIONAL_BITS_MP_LOWPRECISION))
-#define COORD_RESOLUTION_LOWPRECISION			(1.0/(COORD_DENOMINATOR_LOWPRECISION))
 
 #define NORMAL_FRACTIONAL_BITS		11
 #define NORMAL_DENOMINATOR			( (1<<(NORMAL_FRACTIONAL_BITS)) - 1 )

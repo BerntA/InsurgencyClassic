@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: INetMessage interface
 //
@@ -8,7 +8,8 @@
 #ifndef INETMESSAGE_H
 #define INETMESSAGE_H
 
-#include "tier1/bitbuf.h"
+class bf_read;
+class bf_write;
 
 class INetMsgHandler;
 class INetMessage;

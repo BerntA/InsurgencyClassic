@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,6 +12,8 @@
 
 
 // Packet IDs.
+#define VMPI_SHARED_PACKET_ID		10
+
 	#define VMPI_SUBPACKETID_DIRECTORIES	0	// qdir directories.
 	#define VMPI_SUBPACKETID_DBINFO			1	// MySQL database info.
 	#define VMPI_SUBPACKETID_CRASH			3	// A worker saying it crashed.
@@ -32,12 +34,11 @@ void RecvDBInfo( CDBInfo *pInfo, unsigned long *pJobPrimaryID );
 void SendMulticastIP( const CIPAddr *pAddr );
 void RecvMulticastIP( CIPAddr *pAddr );
 
-void VMPI_HandleCrash( const char *pMessage, void *pvExceptionInfo, bool bAssert );
+void VMPI_HandleCrash( const char *pMessage, bool bAssert );
 
 // Call this from an exception handler (set by SetUnhandledExceptionHandler).
-// uCode			= ExceptionInfo->ExceptionRecord->ExceptionCode.
-// pvExceptionInfo	= ExceptionInfo
-void VMPI_ExceptionFilter( unsigned long uCode, void *pvExceptionInfo );
+// Code is ExceptionInfo->ExceptionRecord->ExceptionCode.
+void VMPI_ExceptionFilter( unsigned long code );
 
 void HandleMPIDisconnect( int procID, const char *pReason );
 

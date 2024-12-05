@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -21,8 +21,8 @@
 // to call SetMapping to map what you're drawing input into this cube.
 
 
-#include "mathlib/vector.h"
-#include "mathlib/vector2d.h"
+#include "vector.h"
+#include "vector2d.h"
 #include "utlvector.h"
 
 class IFileSystem;

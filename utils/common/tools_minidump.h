@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -23,12 +23,7 @@ void SetupDefaultToolsMinidumpHandler();
 
 
 // (Used by VMPI) - you specify your own crash handler.
-// Arguments passed to ToolsExceptionHandler
-//		exceptionCode		- exception code
-//		pvExceptionInfo		- on Win32 platform points to "struct _EXCEPTION_POINTERS"
-//							  otherwise NULL
-//
-typedef void (*ToolsExceptionHandler)( unsigned long exceptionCode, void *pvExceptionInfo );
+typedef void (*ToolsExceptionHandler)( unsigned long exceptionCode );
 void SetupToolsMinidumpHandler( ToolsExceptionHandler fn );
 
 

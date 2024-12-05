@@ -1,0 +1,38 @@
+#############################################################################
+# Developer configurable items
+#############################################################################
+
+# the name of the binary (_i486.so is appended to the end)
+NAME=server
+# the location of the vcproj that builds
+PROJ=../dlls/hl_sdk.vcproj
+# the name of the configuration (typically <proj name>_<build type><build target>)
+CONFIG=server_TestingWin32
+
+# link flags for your mod, make sure to include any special libraries here
+LDFLAGS=-lm -ldl -Wl,-rpath,. -shared
+LIBS=tier0_i486.so vstdlib_i486.so mathlib_i486.a choreoobjects_i486.a tier1_i486.a
+
+TARGET=server_i486.so
+LINKTEST=1
+
+#flags passed to the c compiler
+CFLAGS=
+# optimization
+CFLAGS:=$(CFLAGS) -march=pentium3 -msse
+#-mtune=pentium-mmx -march=pentium-mmx -msse
+#-mtune=i686 -march=pentium3 -mmmx
+# compiler options
+CFLAGS:=$(CFLAGS) -fpermissive
+# defines
+CFLAGS:=$(CFLAGS) -DUSE_STATS -D_LINUX -DNDEBUG -Dstricmp=strcasecmp -D_stricmp=strcasecmp -D_strnicmp=strncasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf -D_vsnprintf=vsnprintf -D_alloca=alloca -Dstrcmpi=strcasecmp
+# undefines
+CFLAGS:=$(CFLAGS) -Usprintf=use_Q_snprintf_instead_of_sprintf -Ustrncpy=use_Q_strncpy_instead -UPROTECTED_THINGS_ENABLE
+
+pch: ../dlls/misc/cbase.h.gch
+
+../dlls/misc/cbase.h.gch: ../dlls/misc/cbase.h
+	$(CPLUS) -w $(INCLUDES) $(CFLAGS) -Wp,--output-pch=../dlls/misc/cbase.h.gch -c ../dlls/misc/stdafx.cpp -o /dev/null
+
+pchclean:
+	rm -f ../dlls/misc/cbase.h.gch

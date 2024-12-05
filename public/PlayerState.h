@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -42,11 +42,16 @@ public:
 	int			fixangle;
 	// delta angle for fixangle == FIXANGLE_RELATIVE
 	QAngle		anglechange;
-	// flag to single the HLTV/Replay fake client, not transmitted
+	// flag to single the HLTV fake client, not transmitted
 	bool		hltv;
-	bool		replay;
 	int			frags;
 	int			deaths;
+#endif
+
+// NOTE:  Only care about this stuff in game/client dlls
+// Put at end in case it has any effect on size of structure
+#if defined( GAME_DLL )
+	DECLARE_SIMPLE_DATADESC();
 #endif
 
 #if defined( CLIENT_DLL )

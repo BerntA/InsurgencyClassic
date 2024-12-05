@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,25 +10,13 @@
 #pragma once
 #endif
 
-#include <vgui_controls/Controls.h>
-#include <vgui_controls/TreeView.h>
-#include <vgui_controls/Frame.h>
+#include <vgui_controls/controls.h>
+#include <vgui_controls/frame.h>
+
+class DirectoryTreeView;
 
 namespace vgui
 {
-
-//-----------------------------------------------------------------------------
-// Purpose: Used to handle dynamically populating the tree view
-//-----------------------------------------------------------------------------
-class DirectoryTreeView : public TreeView
-{
-public:
-	DirectoryTreeView(DirectorySelectDialog *parent, const char *name);
-	virtual void GenerateChildrenOfNode(int itemIndex);
-
-private:
-	DirectorySelectDialog *m_pParent;
-};
 
 //-----------------------------------------------------------------------------
 // Purpose: Utility dialog, used to let user select a directory (like during install)
@@ -86,7 +74,7 @@ private:
 	vgui::Button *m_pCancelButton;
 	vgui::Button *m_pSelectButton;
 	vgui::Button *m_pCreateButton;
-	
+
 	friend class DirectoryTreeView;
 };
 

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: N-way tree container class 
 //
@@ -152,7 +152,7 @@ CUtlNTree<T,I>::CUtlNTree( int growSize, int initSize ) :
 
 template <class T, class I>
 CUtlNTree<T,I>::CUtlNTree( void* pMemory, int memsize ) : 
-	m_Memory(pMemory, memsize/sizeof(T))
+	m_Memory((ListElem_t *)pMemory, memsize/sizeof(ListElem_t))
 {
 	ConstructList();
 	ResetDbgInfo();

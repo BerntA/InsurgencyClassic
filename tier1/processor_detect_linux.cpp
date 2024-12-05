@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: linux dependant ASM code for CPU capability detection
 //
@@ -6,8 +6,8 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#define cpuid(in,a,b,c,d)												\
-	asm("pushl %%ebx\n\t" "cpuid\n\t" "movl %%ebx,%%esi\n\t" "pop %%ebx": "=a" (a), "=S" (b), "=c" (c), "=d" (d) : "a" (in));
+#define cpuid(in,a,b,c,d)\
+  asm("cpuid": "=a" (a), "=b" (b), "=c" (c), "=d" (d) : "a" (in));
 
 bool CheckMMXTechnology(void)
 {
@@ -41,7 +41,7 @@ bool Check3DNowTechnology(void)
     if ( eax > 0x80000000L )
     {
      	cpuid(0x80000001,unused,unused,unused,eax);
-		return ( eax & 1<<31 );
+	return ( eax & 1<<31 );
     }
     return false;
 }

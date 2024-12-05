@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,8 +10,8 @@
 #pragma once
 #endif
 
-#include "tier1/utlvector.h"
-#include <vgui_controls/Panel.h>
+#include "utlvector.h"
+#include <vgui_controls/panel.h>
 
 #define DECLARE_PANELANIMATION( className )												\
 	static void AddToAnimationMap( char const *scriptname, char const *type, char const *var,	\

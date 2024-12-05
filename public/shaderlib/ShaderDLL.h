@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,7 +13,7 @@
 #pragma once
 #endif
 
-#include <materialsystem/IShader.h>
+#include <materialsystem/ishader.h>
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -41,9 +41,6 @@ IShaderDLL *GetShaderDLL();
 // Singleton interface for CVars
 //-----------------------------------------------------------------------------
 ICvar *GetCVar();
-
-
-
 
 
 #endif // SHADERDLL_H

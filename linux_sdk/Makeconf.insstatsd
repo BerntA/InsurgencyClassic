@@ -1,0 +1,28 @@
+#############################################################################
+# Developer configurable items
+#############################################################################
+
+# the name of the binary (_i486.so is appended to the end)
+NAME=ins_statsman
+# the location of the vcproj that builds
+PROJ=../stats/insstats/insstatsd.vcproj
+# the name of the configuration (typically <proj name>_<build type><build target>)
+CONFIG=insstatsd_ReleaseWin32
+
+# link flags for your mod, make sure to include any special libraries here
+LDFLAGS=-ldl -Wl,-rpath,.,-rpath-link,/usr/lib
+LIBS=libSocketW.so.0 libZThread-2.3.so.2 libmysqlclient.so.12 -lstdc++
+
+TARGET=insstatsd
+
+#flags passed to the c compiler
+CFLAGS=
+# optimization
+CFLAGS:=$(CFLAGS) -march=pentium-mmx -msse
+# -mtune=pentium-mmx 
+# undefs
+CFLAGS:=$(CFLAGS) -U__WIN32__
+
+pch:
+
+pchclean:

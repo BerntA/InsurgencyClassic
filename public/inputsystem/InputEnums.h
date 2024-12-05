@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -13,12 +13,6 @@
 // Standard maximum +/- value of a joystick axis
 #define MAX_BUTTONSAMPLE			32768
 
-#if !defined( _X360 )
-#define INVALID_USER_ID		-1
-#else
-#define INVALID_USER_ID		XBX_INVALID_USER_ID
-#endif
-
 //-----------------------------------------------------------------------------
 // Forward declarations: 
 //-----------------------------------------------------------------------------
@@ -27,22 +21,8 @@ enum
 {
 	MAX_JOYSTICKS = 1,
 	MOUSE_BUTTON_COUNT = 5,
-	MAX_NOVINT_DEVICES = 2,
 };
 
-#if defined( LINUX )
-// Linux has a slightly different mapping order on the joystick axes
-enum JoystickAxis_t
-{
-	JOY_AXIS_X = 0,
- 	JOY_AXIS_Y,
-	JOY_AXIS_Z,
-	JOY_AXIS_U,
-	JOY_AXIS_R,
-	JOY_AXIS_V,
-	MAX_JOYSTICK_AXES,
-};
-#else
 enum JoystickAxis_t
 {
 	JOY_AXIS_X = 0,
@@ -53,7 +33,6 @@ enum JoystickAxis_t
 	JOY_AXIS_V,
 	MAX_JOYSTICK_AXES,
 };
-#endif
 
 
 
@@ -77,15 +56,11 @@ enum InputEventType_t
 	IE_ButtonPressed = 0,	// m_nData contains a ButtonCode_t
 	IE_ButtonReleased,		// m_nData contains a ButtonCode_t
 	IE_ButtonDoubleClicked,	// m_nData contains a ButtonCode_t
+	IE_JoyButtonPressed,	// m_nData contains a ButtonCode_t
+	IE_JoyButtonReleased,	// m_nData contains a ButtonCode_t
 	IE_AnalogValueChanged,	// m_nData contains an AnalogCode_t, m_nData2 contains the value
 
-	IE_FirstSystemEvent = 100,
-	IE_Quit = IE_FirstSystemEvent,
-	IE_ControllerInserted,	// m_nData contains the controller ID
-	IE_ControllerUnplugged,	// m_nData contains the controller ID
-
-	IE_FirstVguiEvent = 1000,	// Assign ranges for other systems that post user events here
-	IE_FirstAppEvent = 2000,
+	IE_EventTypeCount,
 };
 
 struct InputEvent_t

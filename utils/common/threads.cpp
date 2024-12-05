@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -174,7 +174,7 @@ DWORD WINAPI InternalRunThreadsFn( LPVOID pParameter )
 }
 
 
-void RunThreads_Start( RunThreadsFn fn, void *pUserData, ERunThreadsPriority ePriority )
+void RunThreads_Start( RunThreadsFn fn, void *pUserData )
 {
 	Assert( numthreads > 0 );
 	threaded = true;
@@ -197,15 +197,8 @@ void RunThreads_Start( RunThreadsFn fn, void *pUserData, ERunThreadsPriority ePr
 		   0,			// DWORD fdwCreate,
 		   &dwDummy );
 
-		if ( ePriority == k_eRunThreadsPriority_UseGlobalState )
-		{
-			if( g_bLowPriorityThreads )
-				SetThreadPriority( g_ThreadHandles[i], THREAD_PRIORITY_LOWEST );
-		}
-		else if ( ePriority == k_eRunThreadsPriority_Idle )
-		{
-			SetThreadPriority( g_ThreadHandles[i], THREAD_PRIORITY_IDLE );
-		}
+		if( g_bLowPriorityThreads )
+			SetThreadPriority( g_ThreadHandles[i], THREAD_PRIORITY_LOWEST );
 	}
 }
 

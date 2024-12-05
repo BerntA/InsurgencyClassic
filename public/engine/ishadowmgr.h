@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -14,7 +14,7 @@
 #endif
 
 #include "interface.h"
-#include "mathlib/vmatrix.h"
+#include "vmatrix.h"
 
 
 //-----------------------------------------------------------------------------
@@ -133,12 +133,11 @@ public:
 	// the shadow size measured in the space of the shadow matrix; the
 	// shadow goes from +/- size.x/2 along the x axis of the shadow matrix
 	// and +/- size.y/2 along the y axis of the shadow matrix.
-	virtual void ProjectShadow( ShadowHandle_t handle, const Vector &origin, 
-		const Vector& projectionDir, const VMatrix& worldToShadow, const Vector2D& size,
-		int nLeafCount, const int *pLeafList,
-		float maxHeight, float falloffOffset, float falloffAmount, const Vector &vecCasterOrigin ) = 0;
+	virtual void ProjectShadow( ShadowHandle_t handle, const Vector& origin,
+		const Vector& projectionDir, const VMatrix &worldToShadow, const Vector2D &size,
+		float maxDistance, float falloffOffset, float falloffAmount, const Vector &vecCasterOrigin ) = 0;
 
-	virtual void ProjectFlashlight( ShadowHandle_t handle, const VMatrix &worldToShadow, int nLeafCount, const int *pLeafList ) = 0;
+	virtual void ProjectFlashlight( ShadowHandle_t handle, const VMatrix &worldToShadow ) = 0;
 
 	// Gets at information about a particular shadow
 	virtual const ShadowInfo_t &GetInfo( ShadowHandle_t handle ) = 0;
@@ -176,13 +175,9 @@ public:
 	virtual void DrawFlashlightDepthTexture( ) = 0;
 
 	virtual void AddFlashlightRenderable( ShadowHandle_t shadow, IClientRenderable *pRenderable ) = 0;
-	virtual ShadowHandle_t CreateShadowEx( IMaterial* pMaterial, IMaterial* pModelMaterial, void* pBindProxy, int creationFlags ) = 0;
+	virtual ShadowHandle_t CreateShadowEx( IMaterial* pMaterial, IMaterial* pModelMaterial, void* pBindProxy, int creationFlags, ITexture *pFlashlightDepthTexture ) = 0;
 
-	virtual void SetFlashlightDepthTexture( ShadowHandle_t shadowHandle, ITexture *pFlashlightDepthTexture, unsigned char ucShadowStencilBit ) = 0;
-
-	virtual const FlashlightState_t &GetFlashlightState( ShadowHandle_t handle ) = 0;
-
-	virtual void SetFlashlightRenderState( ShadowHandle_t handle ) = 0;
+	virtual void UpdateFlashlightStateEx( ShadowHandle_t shadowHandle, const FlashlightState_t &lightState, ITexture *pFlashlightDepthTexture ) = 0;
 };
 
 

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -9,8 +9,6 @@
 #ifdef _WIN32
 #pragma once
 #endif
-
-class Quaternion;
 
 enum
 {
@@ -56,8 +54,6 @@ enum
 	CURVE_KOCHANEK_BARTELS_EARLY_TO_KOCHANEK_BARTELS_EARLY	= MAKE_CURVE_TYPE( INTERPOLATE_KOCHANEK_BARTELS_EARLY, INTERPOLATE_KOCHANEK_BARTELS_EARLY ),
 	CURVE_KOCHANEK_BARTELS_LATE_TO_KOCHANEK_BARTELS_LATE	= MAKE_CURVE_TYPE( INTERPOLATE_KOCHANEK_BARTELS_LATE, INTERPOLATE_KOCHANEK_BARTELS_LATE ),
 	CURVE_SIMPLE_CUBIC_TO_SIMPLE_CUBIC						= MAKE_CURVE_TYPE( INTERPOLATE_SIMPLE_CUBIC, INTERPOLATE_SIMPLE_CUBIC ),
-	CURVE_LINEAR_TO_HOLD									= MAKE_CURVE_TYPE( INTERPOLATE_LINEAR_INTERP, INTERPOLATE_HOLD ),
-	CURVE_HOLD_TO_LINEAR									= MAKE_CURVE_TYPE( INTERPOLATE_HOLD, INTERPOLATE_LINEAR_INTERP ),
 };
 
 // Turn enum into string and vice versa
@@ -89,14 +85,5 @@ void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
 	const Vector &vNext,
 	float f,
 	Vector &vOut );
-
-// Main spline interpolation function for Vectors, doesn't assume time is in .x and doesn't do normalization
-void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
-												 const Quaternion &vPre,
-												 const Quaternion &vStart,
-												 const Quaternion &vEnd,
-												 const Quaternion &vNext,
-												 float f,
-												 Quaternion &vOut );
 
 #endif // INTERPOLATORTYPES_H

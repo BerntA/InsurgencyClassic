@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -13,7 +13,7 @@
 #endif
 
 #include <utlvector.h>
-#include <vgui_controls/Panel.h>
+#include <vgui_controls/panel.h>
 
 namespace vgui
 {
@@ -58,7 +58,6 @@ private:
 	char *m_pImageName;
 	bool m_bAnimating;
 	bool m_bFiltered;
-	bool m_bScaleImage;
 };
 
 }; // namespace vgui

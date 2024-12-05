@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -30,7 +30,6 @@ public:
 	virtual dlight_t	*CL_AllocElight			( int key );
 	virtual int			CL_GetActiveDLights		( dlight_t *pList[MAX_DLIGHTS] );
 	virtual const char *Draw_DecalNameFromIndex	( int nIndex );
-	virtual dlight_t    *GetElightByKey			( int key );
 };
 
 extern CVEfx *g_pEfx;

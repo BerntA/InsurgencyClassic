@@ -1,9 +1,9 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
 // $NoKeywords: $
-//===========================================================================//
+//=============================================================================//
 
 #ifndef IINPUTINTERNAL_H
 #define IINPUTINTERNAL_H
@@ -11,17 +11,10 @@
 #pragma once
 #endif
 
-#include <vgui/IInput.h>
+#include <vgui/iinput.h>
 
 namespace vgui
 {
-
-enum MouseCodeState_t
-{
-	BUTTON_RELEASED = 0,
-	BUTTON_PRESSED,
-	BUTTON_DOUBLECLICKED,
-};
 
 typedef int HInputContext;
 
@@ -39,15 +32,15 @@ public:
 	virtual void PanelDeleted(VPANEL panel) = 0;
 
 	// inputs into vgui input handling 
-	virtual bool InternalCursorMoved(int x,int y) = 0; //expects input in surface space
-	virtual bool InternalMousePressed(MouseCode code) = 0;
-	virtual bool InternalMouseDoublePressed(MouseCode code) = 0;
-	virtual bool InternalMouseReleased(MouseCode code) = 0;
-	virtual bool InternalMouseWheeled(int delta) = 0;
-	virtual bool InternalKeyCodePressed(KeyCode code) = 0;
+	virtual void InternalCursorMoved(int x,int y) = 0; //expects input in surface space
+	virtual void InternalMousePressed(MouseCode code) = 0;
+	virtual void InternalMouseDoublePressed(MouseCode code) = 0;
+	virtual void InternalMouseReleased(MouseCode code) = 0;
+	virtual void InternalMouseWheeled(int delta) = 0;
+	virtual void InternalKeyCodePressed(KeyCode code) = 0;
 	virtual void InternalKeyCodeTyped(KeyCode code) = 0;
 	virtual void InternalKeyTyped(wchar_t unichar) = 0;
-	virtual bool InternalKeyCodeReleased(KeyCode code) = 0;
+	virtual void InternalKeyCodeReleased(KeyCode code) = 0;
 
 	// Creates/ destroys "input" contexts, which contains information
 	// about which controls have mouse + key focus, for example.
@@ -61,22 +54,6 @@ public:
 	// Activates a particular input context, use DEFAULT_INPUT_CONTEXT
 	// to get the one normally used by VGUI
 	virtual void ActivateInputContext( HInputContext context ) = 0;
-
-	// This method is called to post a cursor message to the current input context
-	virtual void PostCursorMessage() = 0;
-
-	// Cursor position; this is the current position read from the input queue.
-	// We need to set it because client code may read this during Mouse Pressed
-	// events, etc.
-	virtual void UpdateCursorPosInternal( int x, int y ) = 0;
-
-	// Called to handle explicit calls to CursorSetPos after input processing is complete
-	virtual void HandleExplicitSetCursor( ) = 0;
-
-	// Updates the internal key/mouse state associated with the current input context without sending messages
-	virtual void SetKeyCodeState( KeyCode code, bool bPressed ) = 0;
-	virtual void SetMouseCodeState( MouseCode code, MouseCodeState_t state ) = 0;
-	virtual void UpdateButtonState( const InputEvent_t &event ) = 0;
 };
 
 } // namespace vgui

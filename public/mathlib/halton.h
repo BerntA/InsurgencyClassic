@@ -1,4 +1,3 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
 // $Id$
 
 // halton.h - classes, etc for generating numbers using the Halton pseudo-random sequence.  See
@@ -19,7 +18,7 @@
 #define HALTON_H
 
 #include <tier0/platform.h>
-#include <mathlib/vector.h>
+#include <vector.h>
 
 class HaltonSequenceGenerator_t
 {

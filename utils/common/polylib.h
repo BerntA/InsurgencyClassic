@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -16,7 +16,7 @@
 #pragma once
 
 #ifndef MATHLIB_H
-#include "mathlib/mathlib.h"
+#include "mathlib.h"
 #endif
 
 struct winding_t

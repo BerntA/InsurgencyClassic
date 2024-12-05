@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======//
 //
 // Purpose: A dictionary mapping from symbol to structure 
 //
@@ -21,34 +21,17 @@
 
 #include "tier0/memdbgon.h"
 
-enum EDictCompareType
-{
-	k_eDictCompareTypeCaseSensitive=0,
-	k_eDictCompareTypeCaseInsensitive=1,
-	k_eDictCompareTypeFilenames				// Slashes and backslashes count as the same character..
-};
-
 //-----------------------------------------------------------------------------
 // A dictionary mapping from symbol to structure
 //-----------------------------------------------------------------------------
-#define FOR_EACH_DICT( dictName, iteratorName ) \
-	for( int iteratorName=dictName.First(); iteratorName != dictName.InvalidIndex(); iteratorName = dictName.Next( iteratorName ) )
-
-// faster iteration, but in an unspecified order
-#define FOR_EACH_DICT_FAST( dictName, iteratorName ) \
-	for ( int iteratorName = 0; iteratorName < dictName.MaxElement(); ++iteratorName ) if ( !dictName.IsValidIndex( iteratorName ) ) continue; else
-
-//-----------------------------------------------------------------------------
-// A dictionary mapping from symbol to structure
-//-----------------------------------------------------------------------------
-template <class T, class I = int > 
+template <class T, class I> 
 class CUtlDict
 {
 public:
 	// constructor, destructor
 	// Left at growSize = 0, the memory will first allocate 1 element and double in size
 	// at each increment.
-	CUtlDict( int compareType = k_eDictCompareTypeCaseInsensitive, int growSize = 0, int initSize = 0 );
+	CUtlDict( bool caseInsensitive = true, int growSize = 0, int initSize = 0 );
 	~CUtlDict( );
 
 	void EnsureCapacity( int );
@@ -67,9 +50,6 @@ public:
 
 	// Number of elements
 	unsigned int Count() const;
-
-	// Number of allocated slots
-	I MaxElement() const;
 	
 	// Checks if a node is valid and in the tree
 	bool  IsValidIndex( I i ) const;
@@ -83,7 +63,6 @@ public:
 	
 	// Find method
 	I  Find( const char *pName ) const;
-	bool HasElement( const char *pName ) const;
 	
 	// Remove methods
 	void	RemoveAt( I i );
@@ -98,10 +77,6 @@ public:
 	I		First() const;
 	I		Next( I i ) const;
 
-	// Nested typedefs, for code that might need 
-	// to fish out the index type from a given dict
-	typedef I IndexType_t;
-
 protected:
 	typedef CUtlMap<const char *, T, I> DictElementMap_t;
 	DictElementMap_t m_Elements;
@@ -112,13 +87,9 @@ protected:
 // constructor, destructor
 //-----------------------------------------------------------------------------
 template <class T, class I>
-CUtlDict<T, I>::CUtlDict( int compareType, int growSize, int initSize ) : m_Elements( growSize, initSize )
+CUtlDict<T, I>::CUtlDict( bool caseInsensitive, int growSize, int initSize ) : m_Elements( growSize, initSize )
 {
-	if ( compareType == k_eDictCompareTypeFilenames )
-	{
-		m_Elements.SetLessFunc( CaselessStringLessThanIgnoreSlashes );
-	}
-	else if ( compareType == k_eDictCompareTypeCaseInsensitive )
+	if ( caseInsensitive )
 	{
 		m_Elements.SetLessFunc( CaselessStringLessThan );
 	}
@@ -202,14 +173,6 @@ inline	unsigned int CUtlDict<T, I>::Count() const
 	return m_Elements.Count(); 
 }
 
-//-----------------------------------------------------------------------------
-// Number of allocated slots
-//-----------------------------------------------------------------------------
-template <class T, class I>
-inline I CUtlDict<T, I>::MaxElement() const
-{
-	return m_Elements.MaxElement();
-}
 	
 //-----------------------------------------------------------------------------
 // Checks if a node is valid and in the tree
@@ -323,18 +286,6 @@ I CUtlDict<T, I>::Find( const char *pName ) const
 		return m_Elements.Find( pName );
 	else
 		return InvalidIndex();
-}
-
-//-----------------------------------------------------------------------------
-// returns true if we already have this node
-//-----------------------------------------------------------------------------
-template <class T, class I> 
-bool CUtlDict<T, I>::HasElement( const char *pName ) const
-{
-	if ( pName )
-		return m_Elements.IsValidIndex( m_Elements.Find( pName ) );
-	else
-		return false;
 }
 
 

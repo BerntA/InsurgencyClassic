@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<job>
+  <runtime>
+    <description>This script generates a function with the revision number in its name that is exported.</description>
+    <unnamed name="dst" helpstring="The target file" required="true" />
+  </runtime>
+  <!-- Script Constants: -->
+  <object id="fsObject" progid="Scripting.FileSystemObject" />
+  <!-- Script Code: -->
+  <script language="JScript">
+  <![CDATA[
+// Program Code:
+var input="";
+
+var tf=fsObject.OpenTextFile(".svn\\entries", 1, false)
+while (!tf.AtEndOfStream)
+	input+=tf.Read(1);
+tf.Close();
+
+var revision=input.match(/(committed-rev="|dir\n)([0-9]*)/i)[2];
+
+tf=fsObject.CreateTextFile(WScript.Arguments.Unnamed.Item(0), true);
+tf.Write("extern void __declspec(dllexport) RevisionIdent_");
+tf.Write(revision);
+tf.WriteLine("(void) {};");
+tf.Close();
+
+  ]]>
+  </script>
+</job>

@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -14,8 +14,8 @@
 
 #include <utllinkedlist.h>
 #include <utlvector.h>
-#include <vgui/VGUI.h>
-#include <vgui_controls/EditablePanel.h>
+#include <vgui/vgui.h>
+#include <vgui_controls/panel.h>
 
 class KeyValues;
 
@@ -24,10 +24,10 @@ namespace vgui
 
 //-----------------------------------------------------------------------------
 // Purpose: A list of variable height child panels
-// each list item consists of a label-panel pair. Height of the item is
-// determined from the label.
+//  each list item consists of a label-panel pair. Height of the item is
+// determined from the lable.
 //-----------------------------------------------------------------------------
-class PanelListPanel : public EditablePanel
+class PanelListPanel : public Panel
 {
 	DECLARE_CLASS_SIMPLE( PanelListPanel, Panel );
 
@@ -38,18 +38,10 @@ public:
 	// DATA & ROW HANDLING
 	// The list now owns the panel
 	virtual int AddItem( Panel *labelPanel, Panel *panel );
-	int	GetItemCount() const;
-	int GetItemIDFromRow( int nRow ) const;
-
-	// Iteration. Use these until they return InvalidItemID to iterate all the items.
-	int FirstItem() const;
-	int NextItem( int nItemID ) const;
-	int InvalidItemID() const;
+	virtual int	GetItemCount();
 
 	virtual Panel *GetItemLabel(int itemID); 
 	virtual Panel *GetItemPanel(int itemID); 
-
-    ScrollBar*  GetScrollbar() { return m_vbar; }
 
 	virtual void RemoveItem(int itemID); // removes an item from the table (changing the indices of all following items)
 	virtual void DeleteAllItems(); // clears and deletes all the memory used by the data items
@@ -61,8 +53,6 @@ public:
 	// layout
 	void SetFirstColumnWidth( int width );
 	int GetFirstColumnWidth();
-	void SetNumColumns( int iNumColumns );
-	int GetNumColumns( void );
 	void MoveScrollBarToTop();
 
 	// selection
@@ -76,15 +66,6 @@ public:
 
 	void		SetVerticalBufferPixels( int buffer );
 
-	void		ScrollToItem( int itemNumber );
-
-	CUtlVector< int > *GetSortedVector( void )
-	{
-		return &m_SortedItems;
-	}
-
-	int	ComputeVPixelsNeeded();
-
 protected:
 	// overrides
 	virtual void OnSizeChanged(int wide, int tall);
@@ -94,7 +75,7 @@ protected:
 	virtual void OnMouseWheeled(int delta);
 
 private:
-	
+	int	ComputeVPixelsNeeded();
 
 	enum { DEFAULT_HEIGHT = 24, PANELBUFFER = 5 };
 
@@ -115,11 +96,8 @@ private:
 
 	PHandle					m_hSelectedItem;
 	int						m_iFirstColumnWidth;
-	int						m_iNumColumns;
 	int						m_iDefaultHeight;
 	int						m_iPanelBuffer;
-
-	CPanelAnimationVar( bool, m_bAutoHideScrollbar, "autohide_scrollbar", "0" );
 };
 
 }

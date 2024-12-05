@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -18,7 +18,6 @@
 
 class CAudioSource;
 
-#pragma pack(push,4)
 class CVoiceData
 {
 public:
@@ -26,7 +25,6 @@ public:
 	{
 		m_flElapsed = 0.0f;
 		m_pAudioSource = NULL;
-		m_bIgnorePhonemes = false;
 	}
 
 	void SetElapsedTime( float t )
@@ -39,15 +37,9 @@ public:
 		return m_flElapsed;
 	}
 
-	void SetSource( CAudioSource *source, bool bIgnorePhonemes )
+	void SetSource( CAudioSource *source )
 	{
 		m_pAudioSource = source;
-		m_bIgnorePhonemes = bIgnorePhonemes;
-	}
-
-	bool ShouldIgnorePhonemes() const
-	{
-		return m_bIgnorePhonemes;
 	}
 
 	CAudioSource	*GetSource()
@@ -58,7 +50,6 @@ public:
 private:
 	float					m_flElapsed;
 	CAudioSource 			*m_pAudioSource;
-	bool					m_bIgnorePhonemes;
 };
 
 #define UNKNOWN_VOICE_SOURCE -1
@@ -87,7 +78,7 @@ public:
 	int						GetIndexForSource( CAudioSource *source );
 	bool					IsSourceReferenced( CAudioSource *source );
 
-	CVoiceData				*AddSource( CAudioSource *source, bool bIgnorePhonemes );
+	CVoiceData				*AddSource( CAudioSource *source );
 
 	void					RemoveSource( CAudioSource *source );
 	void					RemoveSourceByIndex( int index );
@@ -102,12 +93,10 @@ private:
 		MAX_VOICE_DATA = 4
 	};
 
-	short					m_nVoiceSources;
-	short					m_needsEnvelope; 
 	CVoiceData				m_VoiceSources[ MAX_VOICE_DATA ];
+	short					m_nVoiceSources;
+	short					m_needsEnvelope;
 };
-#pragma pack(pop)
-
 
 inline bool CMouthInfo::IsActive( void )
 {
@@ -172,7 +161,7 @@ inline void CMouthInfo::RemoveSourceByIndex( int index )
 	m_VoiceSources[ index ] = m_VoiceSources[ --m_nVoiceSources ];
 }
 
-inline CVoiceData *CMouthInfo::AddSource( CAudioSource *source, bool bIgnorePhonemes )
+inline CVoiceData *CMouthInfo::AddSource( CAudioSource *source )
 {
 	int idx = GetIndexForSource( source );
 	if ( idx == UNKNOWN_VOICE_SOURCE )
@@ -189,7 +178,7 @@ inline CVoiceData *CMouthInfo::AddSource( CAudioSource *source, bool bIgnorePhon
 	}
 
 	CVoiceData *data = &m_VoiceSources[ idx ];
-	data->SetSource( source, bIgnorePhonemes );
+	data->SetSource( source );
 	data->SetElapsedTime( 0.0f );
 	return data;
 }

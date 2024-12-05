@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,7 +12,7 @@
 #endif
 
 
-#include "mathlib/vector.h"
+#include "vector.h"
 
 
 // CSimplePhysics is a framework for simplified physics simulation.

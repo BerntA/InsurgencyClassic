@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Defines a symbol table
 //
@@ -6,32 +6,15 @@
 // $NoKeywords: $
 //=============================================================================//
 
+#ifndef _XBOX
 #pragma warning (disable:4514)
+#endif
 
 #include "utlsymbol.h"
-#include "KeyValues.h"
+#include "keyvalues.h"
 #include "tier0/threadtools.h"
 #include "tier0/memdbgon.h"
 #include "stringpool.h"
-#include "utlhashtable.h"
-#include "utlstring.h"
-
-// Ensure that everybody has the right compiler version installed. The version
-// number can be obtained by looking at the compiler output when you type 'cl'
-// and removing the last two digits and the periods: 16.00.40219.01 becomes 160040219
-#ifdef _MSC_FULL_VER
-	#if _MSC_FULL_VER > 160000000
-		// VS 2010
-		#if _MSC_FULL_VER < 160040219
-			#error You must install VS 2010 SP1
-		#endif
-	#else
-		// VS 2005
-		#if _MSC_FULL_VER < 140050727
-			#error You must install VS 2005 SP1
-		#endif
-	#endif
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -57,7 +40,11 @@ void CUtlSymbol::Initialize()
 	// If this assert fails, then the module that this call is in has chosen to disallow
 	// use of the static symbol table. Usually, it's to prevent confusion because it's easy
 	// to accidentally use the global symbol table when you really want to use a specific one.
+#ifndef _XBOX
+	// xboxissue - need to isolate this concept per lib, otherwise
+	// can't trap coding mistakes (i.e. unintended global symbol table usage)
 	Assert( s_bAllowStaticSymbolTable );
+#endif
 
 	// necessary to allow us to create global symbols
 	static bool symbolsInitialized = false;
@@ -94,12 +81,12 @@ CUtlSymbolTableMT* CUtlSymbol::CurrTable()
 // string->symbol->string
 //-----------------------------------------------------------------------------
 
-CUtlSymbol::CUtlSymbol( const char* pStr )
+CUtlSymbol::CUtlSymbol( char const* pStr )
 {
 	m_Id = CurrTable()->AddString( pStr );
 }
 
-const char* CUtlSymbol::String( ) const
+char const* CUtlSymbol::String( ) const
 {
 	return CurrTable()->String(m_Id);
 }
@@ -113,7 +100,7 @@ void CUtlSymbol::DisableStaticSymbolTable()
 // checks if the symbol matches a string
 //-----------------------------------------------------------------------------
 
-bool CUtlSymbol::operator==( const char* pStr ) const
+bool CUtlSymbol::operator==( char const* pStr ) const
 {
 	if (m_Id == UTL_INVAL_SYMBOL) 
 		return false;
@@ -142,27 +129,21 @@ bool CUtlSymbolTable::CLess::operator()( const CStringPoolIndex &i1, const CStri
 	// right now at least, because m_LessFunc is the first member of CUtlRBTree, and m_Lookup
 	// is the first member of CUtlSymbolTabke, this == pTable
 	CUtlSymbolTable *pTable = (CUtlSymbolTable *)( (byte *)this - offsetof(CUtlSymbolTable::CTree, m_LessFunc) ) - offsetof(CUtlSymbolTable, m_Lookup );
-	const char* str1 = (i1 == INVALID_STRING_INDEX) ? pTable->m_pUserSearchString :
+	char const* str1 = (i1 == INVALID_STRING_INDEX) ? pTable->m_pUserSearchString :
 													  pTable->StringFromIndex( i1 );
-	const char* str2 = (i2 == INVALID_STRING_INDEX) ? pTable->m_pUserSearchString :
+	char const* str2 = (i2 == INVALID_STRING_INDEX) ? pTable->m_pUserSearchString :
 													  pTable->StringFromIndex( i2 );
 
-	if ( !str1 && str2 )
-		return false;
-	if ( !str2 && str1 )
-		return true;
-	if ( !str1 && !str2 )
-		return false;
 	if ( !pTable->m_bInsensitive )
-		return V_strcmp( str1, str2 ) < 0;
+		return strcmp( str1, str2 ) < 0;
 	else
-		return V_stricmp( str1, str2 ) < 0;
+		return strcmpi( str1, str2 ) < 0;
 }
-
 
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
+
 CUtlSymbolTable::CUtlSymbolTable( int growSize, int initSize, bool caseInsensitive ) : 
 	m_Lookup( growSize, initSize ), m_bInsensitive( caseInsensitive ), m_StringPools( 8 )
 {
@@ -175,7 +156,7 @@ CUtlSymbolTable::~CUtlSymbolTable()
 }
 
 
-CUtlSymbol CUtlSymbolTable::Find( const char* pString ) const
+CUtlSymbol CUtlSymbolTable::Find( char const* pString )
 {	
 	if (!pString)
 		return CUtlSymbol();
@@ -215,7 +196,7 @@ int CUtlSymbolTable::FindPoolWithSpace( int len )	const
 // Finds and/or creates a symbol based on the string
 //-----------------------------------------------------------------------------
 
-CUtlSymbol CUtlSymbolTable::AddString( const char* pString )
+CUtlSymbol CUtlSymbolTable::AddString( char const* pString )
 {
 	if (!pString) 
 		return CUtlSymbol( UTL_INVAL_SYMBOL );
@@ -225,7 +206,7 @@ CUtlSymbol CUtlSymbolTable::AddString( const char* pString )
 	if (id.IsValid())
 		return id;
 
-	int len = V_strlen(pString) + 1;
+	int len = strlen(pString) + 1;
 
 	// Find a pool with space for this string, or allocate a new one.
 	int iPool = FindPoolWithSpace( len );
@@ -263,7 +244,7 @@ CUtlSymbol CUtlSymbolTable::AddString( const char* pString )
 // Look up the string associated with a particular symbol
 //-----------------------------------------------------------------------------
 
-const char* CUtlSymbolTable::String( CUtlSymbol id ) const
+char const* CUtlSymbolTable::String( CUtlSymbol id ) const
 {
 	if (!id.IsValid()) 
 		return "";
@@ -279,7 +260,7 @@ const char* CUtlSymbolTable::String( CUtlSymbol id ) const
 
 void CUtlSymbolTable::RemoveAll()
 {
-	m_Lookup.Purge();
+	m_Lookup.RemoveAll();
 	
 	for ( int i=0; i < m_StringPools.Count(); i++ )
 		free( m_StringPools[i] );
@@ -288,110 +269,67 @@ void CUtlSymbolTable::RemoveAll()
 }
 
 
-
-class CUtlFilenameSymbolTable::HashTable : public CUtlStableHashtable<CUtlConstString>
-{
-};
-
-CUtlFilenameSymbolTable::CUtlFilenameSymbolTable()
-{
-	m_Strings = new HashTable;
-}
-
-CUtlFilenameSymbolTable::~CUtlFilenameSymbolTable()
-{
-	delete m_Strings;
-}
-
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *pFileName - 
 // Output : FileNameHandle_t
 //-----------------------------------------------------------------------------
-FileNameHandle_t CUtlFilenameSymbolTable::FindOrAddFileName( const char *pFileName )
+FileNameHandle_t CUtlFilenameSymbolTable::FindOrAddFileName( char const *pFileName )
 {
 	if ( !pFileName )
 	{
 		return NULL;
 	}
 
-	// find first
-	FileNameHandle_t hFileName = FindFileName( pFileName );
-	if ( hFileName )
-	{
-		return hFileName;
-	}
-
-	// Fix slashes+dotslashes and make lower case first..
+	// Fix slashes and make lower case first..
 	char fn[ MAX_PATH ];
 	Q_strncpy( fn, pFileName, sizeof( fn ) );
-	Q_RemoveDotSlashes( fn );
+	Q_FixSlashes( fn );
 #ifdef _WIN32
-	Q_strlower( fn );
+	strlwr( fn );
 #endif
 
-	// Split the filename into constituent parts
+	// Split the fn into constituent parts
 	char basepath[ MAX_PATH ];
 	Q_ExtractFilePath( fn, basepath, sizeof( basepath ) );
+
 	char filename[ MAX_PATH ];
 	Q_strncpy( filename, fn + Q_strlen( basepath ), sizeof( filename ) );
 
-	// not found, lock and look again
 	FileNameHandleInternal_t handle;
-	m_lock.LockForWrite();
-	handle.path = m_Strings->Insert( basepath ) + 1;
-	handle.file = m_Strings->Insert( filename ) + 1;
-	//handle.path = m_StringPool.FindStringHandle( basepath );
-	//handle.file = m_StringPool.FindStringHandle( filename );
-	//if ( handle.path != m_Strings.InvalidHandle() && handle.file )
-	//{
-		// found
-	//	m_lock.UnlockWrite();
-	//	return *( FileNameHandle_t * )( &handle );
-	//}
-
-	// safely add it
-	//handle.path = m_StringPool.ReferenceStringHandle( basepath );
-	//handle.file = m_StringPool.ReferenceStringHandle( filename );
-	m_lock.UnlockWrite();
+	handle.path = g_CountedStringPool.ReferenceStringHandle(basepath);
+	handle.file = g_CountedStringPool.ReferenceStringHandle(filename );
 
 	return *( FileNameHandle_t * )( &handle );
 }
 
-FileNameHandle_t CUtlFilenameSymbolTable::FindFileName( const char *pFileName )
+FileNameHandle_t CUtlFilenameSymbolTable::FindFileName( char const *pFileName )
 {
 	if ( !pFileName )
 	{
 		return NULL;
 	}
 
-	// Fix slashes+dotslashes and make lower case first..
+	// Fix slashes and make lower case first..
 	char fn[ MAX_PATH ];
 	Q_strncpy( fn, pFileName, sizeof( fn ) );
-	Q_RemoveDotSlashes( fn );
+	Q_FixSlashes( fn );
 #ifdef _WIN32
-	Q_strlower( fn );
+	strlwr( fn );
 #endif
 
-	// Split the filename into constituent parts
+	// Split the fn into constituent parts
 	char basepath[ MAX_PATH ];
 	Q_ExtractFilePath( fn, basepath, sizeof( basepath ) );
+
 	char filename[ MAX_PATH ];
 	Q_strncpy( filename, fn + Q_strlen( basepath ), sizeof( filename ) );
 
 	FileNameHandleInternal_t handle;
+	handle.path = g_CountedStringPool.FindStringHandle(basepath);
+	handle.file = g_CountedStringPool.FindStringHandle(filename);
 
-	Assert( (uint16)(m_Strings->InvalidHandle() + 1) == 0 );
-
-	m_lock.LockForRead();
-	handle.path = m_Strings->Find(basepath) + 1;
-	handle.file = m_Strings->Find(filename) + 1;
-	//handle.path = m_StringPool.FindStringHandle(basepath);
-	//handle.file = m_StringPool.FindStringHandle(filename);
-	m_lock.UnlockRead();
-
-	if ( handle.path == 0 || handle.file == 0 )
+	if( handle.path == NULL || handle.file == NULL )
 		return NULL;
 
 	return *( FileNameHandle_t * )( &handle );
@@ -400,37 +338,31 @@ FileNameHandle_t CUtlFilenameSymbolTable::FindFileName( const char *pFileName )
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : handle - 
-// Output : const char
+// Output : char const
 //-----------------------------------------------------------------------------
 bool CUtlFilenameSymbolTable::String( const FileNameHandle_t& handle, char *buf, int buflen )
 {
 	buf[ 0 ] = 0;
 
 	FileNameHandleInternal_t *internal = ( FileNameHandleInternal_t * )&handle;
-	if ( !internal || !internal->file || !internal->path )
+	if ( !internal )
 	{
 		return false;
 	}
 
-	m_lock.LockForRead();
-	//const char *path = m_StringPool.HandleToString(internal->path);
-	//const char *fn = m_StringPool.HandleToString(internal->file);
-	const char *path = (*m_Strings)[ internal->path - 1 ].Get();
-	const char *fn = (*m_Strings)[ internal->file - 1].Get();
-	m_lock.UnlockRead();
-
-	if ( !path || !fn )
-	{
+	char const *path = g_CountedStringPool.HandleToString(internal->path);
+	if ( !path )
 		return false;
-	}
 
 	Q_strncpy( buf, path, buflen );
+	char const *fn = g_CountedStringPool.HandleToString(internal->file);
+	if ( !fn )
+	{
+		return false;
+	}
+
 	Q_strncat( buf, fn, buflen, COPY_ALL_CHARACTERS );
 
 	return true;
 }
 
-void CUtlFilenameSymbolTable::RemoveAll()
-{
-	m_Strings->Purge();
-}
