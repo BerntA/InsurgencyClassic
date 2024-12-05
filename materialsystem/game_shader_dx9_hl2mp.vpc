@@ -1,0 +1,21 @@
+//-----------------------------------------------------------------------------
+//	game_shader_dx9.vpc
+//
+//	Project Script for mods to use an an example of how to override shaders
+//-----------------------------------------------------------------------------
+
+$Macro SRCDIR		".."
+$Macro GAMENAME "insurgency"
+$Include "$SRCDIR\materialsystem\game_shader_dx9_base.vpc"
+
+$Project "shaders"
+{
+	$Folder	"Source Files"
+	{
+		$File   "nightvision.cpp"
+	}
+	
+	$Folder	"Header Files"
+	{
+	}	
+}

@@ -1,0 +1,1141 @@
+//========= Copyright Valve Corporation, All rights reserved. ============//
+//
+// Purpose:		Player for HL2.
+//
+//=============================================================================//
+
+#include "cbase.h"
+#include "hl2_player.h"
+#include "game.h"
+#include "gamerules.h"
+#include "trains.h"
+#include "vcollide_parse.h"
+#include "in_buttons.h"
+#include "igamemovement.h"
+#include "info_camera_link.h"
+#include "point_camera.h"
+#include "engine/IEngineSound.h"
+#include "ndebugoverlay.h"
+#include "globals.h"
+#include "collisionutils.h"
+#include "coordsize.h"
+#include "effect_color_tables.h"
+#include "vphysics/player_controller.h"
+#include "player_pickup.h"
+#include "hl2_shared_misc.h"
+#include "effect_dispatch_data.h"
+#include "te_effect_dispatch.h" 
+#include "entitylist.h"
+#include "datacache/imdlcache.h"
+#include "eventqueue.h"
+#include "filters.h"
+#include "hl2mp_gamerules.h"
+#include "hl2mp_player.h"
+#include "GameBase_Shared.h"
+#include "GameBase_Server.h"
+#include "vprof.h"
+#include "tier0/icommandline.h"
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+// Do not touch with without seeing me, please! (sjb)
+// For consistency's sake, enemy gunfire is traced against a scaled down
+// version of the player's hull, not the hitboxes for the player's model
+// because the player isn't aware of his model, and can't do anything about
+// preventing headshots and other such things. Also, game difficulty will
+// not change if the model changes. This is the value by which to scale
+// the X/Y of the player's hull to get the volume to trace bullets against.
+#define PLAYER_HULL_REDUCTION	0.70
+
+#define TIME_IGNORE_FALL_DAMAGE 10.0
+
+ConVar player_showpredictedposition( "player_showpredictedposition", "0" );
+ConVar player_showpredictedposition_timestep( "player_showpredictedposition_timestep", "1.0" );
+
+PRECACHE_REGISTER(player);
+
+	// Global Savedata for HL2 player
+BEGIN_DATADESC( CHL2_Player )
+
+	DEFINE_INPUTFUNC( FIELD_FLOAT, "IgnoreFallDamage", InputIgnoreFallDamage ),
+	DEFINE_INPUTFUNC( FIELD_FLOAT, "IgnoreFallDamageWithoutReset", InputIgnoreFallDamageWithoutReset ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "DisableFlashlight", InputDisableFlashlight ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "EnableFlashlight", InputEnableFlashlight ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "ForceDropPhysObjects", InputForceDropPhysObjects ),
+
+END_DATADESC()
+
+CHL2_Player::CHL2_Player()
+{
+}
+
+IMPLEMENT_SERVERCLASS_ST(CHL2_Player, DT_HL2_Player)
+END_SEND_TABLE()
+
+void CHL2_Player::Precache( void )
+{
+	BaseClass::Precache();
+
+	PrecacheScriptSound( "HL2Player.UseDeny" );
+	PrecacheScriptSound( "HL2Player.FlashLightOn" );
+	PrecacheScriptSound( "HL2Player.FlashLightOff" );
+	PrecacheScriptSound( "HL2Player.PickupWeapon" );
+	PrecacheScriptSound( "HL2Player.TrainUse" );
+	PrecacheScriptSound( "HL2Player.Use" );
+}
+
+void CHL2_Player::HandleSpeedChanges( void )
+{
+	bool bIsWalking = IsWalking();
+	bool bWantWalking = (m_nButtons & IN_WALK) && !(m_nButtons & IN_DUCK);
+	if( bIsWalking != bWantWalking )
+	{
+		if ( bWantWalking )
+			StartWalking();
+		else
+			StopWalking();
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Allow pre-frame adjustments on the player
+//-----------------------------------------------------------------------------
+void CHL2_Player::PreThink(void)
+{
+	if ( player_showpredictedposition.GetBool() )
+	{
+		Vector	predPos;
+
+		UTIL_PredictedPosition( this, player_showpredictedposition_timestep.GetFloat(), &predPos );
+
+		NDebugOverlay::Box(predPos, GetPlayerMins(), GetPlayerMaxs(), 0, 255, 0, 0, 0.01f);
+		NDebugOverlay::Line( GetAbsOrigin(), predPos, 0, 255, 0, 0, 0.01f );
+	}
+
+	VPROF_SCOPE_BEGIN( "CHL2_Player::PreThink-Speed" );
+	HandleSpeedChanges();
+	VPROF_SCOPE_END();
+
+	if ( g_fGameOver || IsPlayerLockedInPlace() )
+		return;         // finale
+
+	VPROF_SCOPE_BEGIN( "CHL2_Player::PreThink-ItemPreFrame" );
+	ItemPreFrame( );
+	VPROF_SCOPE_END();
+
+	VPROF_SCOPE_BEGIN( "CHL2_Player::PreThink-WaterMove" );
+	WaterMove();
+	VPROF_SCOPE_END();
+
+	if ( g_pGameRules && g_pGameRules->FAllowFlashlight() )	
+		m_Local.m_iHideHUD &= ~HIDEHUD_FLASHLIGHT;	
+	else	
+		m_Local.m_iHideHUD |= HIDEHUD_FLASHLIGHT;	
+
+	// checks if new client data (for HUD and view control) needs to be sent to the client
+	VPROF_SCOPE_BEGIN( "CHL2_Player::PreThink-UpdateClientData" );
+	UpdateClientData();
+	VPROF_SCOPE_END();
+
+	VPROF_SCOPE_BEGIN( "CHL2_Player::PreThink-CheckTimeBasedDamage" );
+	CheckTimeBasedDamage();
+	VPROF_SCOPE_END();
+
+	if (m_lifeState >= LIFE_DYING)
+	{
+		PlayerDeathThink();
+		return;
+	}
+
+	// So the correct flags get sent to client asap.
+	//
+	if ( m_afPhysicsFlags & PFLAG_DIROVERRIDE )
+		AddFlag( FL_ONTRAIN );
+	else 
+		RemoveFlag( FL_ONTRAIN );
+
+	// Train speed control
+	if ( m_afPhysicsFlags & PFLAG_DIROVERRIDE )
+	{
+		CBaseEntity *pTrain = GetGroundEntity();
+		float vel;
+
+		if ( pTrain )
+		{
+			if ( !(pTrain->ObjectCaps() & FCAP_DIRECTIONAL_USE) )
+				pTrain = NULL;
+		}
+
+		if ( !pTrain )
+		{
+			if ( GetActiveWeapon() && (GetActiveWeapon()->ObjectCaps() & FCAP_DIRECTIONAL_USE) )
+			{
+				m_iTrain = TRAIN_ACTIVE | TRAIN_NEW;
+
+				if ( m_nButtons & IN_FORWARD )
+				{
+					m_iTrain |= TRAIN_FAST;
+				}
+				else if ( m_nButtons & IN_BACK )
+				{
+					m_iTrain |= TRAIN_BACK;
+				}
+				else
+				{
+					m_iTrain |= TRAIN_NEUTRAL;
+				}
+				return;
+			}
+			else
+			{
+				trace_t trainTrace;
+				// Maybe this is on the other side of a level transition
+				UTIL_TraceLine( GetAbsOrigin(), GetAbsOrigin() + Vector(0,0,-38), 
+					MASK_PLAYERSOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &trainTrace );
+
+				if ( trainTrace.fraction != 1.0 && trainTrace.m_pEnt )
+					pTrain = trainTrace.m_pEnt;
+
+
+				if ( !pTrain || !(pTrain->ObjectCaps() & FCAP_DIRECTIONAL_USE) || !pTrain->OnControls(this) )
+				{
+					//					Warning( "In train mode with no train!\n" );
+					m_afPhysicsFlags &= ~PFLAG_DIROVERRIDE;
+					m_iTrain = TRAIN_NEW|TRAIN_OFF;
+					return;
+				}
+			}
+		}
+		else if ( !( GetFlags() & FL_ONGROUND ) || pTrain->HasSpawnFlags( SF_TRACKTRAIN_NOCONTROL ) || (m_nButtons & (IN_MOVELEFT|IN_MOVERIGHT) ) )
+		{
+			// Turn off the train if you jump, strafe, or the train controls go dead
+			m_afPhysicsFlags &= ~PFLAG_DIROVERRIDE;
+			m_iTrain = TRAIN_NEW|TRAIN_OFF;
+			return;
+		}
+
+		SetAbsVelocity( vec3_origin );
+		vel = 0;
+		if ( m_afButtonPressed & IN_FORWARD )
+		{
+			vel = 1;
+			pTrain->Use( this, this, USE_SET, (float)vel );
+		}
+		else if ( m_afButtonPressed & IN_BACK )
+		{
+			vel = -1;
+			pTrain->Use( this, this, USE_SET, (float)vel );
+		}
+
+		if (vel)
+		{
+			m_iTrain = TrainSpeed(pTrain->m_flSpeed, ((CFuncTrackTrain*)pTrain)->GetMaxSpeed());
+			m_iTrain |= TRAIN_ACTIVE|TRAIN_NEW;
+		}
+	} 
+	else if (m_iTrain & TRAIN_ACTIVE)
+	{
+		m_iTrain = TRAIN_NEW; // turn off train
+	}
+
+	//
+	// If we're not on the ground, we're falling. Update our falling velocity.
+	//
+	if ( !( GetFlags() & FL_ONGROUND ) )
+	{
+		m_Local.m_flFallVelocity = -GetAbsVelocity().z;
+	}
+
+	// StudioFrameAdvance( );//!!!HACKHACK!!! Can't be hit by traceline when not animating?
+}
+
+void CHL2_Player::PostThink( void )
+{
+	BaseClass::PostThink();
+}
+
+//------------------------------------------------------------------------------
+// Purpose :
+// Input   :
+// Output  :
+//------------------------------------------------------------------------------
+Class_T CHL2_Player::Classify ( void )
+{
+	return ((m_nControlClass != CLASS_NONE) ? m_nControlClass : CLASS_NONE);
+}
+
+void CHL2_Player::PlayerRunCommand(CUserCmd *ucmd, IMoveHelper *moveHelper)
+{
+	// Can't use stuff while dead
+	if ( IsDead() )	
+		ucmd->buttons &= ~IN_USE;	
+
+	BaseClass::PlayerRunCommand( ucmd, moveHelper );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Sets HL2 specific defaults.
+//-----------------------------------------------------------------------------
+void CHL2_Player::Spawn(void)
+{
+	BaseClass::Spawn();
+
+	//
+	// Our player movement speed is set once here. This will override the cl_xxxx
+	// cvars unless they are set to be lower than this.
+	//
+	//m_flMaxspeed = 320;
+
+	m_Local.m_iHideHUD |= HIDEHUD_CHAT;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CHL2_Player::StartWalking( void )
+{
+	SetMaxSpeed((GetPlayerSpeed() / 2.0f));
+	m_fIsWalking = true;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CHL2_Player::StopWalking( void )
+{
+	SetMaxSpeed(GetPlayerSpeed());
+	m_fIsWalking = false;
+}
+
+class CPhysicsPlayerCallback : public IPhysicsPlayerControllerEvent
+{
+public:
+	int ShouldMoveTo( IPhysicsObject *pObject, const Vector &position )
+	{
+		CHL2_Player *pPlayer = (CHL2_Player *)pObject->GetGameData();
+		if ( pPlayer )
+		{
+			if ( pPlayer->TouchedPhysics() )
+			{
+				return 0;
+			}
+		}
+		return 1;
+	}
+};
+
+static CPhysicsPlayerCallback playerCallback;
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CHL2_Player::InitVCollision( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity )
+{
+	BaseClass::InitVCollision( vecAbsOrigin, vecAbsVelocity );
+
+	// Setup the HL2 specific callback.
+	IPhysicsPlayerController *pPlayerController = GetPhysicsController();
+	if ( pPlayerController )
+	{
+		pPlayerController->SetEventHandler( &playerCallback );
+	}
+}
+
+CHL2_Player::~CHL2_Player( void )
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CHL2_Player::SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs, int pvssize )
+{
+	BaseClass::SetupVisibility( pViewEntity, pvs, pvssize );
+	int area = pViewEntity ? pViewEntity->NetworkProp()->AreaNum() : NetworkProp()->AreaNum();
+	PointCameraSetupVisibility( this, area, pvs, pvssize );
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+int CHL2_Player::FlashlightIsOn( void )
+{
+	return IsEffectActive( EF_DIMLIGHT );
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CHL2_Player::FlashlightTurnOn( void )
+{
+	if( m_bFlashlightDisabled )
+		return;
+
+	AddEffects( EF_DIMLIGHT );
+	EmitSound( "HL2Player.FlashLightOn" );
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CHL2_Player::FlashlightTurnOff( void )
+{
+	RemoveEffects( EF_DIMLIGHT );
+	EmitSound( "HL2Player.FlashLightOff" );
+}
+
+//-----------------------------------------------------------------------------
+bool CHL2_Player::PassesDamageFilter( const CTakeDamageInfo &info )
+{
+	return BaseClass::PassesDamageFilter( info );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CHL2_Player::SetFlashlightEnabled( bool bState )
+{
+	m_bFlashlightDisabled = !bState;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CHL2_Player::InputDisableFlashlight( inputdata_t &inputdata )
+{
+	if( FlashlightIsOn() )
+		FlashlightTurnOff();
+
+	SetFlashlightEnabled( false );
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CHL2_Player::InputEnableFlashlight( inputdata_t &inputdata )
+{
+	SetFlashlightEnabled( true );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Prevent the player from taking fall damage for [n] seconds, but
+// reset back to taking fall damage after the first impact (so players will be
+// hurt if they bounce off what they hit). This is the original behavior.
+//-----------------------------------------------------------------------------
+void CHL2_Player::InputIgnoreFallDamage( inputdata_t &inputdata )
+{
+	float timeToIgnore = inputdata.value.Float();
+
+	if ( timeToIgnore <= 0.0 )
+		timeToIgnore = TIME_IGNORE_FALL_DAMAGE;
+
+	m_flTimeIgnoreFallDamage = gpGlobals->curtime + timeToIgnore;
+	m_bIgnoreFallDamageResetAfterImpact = true;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Absolutely prevent the player from taking fall damage for [n] seconds. 
+//-----------------------------------------------------------------------------
+void CHL2_Player::InputIgnoreFallDamageWithoutReset( inputdata_t &inputdata )
+{
+	float timeToIgnore = inputdata.value.Float();
+
+	if ( timeToIgnore <= 0.0 )
+		timeToIgnore = TIME_IGNORE_FALL_DAMAGE;
+
+	m_flTimeIgnoreFallDamage = gpGlobals->curtime + timeToIgnore;
+	m_bIgnoreFallDamageResetAfterImpact = false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int	CHL2_Player::OnTakeDamage( const CTakeDamageInfo &info )
+{
+	// ignore fall damage if instructed to do so by input
+	if ( ( info.GetDamageType() & DMG_FALL ) && m_flTimeIgnoreFallDamage > gpGlobals->curtime )
+	{
+		// usually, we will reset the input flag after the first impact. However there is another input that
+		// prevents this behavior.
+		if ( m_bIgnoreFallDamageResetAfterImpact )		
+			m_flTimeIgnoreFallDamage = 0;		
+		return 0;
+	}
+
+	if( info.GetDamageType() & DMG_BLAST_SURFACE )
+	{
+		if( GetWaterLevel() > 2 )
+		{
+			// Don't take blast damage from anything above the surface.
+			if (info.GetInflictor()->GetWaterLevel() == 0)
+				return 0;
+		}
+	}
+
+	if ( info.GetDamage() > 0.0f )
+	{
+		m_flLastDamageTime = gpGlobals->curtime;
+	}
+
+	// Modify the amount of damage the player takes, based on skill.
+	CTakeDamageInfo playerDamage = info;
+
+	// Should we run this damage through the skill level adjustment?
+	bool bAdjustForSkillLevel = true;
+
+	if( info.GetDamageType() == DMG_GENERIC && info.GetAttacker() == this && info.GetInflictor() == this )
+	{
+		// Only do a skill level adjustment if the player isn't his own attacker AND inflictor.
+		// This prevents damage from SetHealth() inputs from being adjusted for skill level.
+		bAdjustForSkillLevel = false;
+	}
+
+	if (bAdjustForSkillLevel)
+		playerDamage.AdjustPlayerDamageTakenForSkillLevel();
+
+	return BaseClass::OnTakeDamage( playerDamage );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : &info - 
+//-----------------------------------------------------------------------------
+int CHL2_Player::OnTakeDamage_Alive( const CTakeDamageInfo &info )
+{
+	// Drown
+	if( info.GetDamageType() & DMG_DROWN )
+	{
+		HL2MPRules()->EmitSoundToClient(this, "DrownPain", GetSoundType(), GetSoundsetGender());
+	}
+
+	// Burnt
+	if ( info.GetDamageType() & DMG_BURN )
+	{
+		HL2MPRules()->EmitSoundToClient(this, "BurnPain", GetSoundType(), GetSoundsetGender());
+	}
+
+	// Call the base class implementation
+	return BaseClass::OnTakeDamage_Alive( info );
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CHL2_Player::OnDamagedByExplosion( const CTakeDamageInfo &info )
+{
+	if ( info.GetInflictor() && info.GetInflictor()->ClassMatches( "mortarshell" ) )
+	{
+		// No ear ringing for mortar
+		UTIL_ScreenShake( info.GetInflictor()->GetAbsOrigin(), 4.0, 1.0, 0.5, 1000, SHAKE_START, false );
+		return;
+	}
+	BaseClass::OnDamagedByExplosion( info );
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+bool CHL2_Player::ShouldShootMissTarget( CBaseCombatCharacter *pAttacker )
+{
+	if( gpGlobals->curtime > m_flTargetFindTime )
+	{
+		// Put this off into the future again.
+		m_flTargetFindTime = gpGlobals->curtime + random->RandomFloat( 3, 5 );
+		return true;
+	}
+
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pWeapon - 
+//-----------------------------------------------------------------------------
+void CHL2_Player::Weapon_Equip( CBaseCombatWeapon *pWeapon )
+{
+	if ( GetActiveWeapon() && ( Weapon_GetSlot( pWeapon->GetSlot() ) != NULL ) )
+		Weapon_DropSlot( pWeapon->GetSlot() );
+
+	BaseClass::Weapon_Equip( pWeapon );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *cmd - 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CHL2_Player::ClientCommand( const CCommand &args )
+{
+	// Drop primary weapon:
+	if (!Q_stricmp(args[0], "DropPrimary"))
+	{
+		if ((!HL2MPRules()->m_bRoundStarted && HL2MPRules()->ShouldHideHUDDuringRoundWait()) || HL2MPRules()->IsGameoverOrScoresVisible())
+			return true;
+
+		CBaseCombatWeapon *pActiveWeapon = GetActiveWeapon();
+		if (pActiveWeapon)
+		{
+			if (!pActiveWeapon->CanHolster() || pActiveWeapon->m_bWantsHolster)
+				return true;
+
+			int wepID = pActiveWeapon->GetUniqueWeaponID();
+			if (wepID == WEAPON_ID_HANDS || wepID == WEAPON_ID_ZOMBHANDS)
+				return true;
+
+			Weapon_DropSlot(pActiveWeapon->GetSlot());
+			return true;
+		}
+
+		return true;
+	}
+
+	return BaseClass::ClientCommand( args );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : void CBasePlayer::PlayerUse
+//-----------------------------------------------------------------------------
+void CHL2_Player::PlayerUse ( void )
+{
+	// Was use pressed or released?
+	if ( ! ((m_nButtons | m_afButtonPressed | m_afButtonReleased) & IN_USE) )
+		return;
+
+	if ( m_afButtonPressed & IN_USE )
+	{
+		// Currently using a latched entity?
+		if ( ClearUseEntity() )
+		{
+			return;
+		}
+		else
+		{
+			m_flPlayerUseTime = gpGlobals->curtime;
+
+			if ( m_afPhysicsFlags & PFLAG_DIROVERRIDE )
+			{
+				m_afPhysicsFlags &= ~PFLAG_DIROVERRIDE;
+				m_iTrain = TRAIN_NEW|TRAIN_OFF;
+				return;
+			}
+			else
+			{	// Start controlling the train!
+				CBaseEntity *pTrain = GetGroundEntity();
+				if ( pTrain && !(m_nButtons & IN_JUMP) && (GetFlags() & FL_ONGROUND) && (pTrain->ObjectCaps() & FCAP_DIRECTIONAL_USE) && pTrain->OnControls(this) )
+				{
+					m_afPhysicsFlags |= PFLAG_DIROVERRIDE;
+					m_iTrain = TrainSpeed(pTrain->m_flSpeed, ((CFuncTrackTrain*)pTrain)->GetMaxSpeed());
+					m_iTrain |= TRAIN_NEW;
+					EmitSound( "HL2Player.TrainUse" );
+					return;
+				}
+			}
+		}
+
+		// Tracker 3926:  We can't +USE something if we're climbing a ladder
+		if ( GetMoveType() == MOVETYPE_LADDER )
+		{
+			return;
+		}
+	}
+
+	if( m_flTimeUseSuspended > gpGlobals->curtime )
+	{
+		// Something has temporarily stopped us being able to USE things.
+		// Obviously, this should be used very carefully.(sjb)
+		return;
+	}
+
+	CBaseEntity *pUseEntity = FindUseEntity();
+
+	bool usedSomething = false;
+
+	// Found an object
+	if ( pUseEntity )
+	{
+		float flSec = gpGlobals->curtime - m_flPlayerUseTime;
+
+		//!!!UNDONE: traceline here to prevent +USEing buttons through walls			
+		int caps = pUseEntity->ObjectCaps();
+		variant_t emptyVariant;
+
+		if ( m_afButtonPressed & IN_USE )
+		{
+			// Robin: Don't play sounds for NPCs, because NPCs will allow respond with speech.
+			if ( !pUseEntity->MyNPCPointer() )
+			{
+				EmitSound( "HL2Player.Use" );
+			}
+		}
+
+		if ( ( (m_nButtons & IN_USE) && (caps & FCAP_CONTINUOUS_USE) ) ||
+			( (m_afButtonPressed & IN_USE) && (caps & (FCAP_IMPULSE_USE|FCAP_ONOFF_USE)) ) )
+		{
+			if ( caps & FCAP_CONTINUOUS_USE )
+				m_afPhysicsFlags |= PFLAG_USING;
+
+			pUseEntity->AcceptInput( "Use", this, this, emptyVariant, USE_TOGGLE );
+
+			usedSomething = true;
+		}
+		// UNDONE: Send different USE codes for ON/OFF.  Cache last ONOFF_USE object to send 'off' if you turn away
+		else if ( (m_afButtonReleased & IN_USE) && (pUseEntity->ObjectCaps() & FCAP_ONOFF_USE) )	// BUGBUG This is an "off" use
+		{
+			pUseEntity->AcceptInput( "Use", this, this, emptyVariant, USE_TOGGLE );
+
+			usedSomething = true;
+		}
+
+		if ((flSec > DELAYED_USE_TIME))
+		{
+			m_flPlayerUseTime = gpGlobals->curtime;
+			pUseEntity->DelayedUse(this);
+			usedSomething = true;
+		}
+	}
+	else if ( m_afButtonPressed & IN_USE )
+	{
+		// Signal that we want to play the deny sound, unless the user is +USEing on a ladder!
+		// The sound is emitted in ItemPostFrame, since that occurs after GameMovement::ProcessMove which
+		// lets the ladder code unset this flag.
+		m_bPlayUseDenySound = true;
+	}
+
+	// Debounce the use key
+	if ( usedSomething && pUseEntity )
+	{
+		m_Local.m_nOldButtons |= IN_USE;
+		m_afButtonPressed &= ~IN_USE;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns whether or not we can switch to the given weapon.
+// Input  : pWeapon - 
+//-----------------------------------------------------------------------------
+bool CHL2_Player::Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon )
+{
+	if ( GetActiveWeapon() )
+	{
+		if ( !GetActiveWeapon()->CanHolster() )
+			return false;
+	}
+
+	return true;
+}
+
+//extern ConVar sv_turbophysics;
+
+void CHL2_Player::PickupObject( CBaseEntity *pObject, bool bLimitMassAndSize )
+{
+	// BB2 Warn
+	//if ((VPhysicsGetObject() == NULL) || sv_turbophysics.GetBool())
+	//	return;
+
+	// can't pick up what you're standing on
+	if (!GetGroundEntity() || (GetGroundEntity() == pObject))
+		return;
+
+	if ( bLimitMassAndSize == true )
+	{
+		if ( CBasePlayer::CanPickupObject( pObject, 45, 200 ) == false )
+			return;
+	}
+
+	// Can't be picked up if NPCs are on me
+	if ( pObject->HasNPCsOnIt() )
+		return;
+
+	PlayerPickupObject( this, pObject );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : CBaseEntity
+//-----------------------------------------------------------------------------
+bool CHL2_Player::IsHoldingEntity( CBaseEntity *pEnt )
+{
+	return PlayerPickupControllerIsHoldingEntity( m_hUseEntity, pEnt );
+}
+
+float CHL2_Player::GetHeldObjectMass( IPhysicsObject *pHeldObject )
+{
+	return PlayerPickupGetHeldObjectMass(m_hUseEntity, pHeldObject);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Force the player to drop any physics objects he's carrying
+//-----------------------------------------------------------------------------
+void CHL2_Player::ForceDropOfCarriedPhysObjects( CBaseEntity *pOnlyIfHoldingThis )
+{
+	if ( PhysIsInCallback() )
+	{
+		variant_t value;
+		g_EventQueue.AddEvent( this, "ForceDropPhysObjects", value, 0.01f, pOnlyIfHoldingThis, this );
+		return;
+	}
+
+	// Drop any objects being handheld.
+	ClearUseEntity();
+}
+
+void CHL2_Player::InputForceDropPhysObjects( inputdata_t &data )
+{
+	ForceDropOfCarriedPhysObjects( data.pActivator );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CHL2_Player::UpdateClientData( void )
+{
+	if (m_DmgTake || m_DmgSave || m_bitsHUDDamage != m_bitsDamageType)
+	{
+		CSingleUserRecipientFilter user(this);
+		user.MakeReliable();
+		UserMessageBegin(user, "Damage");
+		WRITE_BYTE(1);
+		MessageEnd();
+
+		m_DmgTake = 0;
+		m_DmgSave = 0;
+		m_bitsHUDDamage = m_bitsDamageType;
+
+		// Clear off non-time-based damage indicators
+		int iTimeBasedDamage = g_pGameRules->Damage_GetTimeBased();
+		m_bitsDamageType &= iTimeBasedDamage;
+	}
+
+	BaseClass::UpdateClientData();
+}
+
+//---------------------------------------------------------
+//---------------------------------------------------------
+Vector CHL2_Player::EyeDirection2D( void )
+{
+	Vector vecReturn = EyeDirection3D();
+	vecReturn.z = 0;
+	vecReturn.AsVector2D().NormalizeInPlace();
+	return vecReturn;
+}
+
+//---------------------------------------------------------
+//---------------------------------------------------------
+Vector CHL2_Player::EyeDirection3D( void )
+{
+	Vector vecForward;
+	AngleVectors( EyeAngles(), &vecForward );
+	return vecForward;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: override how single player rays hit the player
+//-----------------------------------------------------------------------------
+
+bool LineCircleIntersection(
+	const Vector2D &center,
+	const float radius,
+	const Vector2D &vLinePt,
+	const Vector2D &vLineDir,
+	float *fIntersection1,
+	float *fIntersection2)
+{
+	// Line = P + Vt
+	// Sphere = r (assume we've translated to origin)
+	// (P + Vt)^2 = r^2
+	// VVt^2 + 2PVt + (PP - r^2)
+	// Solve as quadratic:  (-b  +/-  sqrt(b^2 - 4ac)) / 2a
+	// If (b^2 - 4ac) is < 0 there is no solution.
+	// If (b^2 - 4ac) is = 0 there is one solution (a case this function doesn't support).
+	// If (b^2 - 4ac) is > 0 there are two solutions.
+	Vector2D P;
+	float a, b, c, sqr, insideSqr;
+
+
+	// Translate circle to origin.
+	P[0] = vLinePt[0] - center[0];
+	P[1] = vLinePt[1] - center[1];
+
+	a = vLineDir.Dot(vLineDir);
+	b = 2.0f * P.Dot(vLineDir);
+	c = P.Dot(P) - (radius * radius);
+
+	insideSqr = b*b - 4*a*c;
+	if(insideSqr <= 0.000001f)
+		return false;
+
+	// Ok, two solutions.
+	sqr = (float)FastSqrt(insideSqr);
+
+	float denom = 1.0 / (2.0f * a);
+
+	*fIntersection1 = (-b - sqr) * denom;
+	*fIntersection2 = (-b + sqr) * denom;
+
+	return true;
+}
+
+static void Collision_ClearTrace( const Vector &vecRayStart, const Vector &vecRayDelta, CBaseTrace *pTrace )
+{
+	pTrace->startpos = vecRayStart;
+	pTrace->endpos = vecRayStart;
+	pTrace->endpos += vecRayDelta;
+	pTrace->startsolid = false;
+	pTrace->allsolid = false;
+	pTrace->fraction = 1.0f;
+	pTrace->contents = 0;
+}
+
+bool IntersectRayWithAACylinder( const Ray_t &ray, 
+	const Vector &center, float radius, float height, CBaseTrace *pTrace )
+{
+	Assert( ray.m_IsRay );
+	Collision_ClearTrace( ray.m_Start, ray.m_Delta, pTrace );
+
+	// First intersect the ray with the top + bottom planes
+	float halfHeight = height * 0.5;
+
+	// Handle parallel case
+	Vector vStart = ray.m_Start - center;
+	Vector vEnd = vStart + ray.m_Delta;
+
+	float flEnterFrac, flLeaveFrac;
+	if (FloatMakePositive(ray.m_Delta.z) < 1e-8)
+	{
+		if ( (vStart.z < -halfHeight) || (vStart.z > halfHeight) )
+		{
+			return false; // no hit
+		}
+		flEnterFrac = 0.0f; flLeaveFrac = 1.0f;
+	}
+	else
+	{
+		// Clip the ray to the top and bottom of box
+		flEnterFrac = IntersectRayWithAAPlane( vStart, vEnd, 2, 1, halfHeight);
+		flLeaveFrac = IntersectRayWithAAPlane( vStart, vEnd, 2, 1, -halfHeight);
+
+		if ( flLeaveFrac < flEnterFrac )
+		{
+			float temp = flLeaveFrac;
+			flLeaveFrac = flEnterFrac;
+			flEnterFrac = temp;
+		}
+
+		if ( flLeaveFrac < 0 || flEnterFrac > 1)
+		{
+			return false;
+		}
+	}
+
+	// Intersect with circle
+	float flCircleEnterFrac, flCircleLeaveFrac;
+	if ( !LineCircleIntersection( vec3_origin.AsVector2D(), radius,
+		vStart.AsVector2D(), ray.m_Delta.AsVector2D(), &flCircleEnterFrac, &flCircleLeaveFrac ) )
+	{
+		return false; // no hit
+	}
+
+	Assert( flCircleEnterFrac <= flCircleLeaveFrac );
+	if ( flCircleLeaveFrac < 0 || flCircleEnterFrac > 1)
+	{
+		return false;
+	}
+
+	if ( flEnterFrac < flCircleEnterFrac )
+		flEnterFrac = flCircleEnterFrac;
+	if ( flLeaveFrac > flCircleLeaveFrac )
+		flLeaveFrac = flCircleLeaveFrac;
+
+	if ( flLeaveFrac < flEnterFrac )
+		return false;
+
+	VectorMA( ray.m_Start, flEnterFrac , ray.m_Delta, pTrace->endpos );
+	pTrace->fraction = flEnterFrac;
+	pTrace->contents = CONTENTS_SOLID;
+
+	// Calculate the point on our center line where we're nearest the intersection point
+	Vector collisionCenter;
+	CalcClosestPointOnLineSegment( pTrace->endpos, center + Vector( 0, 0, halfHeight ), center - Vector( 0, 0, halfHeight ), collisionCenter );
+
+	// Our normal is the direction from that center point to the intersection point
+	pTrace->plane.normal = pTrace->endpos - collisionCenter;
+	VectorNormalize( pTrace->plane.normal );
+
+	return true;
+}
+
+bool CHL2_Player::TestHitboxes( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr )
+{
+	if( g_pGameRules->IsMultiplayer() )
+	{
+		return BaseClass::TestHitboxes( ray, fContentsMask, tr );
+	}
+	else
+	{
+		Assert( ray.m_IsRay );
+
+		Vector mins, maxs;
+
+		mins = WorldAlignMins();
+		maxs = WorldAlignMaxs();
+
+		if ( IntersectRayWithAACylinder( ray, WorldSpaceCenter(), maxs.x * PLAYER_HULL_REDUCTION, maxs.z - mins.z, &tr ) )
+		{
+			tr.hitbox = 0;
+			CStudioHdr *pStudioHdr = GetModelPtr( );
+			if (!pStudioHdr)
+				return false;
+
+			mstudiohitboxset_t *set = pStudioHdr->pHitboxSet( m_nHitboxSet );
+			if ( !set || !set->numhitboxes )
+				return false;
+
+			mstudiobbox_t *pbox = set->pHitbox( tr.hitbox );
+			mstudiobone_t *pBone = pStudioHdr->pBone(pbox->bone);
+			tr.surface.name = "**studio**";
+			tr.surface.flags = SURF_HITBOX;
+			tr.surface.surfaceProps = physprops->GetSurfaceIndex( pBone->pszSurfaceProp() );
+		}
+
+		return true;
+	}
+}
+
+//---------------------------------------------------------
+// Show the player's scaled down bbox that we use for
+// bullet impacts.
+//---------------------------------------------------------
+void CHL2_Player::DrawDebugGeometryOverlays(void) 
+{
+	BaseClass::DrawDebugGeometryOverlays();
+
+	if (m_debugOverlays & OVERLAY_BBOX_BIT) 
+	{	
+		Vector mins, maxs;
+
+		mins = WorldAlignMins();
+		maxs = WorldAlignMaxs();
+
+		mins.x *= PLAYER_HULL_REDUCTION;
+		mins.y *= PLAYER_HULL_REDUCTION;
+
+		maxs.x *= PLAYER_HULL_REDUCTION;
+		maxs.y *= PLAYER_HULL_REDUCTION;
+
+		NDebugOverlay::Box( GetAbsOrigin(), mins, maxs, 255, 0, 0, 100, 0 );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Helper to remove from ladder
+//-----------------------------------------------------------------------------
+void CHL2_Player::ExitLadder()
+{
+	if ( MOVETYPE_LADDER != GetMoveType() )
+		return;
+
+	SetMoveType( MOVETYPE_WALK );
+	SetMoveCollide( MOVECOLLIDE_DEFAULT );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Queues up a use deny sound, played in ItemPostFrame.
+//-----------------------------------------------------------------------------
+void CHL2_Player::PlayUseDenySound()
+{
+	m_bPlayUseDenySound = true;
+}
+
+void CHL2_Player::ItemPostFrame()
+{
+	BaseClass::ItemPostFrame();
+
+	if ( m_bPlayUseDenySound )
+	{
+		m_bPlayUseDenySound = false;
+		EmitSound( "HL2Player.UseDeny" );
+	}
+}
+
+void CHL2_Player::StartWaterDeathSounds( void )
+{
+	CPASAttenuationFilter filter( this );
+
+	if ( m_sndLeeches == NULL )
+	{
+		m_sndLeeches = (CSoundEnvelopeController::GetController()).SoundCreate( filter, entindex(), CHAN_STATIC, "coast.leech_bites_loop" , ATTN_NORM );
+	}
+
+	if ( m_sndLeeches )
+	{
+		(CSoundEnvelopeController::GetController()).Play( m_sndLeeches, 1.0f, 100 );
+	}
+
+	if ( m_sndWaterSplashes == NULL )
+	{
+		m_sndWaterSplashes = (CSoundEnvelopeController::GetController()).SoundCreate( filter, entindex(), CHAN_STATIC, "coast.leech_water_churn_loop" , ATTN_NORM );
+	}
+
+	if ( m_sndWaterSplashes )
+	{
+		(CSoundEnvelopeController::GetController()).Play( m_sndWaterSplashes, 1.0f, 100 );
+	}
+}
+
+void CHL2_Player::StopWaterDeathSounds( void )
+{
+	if ( m_sndLeeches )
+	{
+		(CSoundEnvelopeController::GetController()).SoundFadeOut( m_sndLeeches, 0.5f, true );
+		m_sndLeeches = NULL;
+	}
+
+	if ( m_sndWaterSplashes )
+	{
+		(CSoundEnvelopeController::GetController()).SoundFadeOut( m_sndWaterSplashes, 0.5f, true );
+		m_sndWaterSplashes = NULL;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Shuts down sounds
+//-----------------------------------------------------------------------------
+void CHL2_Player::StopLoopingSounds( void )
+{
+	if ( m_sndLeeches != NULL )
+	{
+		(CSoundEnvelopeController::GetController()).SoundDestroy( m_sndLeeches );
+		m_sndLeeches = NULL;
+	}
+
+	if ( m_sndWaterSplashes != NULL )
+	{
+		(CSoundEnvelopeController::GetController()).SoundDestroy( m_sndWaterSplashes );
+		m_sndWaterSplashes = NULL;
+	}
+
+	BaseClass::StopLoopingSounds();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Makes a splash when the player transitions between water states
+//-----------------------------------------------------------------------------
+void CHL2_Player::Splash( void )
+{
+	CEffectData data;
+	data.m_fFlags = 0;
+	data.m_vOrigin = GetAbsOrigin();
+	data.m_vNormal = Vector(0,0,1);
+	data.m_vAngles = QAngle( 0, 0, 0 );
+
+	if ( GetWaterType() & CONTENTS_SLIME )
+	{
+		data.m_fFlags |= FX_WATER_IN_SLIME;
+	}
+
+	float flSpeed = GetAbsVelocity().Length();
+	if ( flSpeed < 300 )
+	{
+		data.m_flScale = random->RandomFloat( 10, 12 );
+		DispatchEffect( "waterripple", data );
+	}
+	else
+	{
+		data.m_flScale = random->RandomFloat( 6, 8 );
+		DispatchEffect( "watersplash", data );
+	}
+}

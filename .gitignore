@@ -1,32 +1,207 @@
-# Prerequisites
-*.d
+# Files to ignore when considering what GIT should commit.
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
+# Visual Studio
 *.obj
-
-# Precompiled Headers
-*.gch
+*.cache
+*.pdb
+*.idb
+*.tlog
+*.exp
 *.pch
+*.log
+*.ilk
+*.scc
+*.sln.docstates
+*.suo
+*.sdf
+*.opensdf
+*.sln
+*.lastbuildstate
+*.write.1.tlog
+*.sentinel
+*.user
+*.vcxproj
+*.vpc_crc
+*.filters
+*.DS_Store
+*.TemporaryItems
+*.hgignore
+*.ipch
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+*.VC.*
+*.FileListAbsolute.txt
+enc_temp_folder/
 
-# Fortran module files
-*.mod
-*.smod
+# Version Controlling
+*.hg
+/.hg
+hg
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
+# Output file dir
+build/
+
+# OSX/Linux build products
+*.mak
+*.mak.vpc_crc
+*.xcodeproj/
+obj*/
+!devtools/*.mak
+!utils/smdlexp/smdlexp.mak
+*.dSYM
+*.dbg
+*.project
+*.map
+
+# Misc Folders
+ipch
+/ipch/*
+/Debug_insurgency/*
+/Release_insurgency/*
+/Debug_mod_*/*
+/Release_mod_*/*
+/Debug/*
+/Release/*
+/obj_*_linux32/*
+obj_*_linux32
+Debug_dx9_*
+Debug_dx9_*
+Release_dx9_*
+Release_dx9_*
+Release_insurgency
+Debug_insurgency
+Debug_mod_insurgency
+Release_mod_insurgency
+Debug_mod_*
+Release_mod_*
+Debug
+Release
+*_osx32_*
+
+# shader files
+*.TMP
+*.tmp
+*.TEMP
+
+# VS Community
+.vs/*
+.vs/
+
+# VS Code
+.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Build results
+
+[Dd]ebug/
+[Rr]elease/
+[Oo]bj/
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+*_i.c
+*_p.c
+*_i.h
+*.meta
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp_proj
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+materialsystem/buildshaders.log
+
+# Visual C++ cache files
+ipch/
+*.aps
+*.ncb
+*.cachefile
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+
+# Guidance Automation Toolkit
+*.gpState
+
+# ReSharper is a .NET coding add-in
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# Click-Once directory
+publish/
+
+# Publish Web Output
+*.Publish.xml
+*.pubxml
+*.azurePubxml
+
+# Windows Azure Build Output
+csx/
+*.build.csdef
+
+# Windows Store app package directory
+AppPackages/
+
+# Others
+sql/
+*.Cache
+ClientBin/
+[Ss]tyle[Cc]op.*
+![Ss]tyle[Cc]op.targets
+~$*
+*~
+*.dbmdl
+*.[Pp]ublish.xml
+
+*.publishsettings
+
+# RIA/Silverlight projects
+Generated_Code/
+
+# Backup & report files from converting an old project file to a newer
+# Visual Studio version. Backup files are not needed, because we have git ;-)
+_UpgradeReport_Files/
+Backup*/
+UpgradeLog*.XML
+UpgradeLog*.htm
+
+# SQL Server files
+App_Data/*.mdf
+App_Data/*.ldf
+
+# =========================
+# Windows detritus
+# =========================
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Ignore changes to .lib files
 *.lib
 
-# Executables
-*.exe
-*.out
-*.app
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Mac desktop service store files
+.DS_Store
+
+_NCrunch*
