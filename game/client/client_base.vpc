@@ -439,6 +439,13 @@ $Project
 				$File "ins/c_playermodel.h"
 				$File "$SRCDIR\game\shared\ins\func_entity_block.cpp"
 			}
+
+			$Folder "Effects"
+			{
+				$File "ins/fx_ins_weapon.cpp"
+				$File "ins/fx_shelleject.cpp"
+				$File "ins/ins_fx.h"
+			}
 			
 			$Folder "TempEnts"
 			{
