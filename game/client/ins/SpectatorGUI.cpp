@@ -261,8 +261,8 @@ void CSpectatorMenu::Update( void )
 
 	Reset();
 
-	if( m_iHideKey < 0 )
-		m_iHideKey = gameuifuncs->GetEngineKeyCodeForBind( "crouch" );
+	if (m_iHideKey < 0)
+		m_iHideKey = gameuifuncs->GetButtonCodeForBind("crouch");
 
 	IGameResources *gr = GameResources();
 	
