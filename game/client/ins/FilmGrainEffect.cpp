@@ -55,9 +55,5 @@ void CFilmGrainEffect::Render(int x, int y, int w, int h)
 	if (!IsEnabled())
 		return;
 
-	C_HL2MP_Player* pLocalPlayer = C_HL2MP_Player::GetLocalHL2MPPlayer();
-	if (pLocalPlayer && (pLocalPlayer->GetTeamNumber() == TEAM_DECEASED) && pLocalPlayer->IsZombieVisionOn())
-		return; // do not render film grain when zombo vision is on.
-
 	RenderMaterialOverlay(m_FilmGrainMaterial, x, y, w, h);
 }

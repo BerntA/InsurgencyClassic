@@ -199,7 +199,7 @@ void CItem_AmmoCrate::HandleAnimEvent(animevent_t *pEvent)
 			{
 				SetBodygroup(1, false);
 				if (!GameBaseServer()->IsTutorialModeEnabled())
-					pActivator->m_flNextResupplyTime = gpGlobals->curtime + GameBaseShared()->GetSharedGameDetails()->GetGamemodeData()->flAmmoResupplyTime;
+					pActivator->m_flNextResupplyTime = gpGlobals->curtime + 15.0f;
 			}
 
 			pActivator = NULL;

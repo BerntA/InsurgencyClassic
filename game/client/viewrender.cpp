@@ -52,7 +52,6 @@
 #include "con_nprint.h"
 #include "clientmode_shared.h"
 #include "GameBase_Client.h"
-#include "c_objective_icon.h"
 #include "GlobalRenderEffects.h"
 
 #if defined( HL2_CLIENT_DLL )
@@ -1700,8 +1699,7 @@ void CViewRender::SetupVis( const CViewSetup& view, unsigned int &visFlags, View
 void CViewRender::RenderPlayerSprites()
 {
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
-	RenderObjectiveIcons();
-	DrawHumanIndicators();
+	// TODO
 }
 
 //-----------------------------------------------------------------------------

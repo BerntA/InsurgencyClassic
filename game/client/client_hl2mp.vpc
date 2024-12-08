@@ -38,7 +38,6 @@ $Project "client"
 			$File	"hl2\fx_hl2_impacts.cpp"
 			$File	"hl2\fx_hl2_tracers.cpp"
 			$File	"hl2\hl2_clientmode.cpp"
-			$File	"$SRCDIR\game\shared\hl2\hl2_usermessages.cpp"
 			$File	"hl2\hl_in_main.cpp"
 			$File	"hl2\hl_prediction.cpp"
 			$File	"hl2\shieldproxy.cpp"
@@ -53,8 +52,6 @@ $Project "client"
 			$File	"hl2mp\clientmode_hl2mpnormal.h"
 			$File	"hl2mp\hl2mp_hud_chat.cpp"
 			$File	"hl2mp\hl2mp_hud_chat.h"
-			$File	"hl2mp\hl2mptextwindow.cpp"
-			$File	"hl2mp\hl2mptextwindow.h"
 		}
 	}
 }

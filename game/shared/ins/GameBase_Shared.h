@@ -13,12 +13,10 @@
 #include "KeyValues.h"
 #include "filesystem.h"
 #include "GameDefinitions_Shared.h"
-#include "skills_shareddefs.h"
 #include "GameDefinitions_MapData.h"
 
 #ifdef CLIENT_DLL
 #include "c_baseplayer.h"
-#include "music_system.h"
 #else
 #include "player.h"
 #include "achievement_manager.h"
@@ -92,9 +90,6 @@ public:
 	// Misc
 	const char* GetTimeString(int iHoursPlayed);
 	void GetFileContent(const char* path, char* buf, int size);
-	float GetDropOffDamage(const Vector& vecStart, const Vector& vecEnd, float damage, float minDist);
-	float GetSequenceDuration(CStudioHdr* ptr, int sequence);
-	float GetPlaybackSpeedThirdperson(CHL2MP_Player* pClient, int viewmodelActivity, int thirdpersonActivity);
 
 	// Bleeding Dispatches
 	void DispatchBleedout(const Vector& vPos);
@@ -102,20 +97,15 @@ public:
 #ifdef CLIENT_DLL
 #else
 	// Achievement Checks
-	void EntityKilledByPlayer(CBaseEntity* pKiller, CBaseEntity* pVictim, CBaseEntity* pInflictor, int forcedWeaponID = WEAPON_ID_NONE);
-	void OnGameOver(float timeLeft, int iWinner);
+	void EntityKilledByPlayer(CBaseEntity* pKiller, CBaseEntity* pVictim, CBaseEntity* pInflictor, int forcedWeaponID = -1);
 
 	// Workshop Handler:
 	CGameDefinitionsWorkshop* GetServerWorkshopData(void) { return m_pServerWorkshopData; }
-
-	// Events
-	void NewPlayerConnection(bool bState, int index);
 #endif
 
 private:
 
 #ifdef CLIENT_DLL
-	CMusicSystem* m_pMusicSystem;
 #else
 	CGameDefinitionsWorkshop* m_pServerWorkshopData;
 #endif

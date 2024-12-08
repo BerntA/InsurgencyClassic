@@ -81,7 +81,7 @@ void CINSViewportHelper::CreateAllElements( CBaseViewport *pViewport )
 		Assert( pPanel );
 
 		if( pPanel )
-			pViewport->AddNewPanel( pPanel, "??");
+			pViewport->AddNewPanel( pPanel, pPanel->GetName());
 
 		pHelper = pHelper->GetNext();
 	}

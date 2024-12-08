@@ -197,12 +197,8 @@ public:
 
 	// FireBullets uses shared code for prediction.
 	virtual void					FireBullets(const FireBulletsInfo_t &info);
-	virtual float                   FirePenetrativeBullet(const FireBulletsInfo_t &info, Vector &vecStart, Vector &vecDir, CBaseEntity *pAttacker, CBaseEntity *pIgnore, int dmgType);
 	virtual void					ModifyFireBulletsDamage(CTakeDamageInfo* dmgInfo) {}
-	virtual bool					ShouldDrawUnderwaterBulletBubbles();
 	virtual bool					ShouldDrawWaterImpacts(void) { return true; }
-	virtual bool					HandleShotImpactingWater(const FireBulletsInfo_t &info,
-		const Vector &vecEnd, ITraceFilter *pTraceFilter, Vector *pVecTracerDest);
 	virtual ITraceFilter*			GetBeamTraceFilter(void);
 	virtual void					DispatchTraceAttack(const CTakeDamageInfo& info, const Vector& vecDir, trace_t* ptr);
 	virtual void					TraceAttack(const CTakeDamageInfo& info, const Vector& vecDir, trace_t* ptr);
@@ -1003,6 +999,7 @@ public:
 	virtual bool					IsBaseCombatWeapon(void) const { return false; }
 	virtual class C_BaseCombatWeapon		*MyCombatWeaponPointer() { return NULL; }
 	virtual bool					IsBaseTrain(void) const { return false; }
+	virtual C_BaseAnimating*		GetNewPlayerModel() { return NULL; } // client-side plr model helper
 
 	// Returns the eye point + angles (used for viewing + shooting)
 	virtual Vector			EyePosition(void);

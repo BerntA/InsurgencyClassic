@@ -97,7 +97,6 @@ public:
 	bool ShouldDraw( void );
 	virtual void Paint();
 	void MsgFunc_HudText(bf_read &msg);
-	void MsgFunc_GameTitle(bf_read &msg);
 	void MsgFunc_HudMsg(bf_read &msg);
 
 	float FadeBlend( float fadein, float fadeout, float hold, float localTime );
@@ -135,8 +134,6 @@ private:
 	client_textmessage_t		*m_pMessages[maxHUDMessages];
 	float						m_startTime[maxHUDMessages];
 	message_parms_t				m_parms;
-	float						m_gameTitleTime;
-	client_textmessage_t		*m_pGameTitle;
 	bool						m_bHaveMessage;
 
 	CHudTexture *m_iconTitleLife;
@@ -172,7 +169,6 @@ void DispatchHudText( const char *pszText )
 
 DECLARE_HUDELEMENT( CHudMessage );
 DECLARE_HUD_MESSAGE( CHudMessage, HudText );
-DECLARE_HUD_MESSAGE( CHudMessage, GameTitle );
 DECLARE_HUD_MESSAGE( CHudMessage, HudMsg );
 
 ITextMessage *textmessage = NULL;
@@ -213,7 +209,6 @@ void CHudMessage::ApplySchemeSettings(IScheme* scheme)
 void CHudMessage::Init(void)
 {
 	HOOK_HUD_MESSAGE( CHudMessage, HudText );
-	HOOK_HUD_MESSAGE( CHudMessage, GameTitle );
 	HOOK_HUD_MESSAGE( CHudMessage, HudMsg );
 
 	Reset();
@@ -236,9 +231,7 @@ void CHudMessage::Reset( void )
 {
  	memset( m_pMessages, 0, sizeof( m_pMessages[0] ) * maxHUDMessages );
 	memset( m_startTime, 0, sizeof( m_startTime[0] ) * maxHUDMessages );
-	
-	m_gameTitleTime = 0;
-	m_pGameTitle = NULL;
+
 	m_bHaveMessage = false;
 }
 
@@ -618,38 +611,6 @@ void CHudMessage::Paint()
 
 	drawn = 0;
 
-	if ( m_gameTitleTime > 0 )
-	{
-		float localTime = gpGlobals->curtime - m_gameTitleTime;
-		float brightness;
-
-		// Maybe timer isn't set yet
-		if ( m_gameTitleTime > gpGlobals->curtime )
-		{
-			m_gameTitleTime = gpGlobals->curtime;
-		}
-
-		if ( localTime > (m_pGameTitle->fadein + m_pGameTitle->holdtime + m_pGameTitle->fadeout) )
-		{
-			m_gameTitleTime = 0;
-		}
-		else
-		{
-			brightness = FadeBlend( m_pGameTitle->fadein, m_pGameTitle->fadeout, m_pGameTitle->holdtime, localTime );
-
-			int halfWidth = m_iconTitleHalf->Width();
-			int fullWidth = halfWidth + m_iconTitleLife->Width();
-			int fullHeight = m_iconTitleHalf->Height();
-
-			int x = XPosition( m_pGameTitle->x, fullWidth, fullWidth );
-			int y = YPosition( m_pGameTitle->y, fullHeight );
-
-			m_iconTitleHalf->DrawSelf( x, y, Color( m_pGameTitle->r1, m_pGameTitle->g1, m_pGameTitle->b1, brightness * 255 ) );
-			m_iconTitleLife->DrawSelf( x + halfWidth, y, Color( m_pGameTitle->r1, m_pGameTitle->g1, m_pGameTitle->b1, brightness * 255 ) );
-			drawn = 1;
-		}
-	}
-
 	// Fixup level transitions
 	for ( i = 0; i < maxHUDMessages; i++ )
 	{
@@ -785,37 +746,6 @@ void CHudMessage::MsgFunc_HudText( bf_read &msg )
 
 #include "ivieweffects.h"
 #include "shake.h"
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CHudMessage::MsgFunc_GameTitle( bf_read &msg )
-{
-	m_pGameTitle = TextMessageGet( "GAMETITLE" );
-	if ( m_pGameTitle != NULL )
-	{
-		m_gameTitleTime = gpGlobals->curtime;
-
-		m_bHaveMessage = true;
-	}
-
-//	if ( READ_BYTE() )
-	{
-		ScreenFade_t sf;
-		memset( &sf, 0, sizeof( sf ) );
-		sf.a = 255;
-		sf.r = 0;
-		sf.g = 0;
-		sf.b = 0;
-		sf.duration = (float)(1<<SCREENFADE_FRACBITS) * 5.0f;
-		sf.holdTime = (float)(1<<SCREENFADE_FRACBITS) * 1.0f;
-		sf.fadeFlags = FFADE_IN | FFADE_PURGE;
-		vieweffects->Fade( sf );
-
-		Msg( "%i gametitle fade\n", gpGlobals->framecount );
-	}
-}
-
 
 void CHudMessage::MsgFunc_HudMsg(bf_read &msg)
 {

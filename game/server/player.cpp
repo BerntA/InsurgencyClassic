@@ -4405,15 +4405,6 @@ void CBasePlayer::UpdateClientData( void )
 		g_EventQueue.AddEvent( "game_player_manager", "OnPlayerSpawn", value, 0, this, this );
 	}
 
-	// HACKHACK -- send the message to display the game title
-	CWorld *world = GetWorldEntity();
-	if ( world && world->GetDisplayTitle() )
-	{
-		UserMessageBegin( user, "GameTitle" );
-		MessageEnd();
-		world->SetDisplayTitle( false );
-	}
-
 	CheckTrainUpdate();
 
 	// Update all the items
@@ -6087,15 +6078,6 @@ const char *CBasePlayer::GetSoundsetSurvivorLink(void)
 bool CBasePlayer::GetSoundsetGender(void)
 {
 	return m_bSoundsetGender;
-}
-
-void CBasePlayer::PlaySkillSoundCue(int cmd)
-{
-	CSingleUserRecipientFilter filter(this);
-	filter.MakeReliable();
-	UserMessageBegin(filter, "SkillSoundCue");
-	WRITE_BYTE(cmd);
-	MessageEnd();
 }
 
 void CBasePlayer::SetHealthRegenAmount(float Amount)

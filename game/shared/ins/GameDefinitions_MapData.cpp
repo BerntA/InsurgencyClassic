@@ -6,7 +6,6 @@
 
 #include "cbase.h"
 #include "GameDefinitions_MapData.h"
-#include "hl2mp_gamerules.h"
 #include "filesystem.h"
 #include "KeyValues.h"
 #include "GameBase_Shared.h"
@@ -19,7 +18,6 @@
 #else
 #include "vgui/ILocalize.h"
 #include "vgui/VGUI.h"
-#include "music_system.h"
 
 #define STEAM_API_INTERFACE steamapicontext
 #endif

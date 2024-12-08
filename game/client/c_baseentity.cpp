@@ -38,8 +38,6 @@
 #include "cdll_bounded_cvars.h"
 #include "inetchannelinfo.h"
 #include "proto_version.h"
-#include "c_playermodel.h"
-#include "c_hl2mp_player.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -3229,12 +3227,12 @@ bool C_BaseEntity::CanGlowEntity()
 	if (GetGlowMode() <= GLOW_MODE_NONE)
 		return false;
 
-	if (!ShouldDraw() || IsDormant() || !IsServerEntity())
+	if (!ShouldDraw() || IsDormant() || !IsServerEntity() || (pLocal->GetTeamNumber() == TEAM_UNASSIGNED) || (pLocal->GetTeamNumber() == TEAM_SPECTATOR))
 		return false;
 
 	// Team Filtering:
 	int teamLink = GetGlowTeamLink();
-	if (teamLink >= TEAM_HUMANS)
+	if (teamLink == TEAM_ONE || teamLink == TEAM_TWO)
 	{
 		if (pLocal->GetTeamNumber() != teamLink)
 			return false;
@@ -3246,7 +3244,7 @@ bool C_BaseEntity::CanGlowEntity()
 	float length = pLocal->GetLocalOrigin().DistTo(GetLocalOrigin());
 	if (GetGlowMode() == GLOW_MODE_RADIUS)
 	{
-		if (!pLocal->IsAlive() || (pLocal->GetTeamNumber() != TEAM_HUMANS))
+		if (!pLocal->IsAlive())
 			return false;
 
 		float maxRangeDist = ((float)m_iGlowRadiusOverride);
@@ -3270,7 +3268,7 @@ bool C_BaseEntity::CanGlowEntity()
 			)
 			return false;
 
-		if (length <= bb2_elimination_teammate_distance.GetFloat())
+		if (length <= 512.0f)
 			return false;
 	}
 
@@ -6344,16 +6342,11 @@ int C_BaseEntity::GetCreationTick() const
 }
 
 // MAKES SURE THAT WE USE THE RIGHT CLIENT-SIDED PLAYER MODEL!
-C_BaseEntity *C_BaseEntity::GetOverridenParentEntity(C_BaseEntity *pOriginalParent)
+C_BaseEntity* C_BaseEntity::GetOverridenParentEntity(C_BaseEntity* pOriginalParent)
 {
-	C_BaseEntity *pNewParent = pOriginalParent;
-	if (pNewParent && pNewParent->IsPlayer())
-	{
-		C_HL2MP_Player *pPlayer = ToHL2MPPlayer(pNewParent);
-		if (pPlayer && pPlayer->GetNewPlayerModel())
-			pNewParent = pPlayer->GetNewPlayerModel();
-	}
-
+	C_BaseEntity* pNewParent = pOriginalParent;
+	if (pNewParent && pNewParent->IsPlayer() && pNewParent->GetNewPlayerModel())
+		return pNewParent->GetNewPlayerModel();
 	return pNewParent;
 }
 

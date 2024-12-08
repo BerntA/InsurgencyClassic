@@ -13,7 +13,6 @@
 
 #include <utlqueue.h> // a vector based queue template to manage our VGUI menu queue
 #include <vgui_controls/Frame.h>
-#include "vguitextwindow.h"
 #include "vgui/ISurface.h"
 #include <igameevents.h>
 
@@ -57,8 +56,6 @@ public:
 	virtual AnimationController *GetAnimationController() { return m_pAnimController; }
 
 	virtual void ShowBackGround(bool bShow) { }
-
-	virtual int GetDeathMessageStartHeight( void );	
 
 public: // IGameEventListener:
 	virtual void FireGameEvent( IGameEvent * event);

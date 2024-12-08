@@ -17,8 +17,6 @@
 #include "weapon_parse.h"
 #include "baseviewmodel_shared.h"
 #include "utlmap.h"
-#include "skills_shareddefs.h"
-#include "hl2mp_gamerules.h"
 
 #if defined( CLIENT_DLL )
 #include "interpolatedvar.h"

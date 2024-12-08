@@ -7,10 +7,10 @@
 
 #ifndef WORLD_H
 #define WORLD_H
+
 #ifdef _WIN32
 #pragma once
 #endif
-
 
 class CWorld : public CBaseEntity
 {
@@ -39,30 +39,13 @@ public:
 		VectorCopy( m_WorldMaxs, vecMaxs );
 	}
 
-	inline float GetWaveHeight() const
-	{
-		return (float)m_flWaveHeight;
-	}
-
-	bool GetDisplayTitle() const;
 	bool GetStartDark() const;
-
-	void SetDisplayTitle( bool display );
 	void SetStartDark( bool startdark );
-
 	bool IsColdWorld( void );
-
-	int GetMaxZombies(void) { return m_iMaxZombies; }
-	bool IsTutorialMap(void) { return m_bIsTutorialMap; }
-	bool IsStoryMap(void) { return m_bIsStoryMap; }
-	bool CanZombiesAlwaysSeeYou(void) { return m_bZombiesShouldSeeYouAlways; }
 
 private:
 	DECLARE_DATADESC();
 
-	string_t m_iszChapterTitle;
-
-	CNetworkVar( float, m_flWaveHeight );
 	CNetworkVector( m_WorldMins );
 	CNetworkVector( m_WorldMaxs );
 	CNetworkVar( float, m_flMaxOccludeeArea );
@@ -74,22 +57,9 @@ private:
 	// start flags
 	CNetworkVar( bool, m_bStartDark );
 	CNetworkVar( bool, m_bColdWorld );
-	bool m_bDisplayTitle;
-
-	// Arena properties:
-	int m_iArenaReinforcements;
-	float m_flArenaRespawnTime;
-
-	// Other/Misc
-	int m_iMaxZombies;
-	bool m_bIsTutorialMap;
-	bool m_bZombiesShouldSeeYouAlways;
-	CNetworkVar(bool, m_bIsStoryMap);
 };
-
 
 CWorld* GetWorldEntity();
 extern const char *GetDefaultLightstyleString( int styleIndex );
-
 
 #endif // WORLD_H

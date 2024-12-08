@@ -6,9 +6,9 @@
 
 #include "cbase.h"
 #include "GameBase_Shared.h"
-#include "hl2mp_gamerules.h"
 #include "particle_parse.h"
 #include "checksum_sha1.h"
+#include "weapon_defines_shared.h"
 
 #ifndef CLIENT_DLL
 #include "items.h"
@@ -35,10 +35,6 @@ CGameBaseShared* GameBaseShared()
 
 void CGameBaseShared::Init()
 {
-#ifdef CLIENT_DLL
-	m_pMusicSystem = new CMusicSystem();
-#endif
-
 	m_pSharedGameDefinitions = NULL;
 	m_pSharedGameMapData = NULL;
 	LoadBase();
@@ -57,11 +53,6 @@ void CGameBaseShared::LoadBase()
 
 	if (m_pSharedGameMapData)
 		delete m_pSharedGameMapData;
-
-#ifdef CLIENT_DLL
-	if (m_pMusicSystem)
-		m_pMusicSystem->ParseMusicData();
-#endif
 
 	// We load our base values and such:
 	m_pSharedGameDefinitions = new CGameDefinitionsShared();
@@ -87,8 +78,6 @@ void CGameBaseShared::Release()
 	m_pSharedGameMapData = NULL;
 
 #ifdef CLIENT_DLL
-	if (m_pMusicSystem)
-		delete m_pMusicSystem;
 #else
 	if (m_pServerWorkshopData)
 		delete m_pServerWorkshopData;
@@ -254,61 +243,6 @@ void CGameBaseShared::GetFileContent(const char *path, char *buf, int size)
 
 ////////////////////////////////////////////////
 // Purpose:
-// Used by firebullets in baseentity_shared. Returns the new damage to take depending on how far away the victim is from the start pos.
-///////////////////////////////////////////////
-float CGameBaseShared::GetDropOffDamage(const Vector &vecStart, const Vector &vecEnd, float damage, float minDist)
-{
-	// If min dist is zero we don't want drop off!
-	if (minDist <= 0.0f)
-		return damage;
-
-	// If the dist traveled is not longer than minDist we don't care...
-	float distanceTraveled = fabs((vecEnd - vecStart).Length());
-	if (distanceTraveled <= minDist)
-		return damage;
-
-	return ((minDist / distanceTraveled) * damage);
-}
-
-////////////////////////////////////////////////
-// Purpose:
-// Get the raw sequence duration for any activity, the default SequenceDuration function only returns the duration of an active sequence, this func returns the duration regardless of that.
-///////////////////////////////////////////////
-float CGameBaseShared::GetSequenceDuration(CStudioHdr *ptr, int sequence)
-{
-	if (ptr)
-	{
-		int sequences = ptr->GetNumSeq();
-		for (int i = 0; i < sequences; i++)
-		{
-			mstudioseqdesc_t &seqdesc = ptr->pSeqdesc(i);
-			mstudioanimdesc_t &animdesc = ptr->pAnimdesc(ptr->iRelativeAnim(i, seqdesc.anim(0, 0)));
-			if (seqdesc.activity == sequence)
-			{
-				float numFrames = ((float)animdesc.numframes);
-				return (numFrames / animdesc.fps);
-			}
-		}
-	}
-
-	return 0.0f;
-}
-
-float CGameBaseShared::GetPlaybackSpeedThirdperson(CHL2MP_Player *pClient, int viewmodelActivity, int thirdpersonActivity)
-{
-	if (pClient == NULL || pClient->GetViewModel() == NULL || pClient->GetActiveWeapon() == NULL)
-		return 1.0f;
-
-	float durationViewmodel = GetSequenceDuration(pClient->GetViewModel()->GetModelPtr(), viewmodelActivity);
-	float durationThirdperson = GetSequenceDuration(pClient->GetModelPtr(), (int)pClient->GetActiveWeapon()->ActivityOverride((Activity)thirdpersonActivity));
-	if ((durationViewmodel > 0.0f) && (durationThirdperson > 0.0f))
-		return (1.0f / (durationViewmodel / durationThirdperson));
-
-	return 1.0f;
-}
-
-////////////////////////////////////////////////
-// Purpose:
 // Spawn the bleedout effect.
 ///////////////////////////////////////////////
 void CGameBaseShared::DispatchBleedout(const Vector& vPos)
@@ -336,240 +270,26 @@ void CGameBaseShared::EntityKilledByPlayer(CBaseEntity *pKiller, CBaseEntity *pV
 	if (!pKiller || !pKiller->IsPlayer() || !pVictim || !pInflictor)
 		return;
 
-	CHL2MP_Player *pClient = ToHL2MPPlayer(pKiller);
+	CBasePlayer *pClient = ToBasePlayer(pKiller);
 	if (!pClient || pClient->IsBot())
 		return;
 
-	if (pClient->GetTeamNumber() == TEAM_HUMANS)
-	{
-		if (!pClient->GetPerkFlags())
-			pClient->m_iNumPerkKills++;
-	}
-
-	if (!HL2MPRules()->CanUseSkills() || (GameBaseServer()->CanStoreSkills() != PROFILE_GLOBAL))
+	if (GameBaseServer()->CanStoreSkills() != PROFILE_GLOBAL)
 		return;
 
 	int uniqueWepID = forcedWeaponID;
 
-	if (pClient->GetTeamNumber() == TEAM_HUMANS)
-	{
-		if (pVictim->Classify() == CLASS_ZOMBIE)
-		{
-			AchievementManager::WriteToAchievement(pClient, "ACH_ZOMBIE_FIRST_BLOOD");
-			AchievementManager::WriteToStat(pClient, "BBX_KI_ZOMBIES");
-		}
-
-		if (uniqueWepID == WEAPON_ID_NONE)
-		{
-			CBaseCombatWeapon *pWeapon = pClient->GetActiveWeapon();
-			if (pWeapon && FClassnameIs(pInflictor, "player"))
-			{
-				uniqueWepID = pWeapon->GetUniqueWeaponID();
-				if (pWeapon->IsAkimboWeapon())
-					AchievementManager::WriteToStat(pClient, "BBX_KI_AKIMBO");
-			}
-			else if (FClassnameIs(pInflictor, "npc_grenade_frag"))
-				AchievementManager::WriteToStat(pClient, "BBX_KI_EXPLOSIVES");
-			else if (FClassnameIs(pInflictor, "prop_propane_explosive"))
-			{
-				AchievementManager::WriteToAchievement(pClient, "ACH_GM_SURVIVAL_PROPANE");
-				AchievementManager::WriteToStat(pClient, "BBX_KI_EXPLOSIVES");
-			}
-			else if (FClassnameIs(pInflictor, "prop_thrown_brick"))
-			{
-				AchievementManager::WriteToAchievement(pClient, "ACH_WEP_BRICK");
-				AchievementManager::WriteToStat(pClient, "BBX_KI_BRICK");
-			}
-		}
-	}
-	else if (pClient->GetTeamNumber() == TEAM_DECEASED)
-	{
-		if (pVictim->IsHuman())
-		{
-			AchievementManager::WriteToAchievement(pClient, "ACH_ZOMBIE_KILL_HUMAN");
-			AchievementManager::WriteToStat(pClient, "BBX_KI_HUMANS");
-		}
-	}
-
-	if (uniqueWepID > WEAPON_ID_NONE)
+	if (uniqueWepID > INVALID_WEAPON) // TODO
 	{
 		switch (uniqueWepID)
 		{
-		case WEAPON_ID_BERETTA:
-		case WEAPON_ID_BERETTA_AKIMBO:
+		case WEAPON_M9:
 			AchievementManager::WriteToStat(pClient, "BBX_KI_BERETTA");
-			break;
-		case WEAPON_ID_GLOCK17:
-		case WEAPON_ID_GLOCK17_AKIMBO:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_GLOCK17");
-			break;
-		case WEAPON_ID_DEAGLE:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_DEAGLE");
-			break;
-
-		case WEAPON_ID_REXMP412:
-		case WEAPON_ID_REXMP412_AKIMBO:
-			break;
-
-		case WEAPON_ID_AK74:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_AK74");
-			break;
-		case WEAPON_ID_FAMAS:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_FAMAS");
-			break;
-		case WEAPON_ID_G36C:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_G36C");
-			break;
-		case WEAPON_ID_WINCHESTER1894:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_TRAPPER");
-			break;
-
-		case WEAPON_ID_REMINGTON700:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_REM700");
-			break;
-
-		case WEAPON_ID_REMINGTON870:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_870");
-			break;
-		case WEAPON_ID_BENELLIM4:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_BENELLIM4");
-			break;
-		case WEAPON_ID_SAWEDOFF:
-		case WEAPON_ID_SAWEDOFF_AKIMBO:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_SAWOFF");
-			break;
-
-		case WEAPON_ID_MINIGUN:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_MINIGUN");
-			break;
-		case WEAPON_ID_FLAMETHROWER:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_FLAMETHROWER");
-			break;
-
-		case WEAPON_ID_MAC11:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_MAC11");
-			break;
-		case WEAPON_ID_MP7:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_HKMP7");
-			break;
-		case WEAPON_ID_MP5:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_HKMP5");
-			break;
-		case WEAPON_ID_MICROUZI:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_UZI");
-			break;
-
-		case WEAPON_ID_HANDS:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_FISTS");
-			break;
-		case WEAPON_ID_ZOMBHANDS:
-			break;
-		case WEAPON_ID_BRICK:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_BRICK");
-			break;
-		case WEAPON_ID_KICK:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_KICK");
-			break;
-		case WEAPON_ID_M9BAYONET:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_M9PHROBIS");
-			break;
-		case WEAPON_ID_FIREAXE:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_FIREAXE");
-			break;
-		case WEAPON_ID_MACHETE:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_MACHETE");
-			break;
-		case WEAPON_ID_HATCHET:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_HATCHET");
-			break;
-		case WEAPON_ID_SLEDGEHAMMER:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_SLEDGEHAMMER");
-			break;
-		case WEAPON_ID_BASEBALLBAT:
-			AchievementManager::WriteToStat(pClient, "BBX_KI_BASEBALLBAT");
-			break;
-
-		case WEAPON_ID_PROPANE:
-			break;
-		case WEAPON_ID_FRAG:
 			break;
 		}
 	}
 
 	AchievementManager::WriteToStat(pClient, "BBX_ST_KILLS");
-	if (pVictim->IsNPC() && (pVictim->Classify() == CLASS_MILITARY))
-		AchievementManager::WriteToStat(pClient, "BBX_KI_BANDITS");
-}
-
-////////////////////////////////////////////////
-// Purpose:
-// The game is over, we're changing map! Give achievs?
-///////////////////////////////////////////////
-void CGameBaseShared::OnGameOver(float timeLeft, int iWinner)
-{
-	if ((GameBaseServer()->CanStoreSkills() != PROFILE_GLOBAL) || (iWinner != TEAM_HUMANS))
-		return;
-
-	int iPlayersInGame = (HL2MPRules()->GetTeamSize(TEAM_HUMANS) + HL2MPRules()->GetTeamSize(TEAM_DECEASED));
-	const char *currMap = HL2MPRules()->szCurrentMap;
-	bool bTimeOut = (timeLeft <= 0.0f);
-	bool bCanGiveMapAchiev = (!bTimeOut && ((iPlayersInGame >= 4)));
-
-	char pchAchievement[64]; pchAchievement[0] = 0;
-	if (bCanGiveMapAchiev)
-	{
-		for (int i = 0; i < ACHIEVEMENTS::GetNumAchievements(); i++)
-		{
-			const achievementStatItem_t *pAchiev = ACHIEVEMENTS::GetAchievementItem(i);
-			if (pAchiev && pAchiev->szMapLink && pAchiev->szMapLink[0] && !strcmp(currMap, pAchiev->szMapLink))
-			{
-				Q_strncpy(pchAchievement, pAchiev->szAchievement, sizeof(pchAchievement));
-				break;
-			}
-		}
-	}
-
-	if (!bTimeOut)
-	{
-		for (int i = 1; i <= gpGlobals->maxClients; i++)
-		{
-			CHL2MP_Player *pPlayer = ToHL2MPPlayer(UTIL_PlayerByIndex(i));
-			if (!pPlayer || pPlayer->IsBot() || !pPlayer->HasFullySpawned())
-				continue;
-
-			if (pchAchievement && pchAchievement[0])
-				AchievementManager::WriteToAchievement(pPlayer, pchAchievement);
-
-			const char *pSpecialAchievement = NULL;
-			if (!pPlayer->HasPlayerUsedFirearm() && (pPlayer->GetTotalScore() > 0))
-			{
-				if (HL2MPRules()->GetCurrentGamemode() == MODE_OBJECTIVE)
-					pSpecialAchievement = "ACH_OBJ_NOFIREARMS";
-				else if (HL2MPRules()->GetCurrentGamemode() == MODE_ARENA)
-					pSpecialAchievement = "ACH_ENDGAME_NOFIREARMS";
-			}
-
-			if (pSpecialAchievement == NULL)
-				continue;
-
-			AchievementManager::WriteToAchievement(pPlayer, pSpecialAchievement);
-		}
-	}
-}
-
-////////////////////////////////////////////////
-// Purpose:
-// Notify everyone that we have a new player in our game!
-///////////////////////////////////////////////
-void CGameBaseShared::NewPlayerConnection(bool bState, int index)
-{
-	IGameEvent* event = gameeventmanager->CreateEvent("player_connection");
-	if (event)
-	{
-		event->SetBool("state", bState); // False - Connected, True - Disconnected.
-		event->SetInt("index", index);
-		gameeventmanager->FireEvent(event);
-	}
 }
 #endif
 

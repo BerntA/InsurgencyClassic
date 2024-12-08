@@ -12,8 +12,6 @@
 #include "vgui/ILocalize.h"
 #include "c_team.h"
 #include "c_playerresource.h"
-#include "c_hl2mp_player.h"
-#include "hl2mp_gamerules.h"
 
 DECLARE_HUDELEMENT( CHudChat );
 
@@ -102,8 +100,8 @@ Color CHudChat::GetClientColor( int clientIndex )
 	{
 		switch ( g_PR->GetTeam( clientIndex ) )
 		{
-		case TEAM_HUMANS	: return g_ColorBlue;
-		case TEAM_DECEASED	: return g_ColorRed;
+		case TEAM_ONE	: return g_ColorBlue;
+		case TEAM_TWO	: return g_ColorRed;
 		case TEAM_SPECTATOR : return g_ColorDarkGreen;
 		default	: return g_ColorYellow;
 		}

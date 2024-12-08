@@ -1827,9 +1827,6 @@ void CServerGameClients::ClientSettingsChanged( edict_t *pEdict )
 		player->m_bPredictWeapons  = false;
 	}
 
-	bool bAutoReloadWeapons = Q_atoi(QUICKGETCVARVALUE("bb2_weapon_autoreload")) > 0;
-	player->m_BB2Local.m_bEnableAutoReload.Set(bAutoReloadWeapons);
-
 #undef QUICKGETCVARVALUE
 	}
 

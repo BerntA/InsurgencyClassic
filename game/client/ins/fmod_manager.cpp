@@ -11,7 +11,6 @@
 #include "fmod_manager.h"
 #include "filesystem.h"
 #include "GameBase_Client.h"
-#include "music_system.h"
 #include "c_soundscape.h"
 
 using namespace FMOD;
@@ -177,8 +176,6 @@ void CFMODManager::Think(void)
 				// find the next sound, if we have a transit sound, prio that one.
 				if (szTransitSound && szTransitSound[0])
 					PlayAmbientSound(szTransitSound, m_bShouldLoop);
-				else if (bShouldPlayInSequence) // If there's no transit sound and we're in game (no bg map) then continue playing the soundtrack!				
-					GetMusicSystem->RunAmbientSoundTrack();
 			}
 		}
 		else if (pChannel)

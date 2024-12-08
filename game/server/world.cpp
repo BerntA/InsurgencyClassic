@@ -12,7 +12,6 @@
 #include "EnvMessage.h"
 #include "player.h"
 #include "gamerules.h"
-#include "teamplay_gamerules.h"
 #include "physics.h"
 #include "activitylist.h"
 #include "eventlist.h"
@@ -199,7 +198,6 @@ void CDecal::StaticDecal( void )
 	SUB_Remove();
 }
 
-
 bool CDecal::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "texture"))
@@ -317,7 +315,6 @@ void CProjectedDecal::StaticDecal( void )
 	SUB_Remove();
 }
 
-
 bool CProjectedDecal::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "texture"))
@@ -348,9 +345,7 @@ LINK_ENTITY_TO_CLASS( worldspawn, CWorld );
 BEGIN_DATADESC( CWorld )
 
 	// keyvalues are parsed from map, but not saved/loaded
-	DEFINE_KEYFIELD( m_iszChapterTitle, FIELD_STRING, "chaptertitle" ),
 	DEFINE_KEYFIELD( m_bStartDark,		FIELD_BOOLEAN, "startdark" ),
-	DEFINE_KEYFIELD( m_bDisplayTitle,	FIELD_BOOLEAN, "gametitle" ),
 #ifdef _X360
 	DEFINE_KEYFIELD( m_flMaxOccludeeArea, FIELD_FLOAT, "maxoccludeearea_x360" ),
 	DEFINE_KEYFIELD( m_flMinOccluderArea, FIELD_FLOAT, "minoccluderarea_x360" ),
@@ -362,23 +357,12 @@ BEGIN_DATADESC( CWorld )
 	DEFINE_KEYFIELD( m_flMinPropScreenSpaceWidth, FIELD_FLOAT, "minpropscreenwidth" ),
 	DEFINE_KEYFIELD( m_iszDetailSpriteMaterial, FIELD_STRING, "detailmaterial" ),
 	DEFINE_KEYFIELD( m_bColdWorld,		FIELD_BOOLEAN, "coldworld" ),
-	DEFINE_KEYFIELD(m_iMaxZombies, FIELD_INTEGER, "zombies_max"),
-
-	// Gamemode Properties
-	DEFINE_KEYFIELD(m_iArenaReinforcements, FIELD_INTEGER, "arena_reinforcements"),
-	DEFINE_KEYFIELD(m_flArenaRespawnTime, FIELD_FLOAT, "arena_respawntime"),
-
-	// Misc
-	DEFINE_KEYFIELD(m_bIsTutorialMap, FIELD_BOOLEAN, "tutorial_mode"),
-	DEFINE_KEYFIELD(m_bIsStoryMap, FIELD_BOOLEAN, "story_mode"),
-	DEFINE_KEYFIELD(m_bZombiesShouldSeeYouAlways, FIELD_BOOLEAN, "zomb_ext_vis"),
 
 END_DATADESC()
 
 
 // SendTable stuff.
 IMPLEMENT_SERVERCLASS_ST(CWorld, DT_WORLD)
-	SendPropFloat	(SENDINFO(m_flWaveHeight), 8, SPROP_ROUNDUP,	0.0f,	8.0f),
 	SendPropVector	(SENDINFO(m_WorldMins),	-1,	SPROP_COORD),
 	SendPropVector	(SENDINFO(m_WorldMaxs),	-1,	SPROP_COORD),
 	SendPropInt		(SENDINFO(m_bStartDark), 1, SPROP_UNSIGNED ),
@@ -388,7 +372,6 @@ IMPLEMENT_SERVERCLASS_ST(CWorld, DT_WORLD)
 	SendPropFloat	(SENDINFO(m_flMinPropScreenSpaceWidth), 0, SPROP_NOSCALE ),
 	SendPropStringT (SENDINFO(m_iszDetailSpriteMaterial) ),
 	SendPropInt		(SENDINFO(m_bColdWorld), 1, SPROP_UNSIGNED ),
-	SendPropInt(SENDINFO(m_bIsStoryMap), 1, SPROP_UNSIGNED),
 END_SEND_TABLE()
 
 //
@@ -420,7 +403,6 @@ bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
 	return true;
 }
 
-
 extern bool		g_fGameOver;
 static CWorld *g_WorldEntity = NULL;
 
@@ -440,16 +422,6 @@ CWorld::CWorld( )
 	SetMoveType( MOVETYPE_NONE );
 
 	m_bColdWorld = false;
-	m_iMaxZombies = 0;
-
-	// Gamemode Properties
-	m_iArenaReinforcements = 0;
-	m_flArenaRespawnTime = 0.0f;
-
-	// Misc
-	m_bIsTutorialMap = false;
-	m_bIsStoryMap = false;
-	m_bZombiesShouldSeeYouAlways = false;
 }
 
 CWorld::~CWorld( )
@@ -465,7 +437,6 @@ CWorld::~CWorld( )
 	}
 	g_WorldEntity = NULL;
 }
-
 
 //------------------------------------------------------------------------------
 // Purpose : Add a decal to the world
@@ -511,21 +482,6 @@ void CWorld::Spawn(void)
 
 	g_EventQueue.Init();
 	Precache();
-
-	if (m_iArenaReinforcements)
-		bb2_arena_reinforcement_count.SetValue(m_iArenaReinforcements);
-	else
-		bb2_arena_reinforcement_count.Revert();
-
-	if (m_flArenaRespawnTime > 0.0f)
-		bb2_arena_respawn_time.SetValue(m_flArenaRespawnTime);
-	else
-		bb2_arena_respawn_time.Revert();
-
-	if (m_iMaxZombies)
-		bb2_zombie_max.SetValue(m_iMaxZombies);
-	else
-		bb2_zombie_max.Revert();
 }
 
 static const char *g_DefaultLightstyles[] =
@@ -559,7 +515,6 @@ static const char *g_DefaultLightstyles[] =
 	// is made to the brightness of affected surfaces
 	"mmnnmmnnnmmnn",
 };
-
 
 const char *GetDefaultLightstyleString( int styleIndex )
 {
@@ -599,7 +554,7 @@ void CWorld::Precache( void )
 	IGameSystem::LevelInitPreEntityAllSystems( STRING( GetModelName() ) );
 
 	// Create the player resource
-	g_pGameRules->CreateStandardEntities();
+	//g_pGameRules->CreateStandardEntities();
 
 	// UNDONE: Make most of these things server systems or precache_registers
 	// =================================================
@@ -646,54 +601,18 @@ void CWorld::Precache( void )
 	// =================================================
 	CreateAIActivityList();
 
-	// =================================================
-	//	Initialize NPC Relationships
-	// =================================================
-	g_pGameRules->InitDefaultAIRelationships();
-
 	// Call all registered precachers.
-	CPrecacheRegister::Precache();	
-
-	if ( m_iszChapterTitle != NULL_STRING )
-	{
-		DevMsg( 2, "Chapter title: %s\n", STRING(m_iszChapterTitle) );
-		CMessage *pMessage = (CMessage *)CBaseEntity::Create( "env_message", vec3_origin, vec3_angle, NULL );
-		if ( pMessage )
-		{
-			pMessage->SetMessage( m_iszChapterTitle );
-			m_iszChapterTitle = NULL_STRING;
-
-			// send the message entity a play message command, delayed by 1 second
-			pMessage->AddSpawnFlags( SF_MESSAGE_ONCE );
-			pMessage->SetThink( &CMessage::SUB_CallUseToggle );
-			pMessage->SetNextThink( gpGlobals->curtime + 1.0f );
-		}
-	}
+	CPrecacheRegister::Precache();
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Output : float
-//-----------------------------------------------------------------------------
 float GetRealTime()
 {
 	return engine->Time();
 }
 
-
-bool CWorld::GetDisplayTitle() const
-{
-	return m_bDisplayTitle;
-}
-
 bool CWorld::GetStartDark() const
 {
 	return m_bStartDark;
-}
-
-void CWorld::SetDisplayTitle( bool display )
-{
-	m_bDisplayTitle = display;
 }
 
 void CWorld::SetStartDark( bool startdark )

@@ -465,7 +465,6 @@ public:
 	virtual const char *GetSoundsetPrefix(void);
 	virtual const char *GetSoundsetSurvivorLink(void);
 	virtual bool GetSoundsetGender(void);
-	virtual void PlaySkillSoundCue(int cmd);
 
 	// Movement:
 	virtual float GetPlayerSpeed() { return 240.0f; }

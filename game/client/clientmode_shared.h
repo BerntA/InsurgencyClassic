@@ -132,9 +132,9 @@ public:
 	virtual void	DisplayReplayMessage( const char *pLocalizeName, float flDuration, bool bUrgent,
 										  const char *pSound, bool bDlg );
 
-	virtual bool	IsInfoPanelAllowed() OVERRIDE { return true; }
+	virtual bool	IsInfoPanelAllowed() OVERRIDE { return false; }
 	virtual void	InfoPanelDisplayed() OVERRIDE { }
-	virtual bool	IsHTMLInfoPanelAllowed() OVERRIDE { return true; }
+	virtual bool	IsHTMLInfoPanelAllowed() OVERRIDE { return false; }
 
 protected:
 	CBaseViewport			*m_pViewport;

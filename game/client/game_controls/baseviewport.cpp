@@ -33,11 +33,8 @@
 
 // sub dialogs
 #include "spectatorgui.h"
-#include "vguitextwindow.h"
 #include "IGameUIFuncs.h"
 #include "hud.h"
-#include "EndMapVoteMenu.h"
-#include "hl2mp_gamerules.h"
 #include "GameBase_Client.h"
 
 // our definition
@@ -47,7 +44,7 @@
 #include "ienginevgui.h"
 #include "iclientmode.h"
 
-#include "c_hl2mp_player.h"
+#include "insvgui.h"
 
 #include "tier0/etwprof.h"
 
@@ -82,9 +79,6 @@ CON_COMMAND( showpanel, "Shows a viewport panel <name>" )
 		return;
 	
 	if ( args.ArgC() != 2 )
-		return;
-
-	if (!strcmp(args[1], PANEL_ENDVOTE))
 		return;
 		
 	 gViewPortInterface->ShowPanel( args[ 1 ], true );
@@ -203,10 +197,8 @@ void CBaseViewport::OnScreenSizeChanged(int iOldWide, int iOldTall)
 	BaseClass::OnScreenSizeChanged(iOldWide, iOldTall);
 
 	IViewPortPanel* pSpecGuiPanel = FindPanelByName(PANEL_SPECGUI);
-	IViewPortPanel* pMOTDPanel = FindPanelByName(PANEL_INFO);
 
 	bool bSpecGuiWasVisible = pSpecGuiPanel && pSpecGuiPanel->IsVisible();
-	bool bMOTDWasVisible = pMOTDPanel && pMOTDPanel->IsVisible();
 
 	// reload the script file, so the screen positions in it are correct for the new resolution
 	ReloadScheme(NULL);
@@ -223,9 +215,6 @@ void CBaseViewport::OnScreenSizeChanged(int iOldWide, int iOldTall)
 		ShowPanel(PANEL_SPECGUI, true);
 
 	engine->ClientCmd_Unrestricted("hud_reloadscheme\n");
-
-	if (bMOTDWasVisible) // ensure we join the game!
-		engine->ClientCmd_Unrestricted("joingame\n");
 }
 
 void CBaseViewport::CreateDefaultPanels( void )
@@ -236,9 +225,7 @@ void CBaseViewport::CreateDefaultPanels( void )
 
 #ifndef _XBOX
 	AddNewPanel(CreatePanelByName(PANEL_SCOREBOARD), "PANEL_SCOREBOARD");
-	AddNewPanel(CreatePanelByName(PANEL_INFO), "PANEL_INFO");
 	AddNewPanel(CreatePanelByName(PANEL_SPECGUI), "PANEL_SPECGUI");
-	AddNewPanel(CreatePanelByName(PANEL_ENDVOTE), "PANEL_ENDVOTE");
 #endif
 
 	CINSViewportHelper::CreateAllElements(this);
@@ -264,17 +251,9 @@ IViewPortPanel* CBaseViewport::CreatePanelByName(const char *szPanelName)
 	IViewPortPanel* newpanel = NULL;
 
 #ifndef _XBOX
-	if ( Q_strcmp(PANEL_INFO, szPanelName) == 0 )
+	if (Q_strcmp(PANEL_SPECGUI, szPanelName) == 0)
 	{
-		newpanel = new CTextWindow( this );
-	}
-	else if (Q_strcmp(PANEL_ENDVOTE, szPanelName) == 0)
-	{
-		newpanel = new CEndMapVoteMenu(this);
-	}
-	else if ( Q_strcmp(PANEL_SPECGUI, szPanelName) == 0 )
-	{
-		newpanel = new CSpectatorGUI( this ); // ins warn
+		newpanel = new CSpectatorGUI(this); // ins warn
 	}
 #endif
 	
@@ -674,14 +653,6 @@ void CBaseViewport::ReloadScheme(const char *fromFile)
 
 	// reset the hud
 	gHUD.ResetHUD();
-}
-
-int CBaseViewport::GetDeathMessageStartHeight( void )
-{
-	if (GameBaseClient->IsViewPortPanelVisible(PANEL_SPECGUI))
-		return YRES(35);
-
-	return YRES(2);
 }
 
 void CBaseViewport::Paint()

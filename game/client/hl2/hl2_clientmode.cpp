@@ -9,6 +9,9 @@
 #include "ivmodemanager.h"
 #include "clientmode_hlnormal.h"
 #include "panelmetaclassmgr.h"
+#include "inshud.h"
+#include "insvgui.h"
+#include "hint_helper.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

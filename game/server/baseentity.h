@@ -934,7 +934,6 @@ public:
 	virtual void MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
 	virtual int	GetTracerAttachment( void );
 	virtual void FireBullets( const FireBulletsInfo_t &info );
-	virtual float FirePenetrativeBullet(const FireBulletsInfo_t &info, Vector &vecStart, Vector &vecDir, CBaseEntity *pAttacker, CBaseEntity *pIgnore, int dmgType);
 	virtual void DoImpactEffect( trace_t &tr, int nDamageType ); // give shooter a chance to do a custom impact.
 
 	// OLD VERSION! Use the struct version
@@ -1435,18 +1434,6 @@ private:
 	void SetLastThink( int nContextIndex, float thinkTime );
 	float GetNextThink( int nContextIndex ) const;
 	int	GetNextThinkTick( int nContextIndex ) const;
-
-	// Shot statistics
-	void UpdateShotStatistics( const trace_t &tr );
-
-	// Handle shot entering water
-	bool HandleShotImpactingWater( const FireBulletsInfo_t &info, const Vector &vecEnd, ITraceFilter *pTraceFilter, Vector *pVecTracerDest );
-
-	// Handle shot entering water
-	void HandleShotImpactingGlass( const FireBulletsInfo_t &info, const trace_t &tr, const Vector &vecDir, ITraceFilter *pTraceFilter );
-
-	// Should we draw bubbles underwater?
-	bool ShouldDrawUnderwaterBulletBubbles();
 
 	// Computes the tracer start position
 	void ComputeTracerStartPosition( const Vector &vecShotSrc, Vector *pVecTracerStart );

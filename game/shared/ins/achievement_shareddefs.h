@@ -15,7 +15,6 @@ enum AchievementTypes
 {
 	ACHIEVEMENT_TYPE_DEFAULT = 0,
 	ACHIEVEMENT_TYPE_MAP,
-	ACHIEVEMENT_TYPE_REWARD,
 };
 
 struct achievementStatItem_t

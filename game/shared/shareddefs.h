@@ -247,6 +247,14 @@ enum HitGroups_t
 	HIRGROUP_COUNT
 };
 
+// LEGACY
+#define	HITGROUP_CHEST		2
+#define	HITGROUP_STOMACH	3
+#define HITGROUP_LEFTARM	4	
+#define HITGROUP_RIGHTARM	5
+#define HITGROUP_LEFTLEG	6
+#define HITGROUP_RIGHTLEG	7
+
 // HL2 has 600 gravity by default
 // NOTE: The discrete ticks can have quantization error, so these numbers are biased a little to
 // make the heights more exact

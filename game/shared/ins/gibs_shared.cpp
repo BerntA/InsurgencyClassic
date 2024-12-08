@@ -9,7 +9,6 @@
 #include "cbase.h"
 #include "gibs_shared.h"
 #include "GameBase_Shared.h"
-#include "hl2mp_gamerules.h"
 
 #ifdef CLIENT_DLL
 #include "c_basecombatcharacter.h"
@@ -121,7 +120,7 @@ const char *GetGibModel(C_ClientRagdollGib *pVictim, const char *gib)
 
 bool C_ClientRagdollGib::CanGibEntity(const Vector &velocity, int hitgroup, int damageType)
 {
-	C_HL2MP_Player *pClient = C_HL2MP_Player::GetLocalHL2MPPlayer();
+	C_BasePlayer *pClient = C_BasePlayer::GetLocalPlayer();
 	if (!pClient)
 		return false;
 
@@ -134,8 +133,8 @@ bool C_ClientRagdollGib::CanGibEntity(const Vector &velocity, int hitgroup, int 
 
 	gibSharedDataItem *gibInfo = &GIB_SHARED_DATA[hitgroup];
 
-	if (bIsPlayer && !GameBaseShared()->GetSharedGameDetails()->DoesPlayerHaveGibForLimb(GetPlayerLinkSurvivor(), !(GetPlayerLinkTeam() == TEAM_DECEASED), gibInfo->gibFlag))
-		return false;	
+	// check if plr has gib for gibInfo->gibFlag flag!
+	return false; // TODO
 
 	int nGibFlag = gibInfo->gibFlag;
 	bool bCanPopHead = ((damageType == DMG_BUCKSHOT) || (damageType == DMG_BULLET) || (damageType == DMG_BLAST));

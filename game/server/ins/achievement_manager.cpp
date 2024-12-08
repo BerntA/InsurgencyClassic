@@ -18,7 +18,7 @@ static globalStatItem_t szGameStats[] =
 	{ "BBX_ST_ZM_POINTS", 0 },
 };
 
-const char *pszGameSkills[40] =
+const char* pszGameSkills[40] =
 {
 	"BBX_ST_AGI_SPEED",
 	"BBX_ST_AGI_ACROBATICS",
@@ -65,9 +65,9 @@ const char *pszGameSkills[40] =
 	"BBX_ST_ZM_MASS_INVASION",
 };
 
-void AchievementManager::AnnounceAchievement(int plIndex, const char *pcAchievement, int iAchievementType)
+void AchievementManager::AnnounceAchievement(int plIndex, const char* pcAchievement, int iAchievementType)
 {
-	IGameEvent *event = gameeventmanager->CreateEvent("game_achievement");
+	IGameEvent* event = gameeventmanager->CreateEvent("game_achievement");
 	if (event)
 	{
 		event->SetString("ach_str", pcAchievement);
@@ -78,7 +78,7 @@ void AchievementManager::AnnounceAchievement(int plIndex, const char *pcAchievem
 }
 
 // Set an achievement here.
-bool AchievementManager::WriteToAchievement(CHL2MP_Player *pPlayer, const char *szAchievement, int iAchievementType)
+bool AchievementManager::WriteToAchievement(CBasePlayer* pPlayer, const char* szAchievement, int iAchievementType)
 {
 	if (!CanWrite(pPlayer, szAchievement, iAchievementType))
 	{
@@ -107,11 +107,6 @@ bool AchievementManager::WriteToAchievement(CHL2MP_Player *pPlayer, const char *
 		// Send Event:
 		AnnounceAchievement(pPlayer->entindex(), szAchievement, iAchievementType);
 
-		// Give Some Reward:
-		const achievementStatItem_t *pAchiev = ACHIEVEMENTS::GetAchievementItem(szAchievement);
-		if (pAchiev && pAchiev->reward)
-			pPlayer->CanLevelUp(pAchiev->reward);
-
 		return true;
 	}
 
@@ -119,7 +114,7 @@ bool AchievementManager::WriteToAchievement(CHL2MP_Player *pPlayer, const char *
 }
 
 // Write to a stat
-bool AchievementManager::WriteToStat(CHL2MP_Player *pPlayer, const char *szStat, int iForceValue, bool bAddTo)
+bool AchievementManager::WriteToStat(CBasePlayer* pPlayer, const char* szStat, int iForceValue, bool bAddTo)
 {
 	if (!CanWrite(pPlayer, szStat))
 	{
@@ -154,7 +149,7 @@ bool AchievementManager::WriteToStat(CHL2MP_Player *pPlayer, const char *szStat,
 	// Give us achievements if the stats related to certain achievs have been surpassed.
 	for (int i = 0; i < ACHIEVEMENTS::GetNumAchievements(); i++)
 	{
-		const achievementStatItem_t *pAchiev = ACHIEVEMENTS::GetAchievementItem(i);
+		const achievementStatItem_t* pAchiev = ACHIEVEMENTS::GetAchievementItem(i);
 		if (pAchiev && (pAchiev->value <= iCurrentValue) && pAchiev->szAchievement && pAchiev->szAchievement[0] && !strcmp(szStat, pAchiev->szStat))
 			WriteToAchievement(pPlayer, pAchiev->szAchievement);
 	}
@@ -164,13 +159,12 @@ bool AchievementManager::WriteToStat(CHL2MP_Player *pPlayer, const char *szStat,
 	return true;
 }
 
-bool AchievementManager::WriteToStatPvP(CHL2MP_Player *pPlayer, const char *szStat)
+bool AchievementManager::WriteToStatPvP(CBasePlayer* pPlayer, const char* szStat)
 {
 	// Make sure we have loaded stats, have PvP mode on, and have a server context!
 	if (
 		!pPlayer || !pPlayer->HasLoadedStats() || pPlayer->IsBot() || !GameBaseServer()->CanEditSteamStats() ||
-		!steamgameserverapicontext || !steamgameserverapicontext->SteamGameServerStats() ||
-		!HL2MPRules() || !HL2MPRules()->IsFastPacedGameplay()
+		!steamgameserverapicontext || !steamgameserverapicontext->SteamGameServerStats()
 		)
 		return false;
 
@@ -198,7 +192,7 @@ bool AchievementManager::IsGlobalStatsAllowed(void)
 	return (steamgameserverapicontext && steamgameserverapicontext->SteamGameServerStats() && GameBaseServer() && (GameBaseServer()->CanStoreSkills() == PROFILE_GLOBAL));
 }
 
-bool AchievementManager::CanLoadSteamStats(CHL2MP_Player *pPlayer)
+bool AchievementManager::CanLoadSteamStats(CBasePlayer* pPlayer)
 {
 	if (!engine->IsDedicatedServer() || !pPlayer || pPlayer->m_bHasReadProfileData || pPlayer->IsBot() || !steamgameserverapicontext || !steamgameserverapicontext->SteamGameServerStats())
 		return false;
@@ -211,12 +205,12 @@ bool AchievementManager::CanLoadSteamStats(CHL2MP_Player *pPlayer)
 	}
 
 	SteamAPICall_t apiCall = steamgameserverapicontext->SteamGameServerStats()->RequestUserStats(pSteamClient);
-	pPlayer->m_SteamCallResultRequestPlayerStats.Set(apiCall, pPlayer, &CHL2MP_Player::OnReceivedSteamStats);
+	pPlayer->m_SteamCallResultRequestPlayerStats.Set(apiCall, pPlayer, &CBasePlayer::OnReceivedSteamStats);
 	return true;
 }
 
 // Can we write to this achiev/stat?
-bool AchievementManager::CanWrite(CHL2MP_Player *pClient, const char *szParam, int iAchievementType)
+bool AchievementManager::CanWrite(CBasePlayer* pClient, const char* szParam, int iAchievementType)
 {
 	if (!pClient || !pClient->m_bHasReadProfileData || pClient->IsBot() || !IsGlobalStatsAllowed() || !szParam || !szParam[0])
 		return false;
@@ -225,7 +219,7 @@ bool AchievementManager::CanWrite(CHL2MP_Player *pClient, const char *szParam, i
 	{
 		for (int i = 0; i < ACHIEVEMENTS::GetNumAchievements(); i++)
 		{
-			const achievementStatItem_t *pAchiev = ACHIEVEMENTS::GetAchievementItem(i);
+			const achievementStatItem_t* pAchiev = ACHIEVEMENTS::GetAchievementItem(i);
 			if (pAchiev && (iAchievementType == pAchiev->type) && !strcmp(pAchiev->szAchievement, szParam))
 				return true;
 		}
@@ -237,89 +231,14 @@ bool AchievementManager::CanWrite(CHL2MP_Player *pClient, const char *szParam, i
 }
 
 // Get the highest value for this stat. (if it is defined for multiple achievements it will have different max values)
-int AchievementManager::GetMaxValueForStat(const char *szStat)
+int AchievementManager::GetMaxValueForStat(const char* szStat)
 {
 	int iValue = 0;
 	for (int i = 0; i < ACHIEVEMENTS::GetNumAchievements(); i++)
 	{
-		const achievementStatItem_t *pAchiev = ACHIEVEMENTS::GetAchievementItem(i);
+		const achievementStatItem_t* pAchiev = ACHIEVEMENTS::GetAchievementItem(i);
 		if (pAchiev && (iValue < pAchiev->value) && !strcmp(szStat, pAchiev->szStat))
 			iValue = pAchiev->value;
 	}
 	return iValue;
 }
-
-CON_COMMAND(dev_reset_stats, "Reset Stats")
-{
-	CHL2MP_Player *pPlayer = ToHL2MPPlayer(UTIL_GetCommandClient());
-	if (!pPlayer)
-		return;
-
-	if (!pPlayer->IsGroupIDFlagActive(GROUPID_IS_DEVELOPER) && !pPlayer->IsGroupIDFlagActive(GROUPID_IS_TESTER))
-	{
-		ClientPrint(pPlayer, HUD_PRINTCONSOLE, "You must be a developer or tester to use this command!\n");
-		return;
-	}
-
-	if (GameBaseServer()->CanStoreSkills() != PROFILE_GLOBAL)
-	{
-		ClientPrint(pPlayer, HUD_PRINTCONSOLE, "This function can only be used on servers which allow global saving!\n");
-		return;
-	}
-
-	CSteamID pSteamClient;
-	if (!pPlayer->GetSteamID(&pSteamClient))
-	{
-		Warning("Unable to get SteamID for user %i\n", pPlayer->GetUserID());
-		return;
-	}
-
-	// BB2 SKILL TREE - Base
-	int iLevel = clamp(GameBaseShared()->GetSharedGameDetails()->GetPlayerSharedData()->iLevel, 1, MAX_PLAYER_LEVEL);
-	pPlayer->SetPlayerLevel(iLevel);
-	pPlayer->m_BB2Local.m_iSkill_Talents = GameBaseShared()->GetSharedGameDetails()->CalculatePointsForLevel(iLevel);
-	pPlayer->m_BB2Local.m_iSkill_XPLeft = (GameBaseShared()->GetSharedGameDetails()->GetPlayerSharedData()->iXPIncreasePerLevel * iLevel);
-	pPlayer->m_BB2Local.m_iSkill_XPCurrent = 0;
-	pPlayer->m_BB2Local.m_iZombieCredits = 0;
-
-	for (int i = 0; i < MAX_SKILL_ARRAY; i++)
-		pPlayer->m_BB2Local.m_iPlayerSkills.Set(i, 0);
-
-	for (int i = 0; i < ACHIEVEMENTS::GetNumAchievements(); i++)
-	{
-		const achievementStatItem_t *pAchiev = ACHIEVEMENTS::GetAchievementItem(i);
-		if (pAchiev && pAchiev->szStat && pAchiev->szStat[0])
-			steamgameserverapicontext->SteamGameServerStats()->SetUserStat(pSteamClient, pAchiev->szStat, 0);
-	}
-
-	for (int i = 0; i < _ARRAYSIZE(szGameStats); i++)
-		steamgameserverapicontext->SteamGameServerStats()->SetUserStat(pSteamClient, szGameStats[i].szStat, szGameStats[i].defaultValue);
-
-	for (int i = 0; i < _ARRAYSIZE(pszGameSkills); i++)
-		steamgameserverapicontext->SteamGameServerStats()->SetUserStat(pSteamClient, pszGameSkills[i], 0);
-
-	steamgameserverapicontext->SteamGameServerStats()->StoreUserStats(pSteamClient);
-
-	ClientPrint(pPlayer, HUD_PRINTCONSOLE, "You've reset all your stats!\n");
-};
-
-CON_COMMAND(bb2_reset_skills, "Allows a player to reset his/her human skills back to default, will not reset the level or XP, points will be restored!")
-{
-	CHL2MP_Player *pPlayer = ToHL2MPPlayer(UTIL_GetCommandClient());
-	if (!pPlayer || ((pPlayer->LastTimePlayerTalked() + 1.0f) >= gpGlobals->curtime))
-		return;
-
-	pPlayer->NotePlayerTalked();
-
-	if (GameBaseServer()->CanStoreSkills() <= PROFILE_NONE)
-	{
-		ClientPrint(pPlayer, HUD_PRINTCONSOLE, "This function can only be used on servers which allow stat saving!\n");
-		return;
-	}
-
-	pPlayer->m_BB2Local.m_iSkill_Talents = GameBaseShared()->GetSharedGameDetails()->CalculatePointsForLevel(pPlayer->GetPlayerLevel());
-	for (int i = 0; i < PLAYER_SKILL_ZOMBIE_HEALTH; i++)
-		pPlayer->m_BB2Local.m_iPlayerSkills.Set(i, 0);
-
-	ClientPrint(pPlayer, HUD_PRINTCONSOLE, "You've reset all your skills!\n");
-};

@@ -97,8 +97,6 @@
 #include "GameBase_Client.h"
 #include "GameBase_Shared.h"
 #include "c_client_gib.h"
-#include "c_client_attachment.h"
-#include "c_playermodel.h"
 
 #include "hud_macros.h"
 

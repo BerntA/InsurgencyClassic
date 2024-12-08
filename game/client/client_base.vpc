@@ -396,8 +396,7 @@ $Project
 				$File "$SRCDIR\game\shared\ins\GameDefinitions_Shared.cpp"
 				$File "$SRCDIR\game\shared\ins\GameDefinitions_Shared.h"
 				$File "$SRCDIR\game\shared\ins\GameDefinitions_MapData.cpp"
-				$File "$SRCDIR\game\shared\ins\GameDefinitions_MapData.h"			
-				$File "$SRCDIR\game\shared\ins\skills_shareddefs.h"
+				$File "$SRCDIR\game\shared\ins\GameDefinitions_MapData.h"
 				$File "$SRCDIR\game\shared\ins\gibs_shared.cpp"
 				$File "$SRCDIR\game\shared\ins\gibs_shared.h"
 			}
@@ -485,25 +484,9 @@ $Project
 			}
 			
 			$Folder "Entities"
-			{
-				$Folder "Screens"
-				{
-					$File "ins/c_vguipdascreen.cpp"
-					$File "ins/c_vguipdascreen.h"
-				}
-				
-				$File "ins/c_objective_icon.cpp"
-				$File "ins/c_objective_icon.h"			
+			{		
 				$File "ins/c_client_gib.cpp"
-				$File "ins/c_client_gib.h"			
-				$File "ins/c_viewmodel_attachment.cpp"
-				$File "ins/c_viewmodel_attachment.h"
-				$File "ins/c_firstperson_body.cpp"
-				$File "ins/c_firstperson_body.h"
-				$File "ins/c_client_attachment.cpp"
-				$File "ins/c_client_attachment.h"
-				$File "ins/c_playermodel.cpp"
-				$File "ins/c_playermodel.h"
+				$File "ins/c_client_gib.h"
 				$File "$SRCDIR\game\shared\ins\func_entity_block.cpp"
 				$File "ins/c_ins_ammobox.cpp"
 				$File "ins/c_ins_ammobox.h"
@@ -528,7 +511,7 @@ $Project
 				$File "ins/c_te_player_gib.cpp"
 			}
 			
-			$Folder "GAME_UI"
+			$Folder "GAMEUI"
 			{
 				$File "ins/AddonInstallerPanel.cpp"
 				$File "ins/AddonInstallerPanel.h"
@@ -540,8 +523,6 @@ $Project
 			$Folder "HUD"
 			{
 				$File "hud_voicestatus.cpp"
-				$File "ins/hud_votesystem.cpp"
-				$File "ins/hud_deathnotice.cpp"
 				$File "ins/hud_actionindicator.cpp"
 				$File "ins/hud_actionmenu.cpp"
 				$File "ins/hud_boxed.cpp"
@@ -597,36 +578,16 @@ $Project
 				$File "ins/fmod_manager.h"
 				$File "ins/fmod_ambience.cpp"
 				$File "ins/fmod_ambience.h"
-				$File "ins/music_system.cpp"
-				$File "ins/music_system.h"
 				$File "ins/musicmanager.cpp"
 				$File "ins/musicmanager.h"
 				$File "ins/musicplayer.cpp"
 				$File "ins/musicplayer.h"				
 			}
 			
-			$Folder "VGUI_Base"
-			{
-				$File "ins/vgui_base_frame.cpp"
-				$File "ins/vgui_base_frame.h"
-				$File "ins/vgui_base_panel.cpp"
-				$File "ins/vgui_base_panel.h"
-			}
-			
 			$Folder "VGUI_Controls"
-			{	
-				$File "ins/CharacterPreviewPanel.cpp"
-				$File "ins/CharacterPreviewPanel.h"
-				$File "ins/MouseInputPanel.cpp"
-				$File "ins/MouseInputPanel.h"
-				$File "ins/MultiLabel.cpp"
-				$File "ins/MultiLabel.h"
+			{
 				$File "ins/ImageProgressBar.cpp"
-				$File "ins/ImageProgressBar.h"	
-				$File "ins/ComboList.cpp"
-				$File "ins/ComboList.h"
-				$File "ins/MapVoteItem.cpp"
-				$File "ins/MapVoteItem.h"
+				$File "ins/ImageProgressBar.h"
 				$File "ins/ins_imagebutton.cpp"
 				$File "ins/ins_imagebutton.h"
 				$File "ins/ins_richtext.cpp"
@@ -635,10 +596,6 @@ $Project
 			
 			$Folder "VGUI_Menus"
 			{
-				$File "ins/EndMapVoteMenu.cpp"
-				$File "ins/EndMapVoteMenu.h"
-				$File "ins/vote_menu.cpp"
-				$File "ins/vote_menu.h"
 				$File "ins/ins_panel.cpp"
 				$File "ins/ins_panel.h"
 				$File "ins/insvgui.cpp"
@@ -667,19 +624,9 @@ $Project
 				$File "ins/spectatorgui.cpp"
 				$File "ins/spectatorgui.h"
 			}
-			
-			$Folder "VGUI_Screens"
-			{
-				$File "ins/KeyPadScreen.cpp"
-				$File "ins/KeyPadScreen.h"
-				$File "ins/PDAScreen.cpp"
-				$File "ins/PDAScreen.h"
-			}
 
 			$Folder "Player"
 			{
-				$File "ins/c_bb2_player_shared.cpp"
-				$File "ins/c_bb2_player_shared.h"
 				$File "ins/action_helper.cpp"
 				$File "ins/action_helper.h"
 				$File "ins/action_helper_types.h"
@@ -899,11 +846,9 @@ $Project
 		$Folder	"game_controls"
 		{
 			$File	"game_controls\baseviewport.cpp"
+			$File	"game_controls\baseviewport.h"
 			$File	"game_controls\basemodelpanel.cpp"
 			$File	"game_controls\basemodelpanel.h"
-			$File	"game_controls\vguitextwindow.cpp"
-			$File	"game_controls\baseviewport.h"
-			$File	"game_controls\vguitextwindow.h"
 		}
 
 	}

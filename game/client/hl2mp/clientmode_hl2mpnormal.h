@@ -35,7 +35,6 @@ public:
 	~ClientModeHL2MPNormal();
 
 	virtual void	Init();
-	virtual int		GetDeathMessageStartHeight( void );
 };
 
 extern IClientMode *GetClientModeNormal();

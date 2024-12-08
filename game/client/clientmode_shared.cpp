@@ -34,12 +34,14 @@
 #include <vgui/ILocalize.h>
 #include "ienginevgui.h"
 
-// BB2
+#include "inshud.h"
+#include "imc_config.h"
+#include "rendertexture.h"
+
+#include "fmod_manager.h"
 #include "GameBase_Client.h"
-#include "c_hl2mp_player.h"
 #include "GameBase_Shared.h"
 #include "c_client_gib.h"
-#include "c_bb2_player_shared.h"
 #include "c_leaderboard_handler.h"
 
 #if defined( _X360 )
@@ -212,97 +214,14 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 			msg.ReadString( data, sizeof(data) );
 
 			keys->SetString( name, data );
-		}
-
-		// !KLUDGE! Whitelist of URL protocols formats for MOTD
-		if (
-			!V_stricmp( panelname, PANEL_INFO ) // MOTD
-			&& keys->GetInt( "type", 0 ) == 2 // URL message type
-		) {
-			const char *pszURL = keys->GetString( "msg", "" );
-			if ( Q_strncmp( pszURL, "http://", 7 ) != 0 && Q_strncmp( pszURL, "https://", 8 ) != 0 && Q_stricmp( pszURL, "about:blank" ) != 0 )
-			{
-				Warning( "Blocking MOTD URL '%s'; must begin with 'http://' or 'https://' or be about:blank\n", pszURL );
-				keys->deleteThis();
-				return;
-			}
-		}		
+		}	
 		
 		viewport->SetData( keys );
 
 		keys->deleteThis();
 	}
 
-	// is the server trying to show an MOTD panel? Check that it's allowed right now.
-	ClientModeShared *mode = ( ClientModeShared * )GetClientModeNormal();
-	if ( Q_stricmp( panelname, PANEL_INFO ) == 0 && mode )
-	{
-		if ( !mode->IsInfoPanelAllowed() )
-		{
-			return;
-		}
-		else
-		{
-			mode->InfoPanelDisplayed();
-		}
-	}
-
 	gViewPortInterface->ShowPanel( viewport, bShow );
-}
-
-extern ConVar bb2_sound_skill_cues;
-static void __MsgFunc_SkillSoundCue(bf_read &msg)
-{
-	int cmd = msg.ReadByte();
-	if ((cmd <= 0) || !bb2_sound_skill_cues.GetBool())
-		return;
-
-	const char *script = NULL;
-	switch (cmd)
-	{
-	case SKILL_SOUND_CUE_AMMO_BLAZE:
-		script = "SkillActivated.BlazingAmmo";
-		break;
-
-	case SKILL_SOUND_CUE_AMMO_FROST:
-		script = "SkillActivated.FrostAmmo";
-		break;
-
-	case SKILL_SOUND_CUE_AMMO_REFILL:
-		script = "SkillActivated.MagRefill";
-		break;
-
-	case SKILL_SOUND_CUE_AMMO_PENETRATE:
-		script = "SkillActivated.BulletPenetration";
-		break;
-
-	case SKILL_SOUND_CUE_MELEE_BLEED:
-		script = "SkillActivated.MeleeBleed";
-		break;
-
-	case SKILL_SOUND_CUE_MELEE_STUN:
-		script = "SkillActivated.MeleeStun";
-		break;
-
-	case SKILL_SOUND_CUE_LIFE_LEECH:
-		script = "SkillActivated.LifeLeech";
-		break;
-	}
-
-	if (script == NULL)
-		return;
-
-	CSoundParameters params;
-	if (CBaseEntity::GetParametersForSound(script, params, NULL) == false)
-		return;
-
-	enginesound->EmitAmbientSound(params.soundname, 1.0f, random->RandomInt(params.pitchlow, params.pitchhigh));
-}
-
-static void __MsgFunc_Damage(bf_read& msg)
-{
-	bool bShouldRender = msg.ReadByte();
-	// TODO ???
 }
 
 //-----------------------------------------------------------------------------
@@ -367,11 +286,9 @@ void ClientModeShared::Init()
 	ListenForGameEvent("server_cvar");
 	ListenForGameEvent("player_changename");
 	ListenForGameEvent("teamplay_broadcast_audio");
-	ListenForGameEvent("client_sound_transmit");
 	ListenForGameEvent("round_start");
 	ListenForGameEvent("changelevel");
 	ListenForGameEvent("game_achievement");
-	ListenForGameEvent("player_connection");
 
 #ifndef _XBOX
 	HLTVCamera()->Init();
@@ -381,8 +298,6 @@ void ClientModeShared::Init()
 
 	HOOK_MESSAGE(VGUIMenu);
 	HOOK_MESSAGE(Rumble);
-	HOOK_MESSAGE(SkillSoundCue);
-	HOOK_MESSAGE(Damage);
 
 	CLoadIMCHelper::CreateAllElements();
 	GetZoomTexture();
@@ -651,22 +566,6 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 {
 	if ( engine->Con_IsVisible() )
 		return 1;
-	
-	if (HL2MPRules() && (HL2MPRules()->m_iCurrentVoteType != 0) && !BB2PlayerGlobals->GetPlayerVoteResponse() && BB2PlayerGlobals->IsVotePanelActive())
-	{
-		if (keynum == KEY_F1)
-		{
-			BB2PlayerGlobals->SetPlayerVoteResponse(1);
-			engine->ClientCmd_Unrestricted("player_vote_yes\n");
-			return 0;
-		}
-		else if (keynum == KEY_F2)
-		{
-			BB2PlayerGlobals->SetPlayerVoteResponse(2);
-			engine->ClientCmd_Unrestricted("player_vote_no\n");
-			return 0;
-		}
-	}
 
 	if (pszCurrentBinding)
 	{
@@ -817,8 +716,6 @@ void ClientModeShared::LevelInit( const char *newmap )
 {
 	engine->ClientCmd_Unrestricted("progress_enable\n");
 
-	GameBaseClient->CloseGamePanels();
-
 	m_pViewport->GetAnimationController()->StartAnimationSequence("LevelInit");
 
 	// Tell the Chat Interface
@@ -852,8 +749,6 @@ void ClientModeShared::LevelInit( const char *newmap )
 void ClientModeShared::LevelShutdown( void )
 {
 	engine->ClientCmd_Unrestricted("progress_enable\n");
-
-	GameBaseClient->CloseGamePanels();
 
 	// Reset the third person camera so we don't crash
 	g_ThirdPersonManager.Init();
@@ -962,24 +857,12 @@ bool PlayerNameNotSetYet( const char *pszName )
 
 void ClientModeShared::FireGameEvent( IGameEvent *event )
 {
-	C_HL2MP_Player *pClient = C_HL2MP_Player::GetLocalHL2MPPlayer();
-
 	const char *eventname = event->GetName();
 
 	if (Q_strcmp("changelevel", eventname) == 0)
 	{
 		const char *szMap = event->GetString("map");
 		GameBaseClient->Changelevel(szMap);
-	}
-	else if ((Q_strcmp("player_connection", eventname) == 0))
-	{
-		if (!g_PR || (HL2MPRules() && ((HL2MPRules()->GetCurrentGamemode() != MODE_OBJECTIVE) && (HL2MPRules()->GetCurrentGamemode() != MODE_ARENA))))
-			return;
-
-		char szLocalized[128];
-		bool bState = event->GetBool("state");
-		g_pVGuiLocalize->ConvertUnicodeToANSI(g_pVGuiLocalize->Find(bState ? "#NOTIFICATION_LEAVE" : "#NOTIFICATION_JOIN"), szLocalized, sizeof(szLocalized));
-		m_pChatElement->Printf("%c%s", COLOR_CREEPY, szLocalized);
 	}
 	else if (Q_strcmp("game_achievement", eventname) == 0)
 	{
@@ -996,125 +879,17 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			g_pVGuiLocalize->ConvertANSIToUnicode(steamapicontext->SteamUserStats()->GetAchievementDisplayAttribute(szAchievement, "name"), wszAchievementName, sizeof(wszAchievementName));
 
 			wchar_t wszLocalized[512];
-
-			if (m_iType != ACHIEVEMENT_TYPE_REWARD)
-				g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#NOTIFICATION_ACHIEVEMENT"), 2, wszPlayerName, wszAchievementName);
-			else
-				g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#NOTIFICATION_MASTERY"), 2, wszPlayerName, wszAchievementName);
+			g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#NOTIFICATION_ACHIEVEMENT"), 2, wszPlayerName, wszAchievementName);
 
 			char szLocalized[512];
 			g_pVGuiLocalize->ConvertUnicodeToANSI(wszLocalized, szLocalized, sizeof(szLocalized));
 
 			m_pChatElement->Printf("%c%s", COLOR_ACHIEVEMENT, szLocalized);
-		}		
-
-		if (pClient && (pClient->entindex() == m_iIndex))
-		{
-			// Play Congratulation Sound...
-			// If this is some mastery we'll reload the inventory.
-			//if (m_iType >= ACHIEVEMENT_TYPE_REWARD)
-			//
 		}
 	}
 	else if (Q_strcmp("round_start", eventname) == 0)
 	{
 		RemoveAllClientGibs();
-
-		if (pClient && (pClient->GetTeamNumber() >= TEAM_HUMANS))
-			GameBaseClient->CloseGamePanels(true);
-	}
-	else if (Q_strcmp("client_sound_transmit", eventname) == 0)
-	{
-		int iEntIndex = event->GetInt("entity");
-		int iType = event->GetInt("type");
-		int iPlayerIndexForce = event->GetInt("playerindex");
-		bool bGender = event->GetBool("gender");
-		const char *szOriginal = event->GetString("original");
-		const char *szGender = bGender ? "Male" : "Female";
-		const char *szSurvivorLink = event->GetString("survivorlink");
-		const char *szSoundsetPrefix = event->GetString("survivorprefix");
-		char szSoundToEmit[256];
-		szSoundToEmit[0] = 0;
-		bool bIsDeathmatchAnnouncer = ((iEntIndex == -1) && (iType == BB2_SoundTypes::TYPE_ANNOUNCER));
-		bool bIsPlayerSound = ((iType == BB2_SoundTypes::TYPE_PLAYER) || (iType == BB2_SoundTypes::TYPE_DECEASED));
-		if (bIsPlayerSound)
-		{
-			const DataPlayerItem_Survivor_Shared_t *data = GameBaseShared()->GetSharedGameDetails()->GetSurvivorDataForIndex(szSurvivorLink, true);
-			if (data != NULL) // Override gender check:			
-				szGender = data->bGender ? "Male" : "Female";
-		}
-
-		if (pClient && g_PR)
-		{
-			// Filter:
-			if ((iPlayerIndexForce != 0) && (pClient->entindex() != iPlayerIndexForce))
-				return;
-
-			const char *entName = GameBaseShared()->GetSharedGameDetails()->GetEntityNameFromEntitySoundType(iType);
-			bool bEmitSound = false;
-			int soundSetIndex = GameBaseShared()->GetSharedGameDetails()->GetConVarValueForEntitySoundType(iType);
-
-			if (iType == BB2_SoundTypes::TYPE_CUSTOM)
-			{
-				// unused
-			}
-			else if (bIsPlayerSound)
-			{
-				bEmitSound = true;
-				Q_snprintf(szSoundToEmit, 256, "%s_%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetPlayerSoundsetPrefix(iType, szSurvivorLink, szSoundsetPrefix), szGender, szOriginal);
-			}
-			else if (soundSetIndex != -1)
-			{
-				if (bIsDeathmatchAnnouncer)
-				{
-					Q_snprintf(szSoundToEmit, 256, "%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetSoundPrefix(iType, soundSetIndex), szOriginal);
-					if (szSoundToEmit && szSoundToEmit[0])
-					{
-						// If this sound doesn't exist / not parsed then fallback to anything available:
-						CSoundParameters params;
-						if (pClient->GetParametersForSound(szSoundToEmit, params, NULL) == false)
-							Q_snprintf(szSoundToEmit, 256, "%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetSoundPrefix(iType, 0), szOriginal);
-
-						if (!enginesound->IsSoundPrecached(szSoundToEmit))
-							pClient->PrecacheScriptSound(szSoundToEmit);
-
-						CLocalPlayerFilter filter;
-						pClient->EmitSound(filter, pClient->entindex(), szSoundToEmit, &pClient->GetLocalOrigin());
-					}
-				}
-				else
-				{
-					bEmitSound = true;
-					Q_snprintf(szSoundToEmit, 256, "%s_%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetSoundPrefix(iType, soundSetIndex, szSurvivorLink), szGender, szOriginal);
-				}
-			}
-
-			if (bEmitSound)
-			{
-				C_BaseEntity *pEntity = ClientEntityList().GetEnt(iEntIndex);
-				if (pEntity && !pEntity->IsDormant() && szSoundToEmit && szSoundToEmit[0])
-				{
-					// If this sound doesn't exist / not parsed then fallback to anything available:
-					CSoundParameters params;
-					if (pClient->GetParametersForSound(szSoundToEmit, params, NULL) == false)
-					{
-						if ((iType == BB2_SoundTypes::TYPE_CUSTOM) || (iType == BB2_SoundTypes::TYPE_UNKNOWN))
-							return;
-
-						if (pEntity->IsPlayer()) // For players we simplify it a bit.
-							Q_snprintf(szSoundToEmit, 256, "%s_%s.%s", entName, szGender, szOriginal);
-						else // For NPC we use the default (first) soundset.
-							Q_snprintf(szSoundToEmit, 256, "%s_%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetSoundPrefix(iType, 0), szGender, szOriginal);
-					}
-
-					if (!enginesound->IsSoundPrecached(szSoundToEmit))
-						pClient->PrecacheScriptSound(szSoundToEmit);
-
-					CLocalPlayerFilter filter;
-					pEntity->EmitSound(filter, pEntity->entindex(), szSoundToEmit, &pEntity->GetAbsOrigin());
-				}
-			}
-		}
 	}
 	else if ( Q_strcmp( "player_connect_client", eventname ) == 0 )
 	{
@@ -1187,18 +962,13 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if (PlayerNameNotSetYet(pszName))
 			return;
 
-		if ((HL2MPRules()->GetCurrentGamemode() != MODE_ELIMINATION))
-			bSilent = true;
-		else
+		bSilent = true;
+		if (pPlayer && g_PR)
 		{
-			bSilent = true;
-			if (pPlayer && g_PR)
+			int selectedTeam = g_PR->GetSelectedTeam(pPlayer->entindex());
+			if (selectedTeam <= 0 || (selectedTeam != team && (team > TEAM_SPECTATOR)))
 			{
-				int selectedTeam = g_PR->GetSelectedTeam(pPlayer->entindex());
-				if (selectedTeam <= 0 || (selectedTeam != team && (team > TEAM_SPECTATOR)))
-				{
-					bSilent = false;
-				}
+				bSilent = false;
 			}
 		}
 

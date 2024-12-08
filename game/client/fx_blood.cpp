@@ -24,7 +24,6 @@
 #include "GameBase_Client.h"
 #include "GameBase_Shared.h"
 #include "c_client_gib.h"
-#include "c_playermodel.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -590,9 +589,8 @@ void GibImpactCallback(const CEffectData & data)
 		return;
 
 	// Use the new plr model, if a plr is taking dmg:
-	C_HL2MP_Player *pPlayerVictim = ToHL2MPPlayer(pVictim);
-	if (pPlayerVictim && pPlayerVictim->GetNewPlayerModel())
-		pVictim = pPlayerVictim->GetNewPlayerModel();
+	if (pVictim && pVictim->IsPlayer() && pVictim->GetNewPlayerModel())
+		pVictim = pVictim->GetNewPlayerModel();
 
 	const char *particleToEmit = GameBaseShared()->GetSharedGameDetails()->GetGibParticleForLimb(pszHitGroup, GameBaseClient->IsExtremeGore());
 

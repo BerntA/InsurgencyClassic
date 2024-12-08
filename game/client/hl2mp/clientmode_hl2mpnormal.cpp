@@ -15,7 +15,6 @@
 #include <vgui/ISurface.h>
 #include <vgui_controls/AnimationController.h>
 #include "iinput.h"
-#include "hl2mptextwindow.h"
 #include "ienginevgui.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -58,21 +57,8 @@ protected:
 	}
 };
 
-int ClientModeHL2MPNormal::GetDeathMessageStartHeight(void)
-{
-	return m_pViewport->GetDeathMessageStartHeight();
-}
-
 IViewPortPanel* CHudViewport::CreatePanelByName(const char* szPanelName)
 {
-	IViewPortPanel* newpanel = NULL;
-
-	if (Q_strcmp(PANEL_INFO, szPanelName) == 0)
-	{
-		newpanel = new CHL2MPTextWindow(this);
-		return newpanel;
-	}
-
 	return BaseClass::CreatePanelByName(szPanelName);
 }
 

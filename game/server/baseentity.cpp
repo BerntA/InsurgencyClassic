@@ -3498,64 +3498,6 @@ void CBaseEntity::TraceAttackToTriggers(const CTakeDamageInfo& info, const Vecto
 	enginetrace->EnumerateEntities(ray, true, &triggerTraceEnum);
 }
 
-void CBaseEntity::UpdateShotStatistics(const trace_t& tr)
-{
-}
-
-//-----------------------------------------------------------------------------
-// Handle shot entering water
-//-----------------------------------------------------------------------------
-#define	MAX_GLASS_PENETRATION_DEPTH	16.0f
-
-void CBaseEntity::HandleShotImpactingGlass(const FireBulletsInfo_t& info,
-	const trace_t& tr, const Vector& vecDir, ITraceFilter* pTraceFilter)
-{
-	// Move through the glass until we're at the other side
-	Vector	testPos = tr.endpos + (vecDir * MAX_GLASS_PENETRATION_DEPTH);
-
-	CEffectData	data;
-
-	data.m_vNormal = tr.plane.normal;
-	data.m_vOrigin = tr.endpos;
-
-	DispatchEffect("GlassImpact", data);
-
-	trace_t	penetrationTrace;
-
-	// Re-trace as if the bullet had passed right through
-	UTIL_TraceLine(testPos, tr.endpos, MASK_SHOT, pTraceFilter, &penetrationTrace);
-
-	// See if we found the surface again
-	if (penetrationTrace.startsolid || tr.fraction == 0.0f || penetrationTrace.fraction == 1.0f)
-		return;
-
-	//FIXME: This is technically frustrating MultiDamage, but multiple shots hitting multiple targets in one call
-	//		 would do exactly the same anyway...
-
-	// Impact the other side (will look like an exit effect)
-	DoImpactEffect(penetrationTrace, GetAmmoDef()->DamageType(info.m_iAmmoType));
-
-	data.m_vNormal = penetrationTrace.plane.normal;
-	data.m_vOrigin = penetrationTrace.endpos;
-
-	DispatchEffect("GlassImpact", data);
-
-	// Refire the round, as if starting from behind the glass
-	FireBulletsInfo_t behindGlassInfo;
-	behindGlassInfo.m_iShots = 1;
-	behindGlassInfo.m_vecSrc = penetrationTrace.endpos;
-	behindGlassInfo.m_vecDirShooting = vecDir;
-	behindGlassInfo.m_vecSpread = vec3_origin;
-	behindGlassInfo.m_flDistance = info.m_flDistance * (1.0f - tr.fraction);
-	behindGlassInfo.m_iAmmoType = info.m_iAmmoType;
-	behindGlassInfo.m_iTracerFreq = info.m_iTracerFreq;
-	behindGlassInfo.m_flDamage = info.m_flDamage;
-	behindGlassInfo.m_pAttacker = info.m_pAttacker ? info.m_pAttacker : this;
-	behindGlassInfo.m_nFlags = info.m_nFlags;
-
-	FireBullets(behindGlassInfo);
-}
-
 //-----------------------------------------------------------------------------
 // Computes the tracer start position
 //-----------------------------------------------------------------------------
@@ -3596,7 +3538,6 @@ void CBaseEntity::InputDisableDamageForces( inputdata_t &inputdata )
 	AddEFlags( EFL_NO_DAMAGE_FORCES );
 }
 
-	
 //-----------------------------------------------------------------------------
 // Purpose: Sets the damage filter on the object
 //-----------------------------------------------------------------------------

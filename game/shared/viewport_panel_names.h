@@ -25,10 +25,7 @@
 #define PANEL_OVERVIEW		"overview"
 #define PANEL_TEAM			"teamchoice"
 #define PANEL_SQUAD			"squadchoice"
-#define PANEL_SCOREBOARD	"scoreboard"
 
 #define PANEL_SPECGUI		"specgui"
-#define PANEL_ENDVOTE       "end_vote"
-#define PANEL_INFO			"info"
 
 #endif // VIEWPORT_PANEL_NAMES_H

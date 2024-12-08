@@ -481,8 +481,7 @@ $Project
 				$File "$SRCDIR\game\shared\ins\GameDefinitions_MapData.cpp"
 				$File "$SRCDIR\game\shared\ins\GameDefinitions_MapData.h"			
 				$File "ins\GameDefinitions_Workshop.cpp"
-				$File "ins\GameDefinitions_Workshop.h"			
-				$File "$SRCDIR\game\shared\ins\skills_shareddefs.h"
+				$File "ins\GameDefinitions_Workshop.h"
 				$File "$SRCDIR\game\shared\ins\gibs_shared.cpp"
 				$File "$SRCDIR\game\shared\ins\gibs_shared.h"
 			}
@@ -498,26 +497,13 @@ $Project
 			
 			$Folder "Entities"
 			{
-				$Folder "Screens"
-				{
-					$File "ins\VGUIKeyPadScreen.cpp"
-					$File "ins\VGUIKeyPadScreen.h"
-					$File "ins\VGUIPDAScreen.cpp"
-					$File "ins\VGUIPDAScreen.h"
-				}
-				
-				$File "ins\BaseKeyPadEntity.cpp"
-				$File "ins\BaseKeyPadEntity.h"
 				$File "ins\game_announcer.cpp"
 				$File "ins\game_announcer.h"
-				$File "ins\objective_icon.cpp"
-				$File "ins\objective_icon.h"
-				$File "ins\spawn_point_base.cpp"
-				$File "ins\spawn_point_base.h"
 				$File "ins\env_flare.cpp"
 				$File "ins\env_flare.h"
 				$File "ins\func_transition.cpp"
 				$File "ins\func_transition.h"
+				$File "$SRCDIR\game\shared\ins\func_entity_block.cpp"
 			}
 			
 			$Folder "TempEnts"
@@ -527,11 +513,6 @@ $Project
 				$File "ins\te_bullet_shot.h"			
 				$File "ins\te_player_gib.cpp"
 				$File "ins\te_player_gib.h"
-			}
-			
-			$Folder "Triggers"
-			{
-				$File "$SRCDIR\game\shared\ins\func_entity_block.cpp"
 			}
 
 			$Folder "Player"

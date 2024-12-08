@@ -355,7 +355,6 @@ CBaseCombatCharacter::CBaseCombatCharacter( void )
 	m_hasBeenInjured = 0;
 	m_nGibFlags = 0;
 	m_nMaterialOverlayFlags = 0;
-	m_pActiveSkillEffects.Purge();
 
 	for( int t=0; t<MAX_DAMAGE_TEAMS; ++t )
 	{
@@ -381,7 +380,6 @@ CBaseCombatCharacter::CBaseCombatCharacter( void )
 CBaseCombatCharacter::~CBaseCombatCharacter( void )
 {
 	ResetVisibilityCache( this );
-	m_pActiveSkillEffects.Purge();
 }
 
 //-----------------------------------------------------------------------------
@@ -396,7 +394,6 @@ void CBaseCombatCharacter::Spawn( void )
 	m_hasBeenInjured = 0;
 	m_nGibFlags = 0;
 	m_nMaterialOverlayFlags = 0;
-	m_pActiveSkillEffects.Purge();
 
 	for( int t=0; t<MAX_DAMAGE_TEAMS; ++t )
 	{
@@ -1361,8 +1358,6 @@ int CBaseCombatCharacter::OnTakeDamage(const CTakeDamageInfo &info)
 		if (retVal)
 		{
 			CanGibEntity(damageCopy);
-			if (m_iHealth > 0)
-				OnAffectedBySkill(damageCopy);
 		}
 
 		if (m_iHealth <= 0)
@@ -1468,159 +1463,13 @@ int CBaseCombatCharacter::OnTakeDamage_Dead( const CTakeDamageInfo &info )
 float CBaseCombatCharacter::GetIdealSpeed() const
 {
 	float speed = BaseClass::GetIdealSpeed();
-
-	if (IsAffectedBySkillFlag(SKILL_FLAG_COLDSNAP))
-	{
-		speed *= (GameBaseShared()->GetSharedGameDetails()->GetPlayerMiscSkillData()->flSlowDownPercent / 100.0f);
-	}
-
 	return speed;
 }
 
 float CBaseCombatCharacter::GetIdealAccel() const
 {
 	float speed = BaseClass::GetIdealAccel();
-
-	if (IsAffectedBySkillFlag(SKILL_FLAG_COLDSNAP))
-	{
-		speed *= (GameBaseShared()->GetSharedGameDetails()->GetPlayerMiscSkillData()->flSlowDownPercent / 100.0f);
-	}
-
 	return speed;
-}
-
-// The NPC or player has been affected by a skill!
-void CBaseCombatCharacter::OnAffectedBySkill(const CTakeDamageInfo &info)
-{
-	int skillFlag = info.GetSkillFlags();
-	if (!IsNPC() || !skillFlag)
-		return;
-
-	CHL2MP_Player *pAttacker = ToHL2MPPlayer(info.GetAttacker());
-	if (!pAttacker || IsAffectedBySkillFlag(skillFlag))
-		return;
-
-	CBaseCombatWeapon *pKillerWeapon = pAttacker->GetActiveWeapon();
-
-	int nFlag = 0;
-	int nOverlayFlag = 0;
-	float duration = 0.0f;
-	float damage = 0.0f;
-	float timeBetweenDamage = 0.0f;
-
-	if (skillFlag & SKILL_FLAG_BLEED)
-	{
-		nFlag = SKILL_FLAG_BLEED;
-		nOverlayFlag = MAT_OVERLAY_BLEEDING;
-
-		duration = GameBaseShared()->GetSharedGameDetails()->GetPlayerMiscSkillData()->flBleedDuration;
-		damage = 10.0f;
-		timeBetweenDamage = GameBaseShared()->GetSharedGameDetails()->GetPlayerMiscSkillData()->flBleedFrequency;
-
-		if (pKillerWeapon)
-			damage = (info.GetDamage() / 100.0f) * pKillerWeapon->GetWpnData().m_flSkillBleedFactor;
-
-		pAttacker->PlaySkillSoundCue(SKILL_SOUND_CUE_MELEE_BLEED);
-	}
-	else if (skillFlag & SKILL_FLAG_BLAZINGAMMO)
-	{
-		nFlag = SKILL_FLAG_BLAZINGAMMO;
-		nOverlayFlag = MAT_OVERLAY_BURNING;
-
-		duration = GameBaseShared()->GetSharedGameDetails()->GetPlayerMiscSkillData()->flNPCBurnDuration;
-		damage = GameBaseShared()->GetSharedGameDetails()->GetPlayerMiscSkillData()->flNPCBurnDamage;
-		timeBetweenDamage = GameBaseShared()->GetSharedGameDetails()->GetPlayerMiscSkillData()->flNPCBurnFrequency;
-
-		if (info.GetForcedWeaponID() != WEAPON_ID_FLAMETHROWER)
-			pAttacker->PlaySkillSoundCue(SKILL_SOUND_CUE_AMMO_BLAZE);
-	}
-	else if (skillFlag & SKILL_FLAG_COLDSNAP)
-	{
-		nFlag = SKILL_FLAG_COLDSNAP;
-		nOverlayFlag = MAT_OVERLAY_COLDSNAP;
-		duration = GameBaseShared()->GetSharedGameDetails()->GetPlayerMiscSkillData()->flSlowDownDuration;
-		pAttacker->PlaySkillSoundCue(SKILL_SOUND_CUE_AMMO_FROST);
-	}
-	else if (skillFlag & SKILL_FLAG_CRIPPLING_BLOW)
-	{
-		nFlag = SKILL_FLAG_CRIPPLING_BLOW;
-		nOverlayFlag = MAT_OVERLAY_CRIPPLED;
-		duration = GameBaseShared()->GetSharedGameDetails()->GetPlayerMiscSkillData()->flStunDuration;
-		pAttacker->PlaySkillSoundCue(SKILL_SOUND_CUE_MELEE_STUN);
-	}
-
-	if (!nFlag)
-		return;
-
-	AddMaterialOverlayFlag(nOverlayFlag);
-
-	playerSkillAffectionItem_t item;
-	item.flag = nFlag;
-	item.overlayFlag = nOverlayFlag;
-	item.damage = damage;
-	item.duration = gpGlobals->curtime + duration;
-	item.nextTimeToTakeDamage = 0.0f;
-	item.timeToTakeDamage = timeBetweenDamage;
-	item.misc = info.GetForcedWeaponID();
-	item.m_pAttacker = pAttacker;
-
-	m_pActiveSkillEffects.AddToTail(item);
-
-	OnSkillFlagState(nFlag, true);
-}
-
-bool CBaseCombatCharacter::IsAffectedBySkillFlag(int flag) const
-{
-	for (int i = 0; i < m_pActiveSkillEffects.Count(); i++)
-	{
-		if ((m_pActiveSkillEffects[i].flag == flag) || (m_pActiveSkillEffects[i].flag & flag))
-			return true;
-	}
-
-	return false;
-}
-
-void CBaseCombatCharacter::CheckSkillAffections(void)
-{
-	if (!m_pActiveSkillEffects.Count())
-		return;
-
-	for (int i = (m_pActiveSkillEffects.Count() - 1); i >= 0; i--)
-	{
-		playerSkillAffectionItem_t *effectItem = &m_pActiveSkillEffects[i];
-		CBaseEntity *pAttacker = effectItem->m_pAttacker.Get();
-
-		if ((effectItem->duration < gpGlobals->curtime) || !pAttacker)
-		{
-			int flag = effectItem->flag;
-			RemoveMaterialOverlayFlag(effectItem->overlayFlag);
-			m_pActiveSkillEffects.Remove(i);
-			OnSkillFlagState(flag, false);
-			continue;
-		}
-
-		// If we want to take damage, then take damage when the frequency has run out.
-		if (effectItem->damage > 0)
-		{
-			if (effectItem->nextTimeToTakeDamage <= gpGlobals->curtime)
-			{
-				effectItem->nextTimeToTakeDamage = gpGlobals->curtime + effectItem->timeToTakeDamage;
-
-				CTakeDamageInfo info(pAttacker, pAttacker, effectItem->damage, GetSkillAffectionDamageType(effectItem->flag));
-				info.SetSkillFlags(effectItem->flag);
-				info.SetForcedWeaponID(effectItem->misc);
-
-				int activeFlag = effectItem->flag;
-				if (activeFlag == SKILL_FLAG_BLAZINGAMMO)
-					info.SetDamageCustom(DMG_BURN);
-				else if (activeFlag == SKILL_FLAG_BLEED)
-					info.SetDamageCustom(DMG_SLASH);
-
-				TakeDamage(info);
-				SpawnBlood(GetAbsOrigin() + Vector(0, 0, 35), g_vecAttackDir, BloodColor(), 100);
-			}
-		}
-	}
 }
 
 //-----------------------------------------------------------------------------

@@ -10,17 +10,15 @@
 #include "weapon_parse.h"
 #include "ienginevgui.h"
 #include <GameUI/IGameUI.h>
-#include "c_hl2mp_player.h"
+#include "c_ins_player.h"
 
 // ADD INCLUDES FOR OTHER MENUS: (NON-BASEVIEWPORT/INTERFACE)
 #include "AddonInstallerPanel.h"
 #include "fmod_manager.h"
-#include "vote_menu.h"
 #include "ivoicetweak.h"
 
 // Other helpers
 #include "clientmode_shared.h"
-#include "vgui_base_frame.h"
 #include "tier0/icommandline.h"
 #include "c_leaderboard_handler.h"
 #include "GameBase_Shared.h"
@@ -29,21 +27,17 @@
 #include "c_playerresource.h"
 #include "voice_status.h"
 #include "GlobalRenderEffects.h"
-#include "c_bb2_player_shared.h"
-#include "music_system.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 void OnUpdateMirrorRenderingState(IConVar* pConVar, char const* pOldString, float flOldValue)
 {
-	C_HL2MP_Player* pLocal = C_HL2MP_Player::GetLocalHL2MPPlayer();
+	C_BasePlayer* pLocal = C_BasePlayer::GetLocalPlayer();
 	if (!pLocal)
 		return;
 
 	pLocal->UpdateVisibility();
-
-	BB2PlayerGlobals->BodyUpdateVisibility();
 
 	C_BaseCombatWeapon* pLocalWeapon = pLocal->GetActiveWeapon();
 	if (!pLocalWeapon)
@@ -91,7 +85,6 @@ class CGameBaseClient : public IGameBaseClient
 {
 private:
 
-	CVotePanel* VotePanel;
 	CAddonInstallerPanel* ClientWorkshopInstallerPanel;
 	IGameUI* GameUI;
 	IVoiceTweak* m_pVoiceTweak;		// Engine voice tweak API.
@@ -116,18 +109,8 @@ public:
 	// Connection, Changelevel and Map commands.
 	void Changelevel(const char* szMap);
 
-	// Due to the fade out function not all panels get fully closed when we rush out of a game, that's why we have to handle proper forcing here!
-	void CloseGamePanels(bool bInGamePanelsOnly = false);
-	// Check if a baseviewport panel is visible:.
-	bool IsViewPortPanelVisible(const char* panel);
-	// Display the default voting panel.
-	void ShowVotePanel(bool bForceOff = false);
-
 	// Post Init - Late Init - Starts up the main menu.
 	void PostInit(void);
-
-	// Load game localization data.
-	void LoadGameLocalization(void);
 
 	// Handle per-frame thinking...
 	void OnUpdate(void);
@@ -150,7 +133,6 @@ IGameBaseClient* GameBaseClient = (IGameBaseClient*)&g_GameBaseClient;
 CGameBaseClient::CGameBaseClient(void) : m_CallbackUserStatsReceived(this, &CGameBaseClient::Steam_OnUserStatsReceived)
 {
 	ClientWorkshopInstallerPanel = NULL;
-	VotePanel = NULL;
 	GameUI = NULL;
 	m_bIsMenuVisibleAndInGame = false;
 }
@@ -158,8 +140,6 @@ CGameBaseClient::CGameBaseClient(void) : m_CallbackUserStatsReceived(this, &CGam
 // Early Initialization
 void CGameBaseClient::Initialize(void)
 {
-	LoadGameLocalization();
-
 	// Init Game UI
 	CreateInterfaceFn gameUIFactory = g_GameUIDLL.GetFactory();
 	if (gameUIFactory)
@@ -185,7 +165,7 @@ void CGameBaseClient::Initialize(void)
 	ClientWorkshopInstallerPanel->SetVisible(false);
 
 	if (steamapicontext && steamapicontext->SteamRemoteStorage())
-		steamapicontext->SteamRemoteStorage()->SetCloudEnabledForApp(false);
+		steamapicontext->SteamRemoteStorage()->SetCloudEnabledForApp(false); // enable?
 
 	PostInit();
 }
@@ -193,7 +173,6 @@ void CGameBaseClient::Initialize(void)
 // Generate the in-game panels.
 void CGameBaseClient::CreateInGamePanels(vgui::VPANEL parent)
 {
-	VotePanel = new CVotePanel(parent);
 }
 
 // Cleanup - called in vgui_int.cpp
@@ -214,79 +193,21 @@ void CGameBaseClient::Destroy(void)
 		delete ClientWorkshopInstallerPanel;
 	}
 
-	if (VotePanel)
-	{
-		VotePanel->SetParent((vgui::Panel*)NULL);
-		delete VotePanel;
-	}
-
 	GlobalRenderEffects->Shutdown();
-}
-
-// Display the voting panel/menu.
-void CGameBaseClient::ShowVotePanel(bool bForceOff)
-{
-	if (VotePanel)
-	{
-		if (bForceOff)
-		{
-			if (!VotePanel->IsVisible())
-				return;
-
-			VotePanel->OnShowPanel(false);
-			return;
-		}
-
-		C_HL2MP_Player* pClient = C_HL2MP_Player::GetLocalHL2MPPlayer();
-		if (!pClient)
-			return;
-
-		VotePanel->OnShowPanel(!VotePanel->IsVisible());
-	}
-}
-
-// Is this viewport panel visible?
-bool CGameBaseClient::IsViewPortPanelVisible(const char* panel)
-{
-	IViewPortPanel* viewportPanel = (gViewPortInterface ? gViewPortInterface->FindPanelByName(panel) : NULL);
-	if (viewportPanel)
-	{
-		Panel* panel = dynamic_cast<Panel*> (viewportPanel);
-		if (panel)
-			return panel->IsVisible();
-	}
-	return false;
 }
 
 // Are we in-game?
 bool CGameBaseClient::IsInGame(void)
 {
-	C_HL2MP_Player* pClient = C_HL2MP_Player::GetLocalHL2MPPlayer();
+	C_BasePlayer* pClient = C_BasePlayer::GetLocalPlayer();
 	return ((pClient != NULL) && !engine->IsLevelMainMenuBackground());
-}
-
-// Due to the fade out function not all panels get fully closed when we rush out of a game, that's why we have to handle proper forcing here!
-void CGameBaseClient::CloseGamePanels(bool bInGamePanelsOnly)
-{
-	if (VotePanel)
-		VotePanel->ForceClose();
-
-	IViewPortPanel* pBasePanel = (gViewPortInterface ? gViewPortInterface->GetActivePanel() : NULL);
-	if (pBasePanel)
-	{
-		vgui::CVGUIBaseFrame* pBaseClassFrame = dynamic_cast<vgui::CVGUIBaseFrame*> (pBasePanel);
-		if (pBaseClassFrame)
-			pBaseClassFrame->ForceClose();
-		else
-			gViewPortInterface->ShowPanel(pBasePanel->GetName(), false);
-	}
 }
 
 // Called on level 'transit' changelevel to the next map.
 void CGameBaseClient::Changelevel(const char* szMap)
 {
 	// TODO
-	GetMusicSystem->RunLoadingSoundTrack(szMap);
+	// run soundtrack
 	engine->ClientCmd_Unrestricted("progress_enable\n");
 }
 
@@ -316,35 +237,17 @@ void CGameBaseClient::PostInit(void)
 	}
 
 	GlobalRenderEffects->Initialize();
-	BB2PlayerGlobals->Initialize();
 
 	if (steamapicontext && steamapicontext->SteamUserStats())
 		steamapicontext->SteamUserStats()->RequestCurrentStats();
-}
-
-void CGameBaseClient::LoadGameLocalization(void)
-{
-	if (!steamapicontext || !steamapicontext->SteamApps())
-		return;
-
-	const char* currentSelectedLanguage = steamapicontext->SteamApps()->GetCurrentGameLanguage();
-	char pchPathToLocalizedFile[80];
-
-	// Load subtitle localization:
-	Q_snprintf(pchPathToLocalizedFile, sizeof(pchPathToLocalizedFile), "resource/closecaption_%s.dat", currentSelectedLanguage);
-
-	if (filesystem->FileExists(pchPathToLocalizedFile, "MOD"))
-		engine->ClientCmd_Unrestricted(VarArgs("cc_lang %s\n", currentSelectedLanguage));
-	else
-		engine->ClientCmd_Unrestricted("cc_lang english\n");
 }
 
 void CGameBaseClient::OnUpdate(void)
 {
 	CLeaderboardHandler::Update();
 
-	C_HL2MP_Player* pLocal = C_HL2MP_Player::GetLocalHL2MPPlayer();
-	if (!pLocal)
+	C_BasePlayer* pClient = C_BasePlayer::GetLocalPlayer();
+	if (!pClient)
 	{
 		m_bIsMenuVisibleAndInGame = false;
 		return;
@@ -363,21 +266,18 @@ void CGameBaseClient::OnUpdate(void)
 				m_bIsMenuVisibleAndInGame = false;
 		}
 	}
-
-	BB2PlayerGlobals->OnUpdate();
 }
 
 void CGameBaseClient::OnLocalPlayerExternalRendering(void)
 {
-	C_HL2MP_Player* pLocal = C_HL2MP_Player::GetLocalHL2MPPlayer();
-	if (!pLocal)
+	C_BasePlayer* pClient = C_BasePlayer::GetLocalPlayer();
+	if (!pClient)
 		return;
 
 	if (bb2_render_client_in_mirrors.GetBool())
 	{
-		pLocal->ThirdPersonSwitch(g_bShouldRenderLocalPlayerExternally);
-		BB2PlayerGlobals->BodyUpdateVisibility();
-		C_BaseCombatWeapon* pWeapon = pLocal->GetActiveWeapon();
+		pClient->ThirdPersonSwitch(g_bShouldRenderLocalPlayerExternally);
+		C_BaseCombatWeapon* pWeapon = pClient->GetActiveWeapon();
 		if (pWeapon)
 			pWeapon->UpdateVisibility();
 	}
@@ -425,34 +325,3 @@ void CGameBaseClient::Steam_OnUserStatsReceived(UserStatsReceived_t* pUserStatsR
 	CLeaderboardHandler::InitHandle();
 	g_bHasLoadedSteamStats = true;
 }
-
-CON_COMMAND(vote_menu, "Open Vote Menu")
-{
-	bool bForce = false;
-
-	if (args.ArgC() >= 2)
-		bForce = ((atoi(args[1]) >= 1) ? true : false);
-
-	GameBaseClient->ShowVotePanel(bForce);
-};
-
-CON_COMMAND(dev_reset_achievements, "Reset Achievements")
-{
-	if (!steamapicontext || !steamapicontext->SteamUserStats())
-		return;
-
-	C_HL2MP_Player* pClient = C_HL2MP_Player::GetLocalHL2MPPlayer();
-	if (!pClient || !g_PR)
-	{
-		Warning("You need to be in-game to use this command!\n");
-		return;
-	}
-
-	if (g_PR->IsGroupIDFlagActive(pClient->entindex(), GROUPID_IS_DEVELOPER) || g_PR->IsGroupIDFlagActive(pClient->entindex(), GROUPID_IS_TESTER))
-	{
-		steamapicontext->SteamUserStats()->ResetAllStats(true);
-		Warning("You've reset your achievements!\n");
-	}
-	else
-		Warning("You must be a developer or tester to use this command!\n");
-};

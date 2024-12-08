@@ -131,17 +131,6 @@ void CGameBaseServer::NewPlayerConnection(CHL2MP_Player* pClient)
 	if (!pClient)
 		return;
 
-	char szSoundFile[MAX_WEAPON_STRING];
-	Q_strncpy(szSoundFile, "", MAX_WEAPON_STRING);
-
-	CSingleUserRecipientFilter filter(pClient);
-	filter.MakeReliable();
-	UserMessageBegin(filter, "PlayerInit");
-	WRITE_STRING(szSoundFile);
-	MessageEnd();
-
-	GameBaseShared()->NewPlayerConnection(false, pClient->entindex());
-
 	char steamID[80];
 	Q_snprintf(steamID, 80, "%llu", pClient->GetSteamIDAsUInt64());
 

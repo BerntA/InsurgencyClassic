@@ -21,7 +21,6 @@
 #include "utllinkedlist.h"
 #include "physics_impact_damage.h"
 #include "gibs_shared.h"
-#include "skills_shareddefs.h"
 #include "soundent.h"
 #include "utlvector.h"
 #include "tier1/functors.h"
@@ -265,14 +264,6 @@ public:
 
 protected:
 	Relationship_t *FindEntityRelationship(CBaseEntity *pTarget = NULL, int relation = CLASS_NONE);
-
-	// Skill Affection Logic:
-	virtual void OnAffectedBySkill(const CTakeDamageInfo &info);
-	virtual void OnSkillFlagState(int flag, bool state) { }
-	virtual bool IsAffectedBySkillFlag(int flag) const;
-	virtual void CheckSkillAffections(void);
-	virtual int GetSkillAffectionDamageType(int skillFlag) { return DMG_CLUB; }
-	CUtlVector<playerSkillAffectionItem_t> m_pActiveSkillEffects;
 
 	// Material Overlay Logic:
 	CNetworkVar(int, m_nMaterialOverlayFlags);

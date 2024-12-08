@@ -26,37 +26,29 @@ public:
 	void Initialize();
 	void Shutdown();
 
-	IMaterial *GetBloodOverlay(void) { return m_MatBloodOverlay; }
-	IMaterial *GetPerkOverlay(void) { return m_MatPerkOverlay; }
-	IMaterial *GetSpawnProtectionOverlay(void) { return m_MatSpawnProtectionOverlay; }
-	IMaterial *GetHumanIndicationIcon(void) { return m_MatHumanIndicatorIcon; }
-	IMaterial *GetCloakOverlay(void) { return m_MatCloakOverlay; }
+	IMaterial* GetBloodOverlay(void) { return m_MatBloodOverlay; }
+	IMaterial* GetPerkOverlay(void) { return m_MatPerkOverlay; }
+	IMaterial* GetSpawnProtectionOverlay(void) { return m_MatSpawnProtectionOverlay; }
+	IMaterial* GetCloakOverlay(void) { return m_MatCloakOverlay; }
 
-	IMaterial *GetBleedOverlay(void) { return m_MatBleedOverlay; }
-	IMaterial *GetBurnOverlay(void) { return m_MatBurnOverlay; }
-	IMaterial *GetFrozenOverlay(void) { return m_MatIceOverlay; }
-	IMaterial *GetDizzyIcon(void) { return m_MatDizzyIcon; }
-
-	bool CanDrawOverlay(C_BaseEntity *pTarget);
+	IMaterial* GetBleedOverlay(void) { return m_MatBleedOverlay; }
+	IMaterial* GetBurnOverlay(void) { return m_MatBurnOverlay; }
+	IMaterial* GetFrozenOverlay(void) { return m_MatIceOverlay; }
 
 private:
-	IMaterial *m_MatBloodOverlay;
-	IMaterial *m_MatPerkOverlay;
-	IMaterial *m_MatSpawnProtectionOverlay;
-	IMaterial *m_MatHumanIndicatorIcon;
-	IMaterial *m_MatCloakOverlay;
+	IMaterial* m_MatBloodOverlay;
+	IMaterial* m_MatPerkOverlay;
+	IMaterial* m_MatSpawnProtectionOverlay;
+	IMaterial* m_MatCloakOverlay;
 
-	IMaterial *m_MatBleedOverlay;
-	IMaterial *m_MatBurnOverlay;
-	IMaterial *m_MatIceOverlay;
-	IMaterial *m_MatDizzyIcon;
+	IMaterial* m_MatBleedOverlay;
+	IMaterial* m_MatBurnOverlay;
+	IMaterial* m_MatIceOverlay;
 
 	bool m_bInitialized;
 };
 
-extern CGlobalRenderEffects *GlobalRenderEffects;
-extern void DrawHumanIndicators(void);
-extern void DrawDizzyIcon(const Vector &vecOrigin);
+extern CGlobalRenderEffects* GlobalRenderEffects;
 extern void RenderMaterialOverlay(IMaterial* texture, int x, int y, int w, int h);
 
 #endif // C_GLOBAL_RENDER_FX_H
