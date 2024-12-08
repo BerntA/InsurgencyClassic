@@ -98,7 +98,7 @@ int CHUDIconText::LoadIcon( const char *pszFile )
 //=========================================================
 void CHUDIconText::SetText( const char *pszText, bool bHighlight )
 {
-	localize( )->ConvertANSIToUnicode( pszText, m_wszText, sizeof( m_wszText ) );
+	g_pVGuiLocalize->ConvertANSIToUnicode( pszText, m_wszText, sizeof( m_wszText ) );
 	m_iTextLength = wcslen( m_wszText );
 
 	if( bHighlight )

@@ -437,11 +437,7 @@ RecvPropInt(RECVINFO(m_flSimulationTime), 0, RecvProxy_SimulationTime),
 RecvPropInt(RECVINFO(m_ubInterpolationFrame)),
 
 RecvPropVector(RECVINFO_NAME(m_vecNetworkOrigin, m_vecOrigin)),
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-RecvPropVector( RECVINFO_NAME( m_angNetworkAngles, m_angRotation ) ),
-#else
 RecvPropQAngles(RECVINFO_NAME(m_angNetworkAngles, m_angRotation)),
-#endif
 
 #ifdef DEMO_BACKWARDCOMPATABILITY
 RecvPropInt(RECVINFO(m_nModelIndex), 0, RecvProxy_IntToModelIndex16_BackCompatible),

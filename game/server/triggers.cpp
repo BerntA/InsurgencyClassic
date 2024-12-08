@@ -26,10 +26,6 @@
 #include "gameinterface.h"
 #include "team.h"
 
-#ifdef HL2_DLL
-#include "hl2_player.h"
-#endif
-
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -3082,7 +3078,6 @@ void CTriggerVPhysicsMotion::StartTouch( CBaseEntity *pOther )
 	if ( pPlayer )
 	{
 		pPlayer->SetPhysicsFlag( PFLAG_VPHYSICS_MOTIONCONTROLLER, true );
-		pPlayer->m_Local.m_bSlowMovement = true;
 	}
 
 	triggerevent_t event;
@@ -3121,7 +3116,6 @@ void CTriggerVPhysicsMotion::EndTouch( CBaseEntity *pOther )
 	if ( pPlayer )
 	{
 		pPlayer->SetPhysicsFlag( PFLAG_VPHYSICS_MOTIONCONTROLLER, false );
-		pPlayer->m_Local.m_bSlowMovement = false;
 	}
 	triggerevent_t event;
 	PhysGetTriggerEvent( &event, this );

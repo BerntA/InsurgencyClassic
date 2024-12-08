@@ -117,7 +117,7 @@ void __MsgFunc_TextMsg( bf_read &msg )
 	{
 		msg.ReadString( szString, sizeof(szString) );
 		char *tmpStr = hudtextmessage->LookupString( szString, &msg_dest );
-		const wchar_t *pBuf = vgui::localize()->Find( tmpStr );
+		const wchar_t *pBuf = g_pVGuiLocalize->Find( tmpStr );
 		if ( pBuf )
 		{
 			// Copy pBuf into szBuf[i].
@@ -131,7 +131,7 @@ void __MsgFunc_TextMsg( bf_read &msg )
 			{
 				StripEndNewlineFromString( tmpStr );  // these strings are meant for subsitution into the main strings, so cull the automatic end newlines
 			}
-			vgui::localize()->ConvertANSIToUnicode( tmpStr, szBuf[i], sizeof(szBuf[i]) );
+			g_pVGuiLocalize->ConvertANSIToUnicode( tmpStr, szBuf[i], sizeof(szBuf[i]) );
 		}
 	}
 
@@ -140,7 +140,7 @@ void __MsgFunc_TextMsg( bf_read &msg )
 	{
 		case HUD_PRINTCENTER:
 		{
-			vgui::localize()->ConstructString( outputBuf, sizeof(outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
+			g_pVGuiLocalize->ConstructString( outputBuf, sizeof(outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
 			internalCenterPrint->Print( ConvertCRtoNL( outputBuf ) );
 			break;
 		}
@@ -148,8 +148,8 @@ void __MsgFunc_TextMsg( bf_read &msg )
 		case HUD_PRINTNOTIFY:
 		{
 			szString[0] = 1;  // mark this message to go into the notify buffer
-			vgui::localize()->ConstructString( outputBuf, sizeof(outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
-			vgui::localize()->ConvertUnicodeToANSI( outputBuf, szString+1, sizeof(szString)-1 );
+			g_pVGuiLocalize->ConstructString( outputBuf, sizeof(outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
+			g_pVGuiLocalize->ConvertUnicodeToANSI( outputBuf, szString+1, sizeof(szString)-1 );
 			len = strlen( szString );
 			if ( len && szString[len-1] != '\n' && szString[len-1] != '\r' )
 			{
@@ -161,8 +161,8 @@ void __MsgFunc_TextMsg( bf_read &msg )
 
 		case HUD_PRINTTALK:
 		{
-			vgui::localize()->ConstructString( outputBuf, sizeof(outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
-			vgui::localize()->ConvertUnicodeToANSI( outputBuf, szString, sizeof(szString) );
+			g_pVGuiLocalize->ConstructString( outputBuf, sizeof(outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
+			g_pVGuiLocalize->ConvertUnicodeToANSI( outputBuf, szString, sizeof(szString) );
 			len = strlen( szString );
 			if ( len && szString[len-1] != '\n' && szString[len-1] != '\r' )
 			{
@@ -180,8 +180,8 @@ void __MsgFunc_TextMsg( bf_read &msg )
 
 		case HUD_PRINTCONSOLE:
 		{
-			vgui::localize()->ConstructString( outputBuf, sizeof(outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
-			vgui::localize()->ConvertUnicodeToANSI( outputBuf, szString, sizeof(szString) );
+			g_pVGuiLocalize->ConstructString( outputBuf, sizeof(outputBuf), szBuf[0], 4, szBuf[1], szBuf[2], szBuf[3], szBuf[4] );
+			g_pVGuiLocalize->ConvertUnicodeToANSI( outputBuf, szString, sizeof(szString) );
 			len = strlen( szString );
 			if ( len && szString[len-1] != '\n' && szString[len-1] != '\r' )
 			{
@@ -343,8 +343,8 @@ void CHudMessages::PrintRadio( const char *pszMessage, int iEntID )
 	const char *pszName = NULL;
 	int iTeamID, iTeamColor;
 	
-	pszName = PlayerResource( )->GetPlayerName( iEntID );
-	iTeamID = PlayerResource( )->GetTeamID( iEntID );
+	pszName = g_PR->GetPlayerName( iEntID );
+	iTeamID = g_PR->GetTeamID( iEntID );
 
 	if( !pszName || !IsPlayTeam( iTeamID ) )
 	{
@@ -415,7 +415,7 @@ void CHudMessages::Update( void )
 //=========================================================
 void CHudMessages::FireGameEvent( IGameEvent *pEvent )
 {
-	C_PlayerResource *pPR = PlayerResource( );
+	C_PlayerResource *pPR = g_PR;
 
 	if( !pPR )
 		return;
@@ -569,7 +569,7 @@ void CHudMessages::OnThink( void )
 //=========================================================
 void CHudMessages::MsgFunc_FFMsg( bf_read &msg )
 {
-	C_PlayerResource *pPR = PlayerResource( );
+	C_PlayerResource *pPR = g_PR;
 
 	if( !pPR )
 		return;

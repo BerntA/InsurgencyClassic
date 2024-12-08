@@ -38,6 +38,7 @@
 // ------------------------------------------------------------------------------------
 
 #define METERS_PER_INCH					(0.0254f)
+#define INCHS_PER_METER					(39.37f)
 #define CUBIC_METERS_PER_CUBIC_INCH		(METERS_PER_INCH*METERS_PER_INCH*METERS_PER_INCH)
 // 2.2 lbs / kg
 #define POUNDS_PER_KG	(2.2f)

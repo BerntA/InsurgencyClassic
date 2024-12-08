@@ -12,7 +12,6 @@
 #endif
 
 #include "vguitextwindow.h"
-#include <spectatorgui.h>
 
 //-----------------------------------------------------------------------------
 // Purpose: displays the MOTD
@@ -35,23 +34,6 @@ public:
 	virtual void PaintBackground();
 	virtual void PerformLayout();
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
-};
-
-class CHL2MPSpectatorGUI : public CSpectatorGUI
-{
-private:
-	DECLARE_CLASS_SIMPLE( CHL2MPSpectatorGUI, CSpectatorGUI );
-
-public:
-	CHL2MPSpectatorGUI( IViewPort *pViewPort );
-
-	virtual void Update( void );
-	virtual bool NeedsUpdate( void );
-
-protected:
-	float   m_flLastUpdateTime;
-	int		m_nLastSpecMode;
-	CBaseEntity	*m_nLastSpecTarget;
 };
 
 #endif // CSTEXTWINDOW_H

@@ -346,7 +346,7 @@ void CHintLine::Set( const char *pszText )
 	if( !pszText )
 		pszText = pszEmptyText;
 
-	localize( )->ConvertANSIToUnicode( pszText, m_wszText, sizeof( m_wszText ) );
+	g_pVGuiLocalize->ConvertANSIToUnicode( pszText, m_wszText, sizeof( m_wszText ) );
 	m_iLength = Q_strlen( pszText );
 
 	m_iXPos = ( m_pHudHint->GetWide( ) * 0.5f ) - ( UTIL_ComputeStringWidth( m_hFont, pszText ) * 0.5f );

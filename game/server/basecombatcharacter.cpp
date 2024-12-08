@@ -362,7 +362,7 @@ CBaseCombatCharacter::CBaseCombatCharacter( void )
 		m_damageHistory[t].team = TEAM_INVALID;
 	}
 
-	for (int i = 0; i < MAX_WEAPONS; i++)
+	for (int i = 0; i < MAX_PWEAPONS; i++)
 	{
 		m_hMyWeapons.Set( i, NULL );
 	}
@@ -437,7 +437,7 @@ void CBaseCombatCharacter::UpdateOnRemove( void )
 {
 	int i;
 	// Make sure any weapons I didn't drop get removed.
-	for (i=0;i<MAX_WEAPONS;i++) 
+	for (i = 0; i < MAX_PWEAPONS; i++)
 	{
 		if (m_hMyWeapons[i]) 
 		{
@@ -883,7 +883,7 @@ void CBaseCombatCharacter::Event_Dying()
 // ===========================================================================
 bool CBaseCombatCharacter::Weapon_Detach( CBaseCombatWeapon *pWeapon )
 {
-	for ( int i = 0; i < MAX_WEAPONS; i++ )
+	for ( int i = 0; i < MAX_PWEAPONS; i++ )
 	{
 		if ( pWeapon == m_hMyWeapons[i] )
 		{
@@ -965,7 +965,7 @@ void CBaseCombatCharacter::Weapon_DropAll( bool bDisallowWeaponPickup )
 {
 	if ( GetFlags() & FL_NPC )
 	{
-		for (int i=0; i<MAX_WEAPONS; ++i) 
+		for (int i=0; i< MAX_PWEAPONS; ++i)
 		{
 			CBaseCombatWeapon *pWeapon = m_hMyWeapons[i];
 			if (!pWeapon)
@@ -986,7 +986,7 @@ void CBaseCombatCharacter::Weapon_DropAll( bool bDisallowWeaponPickup )
 		CollisionProp()->OBBSize().y * CollisionProp()->OBBSize().y );
 
 	CBaseCombatWeapon *pActiveWeapon = GetActiveWeapon();
-	for (int i=0; i<MAX_WEAPONS; ++i) 
+	for (int i=0; i< MAX_PWEAPONS; ++i)
 	{
 		CBaseCombatWeapon *pWeapon = m_hMyWeapons[i];
 		if (!pWeapon)
@@ -1187,7 +1187,7 @@ void CBaseCombatCharacter::SetLightingOriginRelative( CBaseEntity *pLightingOrig
 void CBaseCombatCharacter::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 {
 	// Add the weapon to my weapon inventory
-	for (int i = 0; i < MAX_WEAPONS; i++)
+	for (int i = 0; i < MAX_PWEAPONS; i++)
 	{
 		if (!m_hMyWeapons[i])
 		{
@@ -1243,7 +1243,7 @@ CBaseCombatWeapon *CBaseCombatCharacter::Weapon_GetSlot( int slot ) const
 	int	targetSlot = slot;
 
 	// Check for that slot being occupied already
-	for ( int i=0; i < MAX_WEAPONS; i++ )
+	for ( int i=0; i < MAX_PWEAPONS; i++ )
 	{
 		if ( m_hMyWeapons[i].Get() != NULL )
 		{
@@ -1270,7 +1270,7 @@ CBaseCombatWeapon *CBaseCombatCharacter::Weapon_Create( const char *pWeaponName 
 void CBaseCombatCharacter::RemoveAllWeapons()
 {
 	ClearActiveWeapon();
-	for (int i = 0; i < MAX_WEAPONS; i++)
+	for (int i = 0; i < MAX_PWEAPONS; i++)
 	{
 		if ( m_hMyWeapons[i] )
 		{
@@ -1666,7 +1666,7 @@ void CBaseCombatCharacter::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways 
 
 	if ( bLocalPlayer )
 	{
-		for ( int i=0; i < MAX_WEAPONS; i++ )
+		for ( int i=0; i < MAX_PWEAPONS; i++ )
 		{
 			CBaseCombatWeapon *pWeapon = m_hMyWeapons[i];
 			if ( !pWeapon )

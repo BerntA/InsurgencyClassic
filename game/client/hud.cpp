@@ -25,7 +25,6 @@
 #include <vgui_controls/AnimationController.h>
 #include "hl2mp_gamerules.h"
 #include <math.h>
-#include "ScoreBoardPanel.h"
 #include "inshud.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

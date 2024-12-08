@@ -552,7 +552,7 @@ void CBasePlayer::DrawDebugGeometryOverlays(void)
 //=========================================================
 // TraceAttack
 //=========================================================
-void CBasePlayer::TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator )
+void CBasePlayer::TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr)
 {
 	if ( m_takedamage )
 	{
@@ -3767,8 +3767,6 @@ void CBasePlayer::Spawn( void )
 
 	g_pGameRules->GetPlayerSpawnSpot( this );
 
-	m_Local.m_bDucked = false;// This will persist over round restart if you hold duck otherwise. 
-	m_Local.m_bDucking = false;
     SetViewOffset( VEC_VIEW_SCALED( this ) );
 	Precache();
 	
@@ -4149,80 +4147,7 @@ ImpulseCommands
 
 void CBasePlayer::ImpulseCommands( )
 {
-	CheatImpulseCommands(m_nImpulse);
 	m_nImpulse = 0;
-}
-
-//=========================================================
-//=========================================================
-void CBasePlayer::CheatImpulseCommands( int iImpulse )
-{
-	if ( !sv_cheats->GetBool() )	
-		return;	
-
-	CBaseEntity *pEntity = NULL;
-	trace_t tr;
-
-	switch (iImpulse)
-	{
-	case 106:
-		pEntity = FindEntityForward(this, true);
-		if (pEntity)
-		{
-			Msg("Classname: %s", pEntity->GetClassname());
-
-			if (pEntity->GetEntityName() != NULL_STRING)
-			{
-				Msg(" - Name: %s\n", STRING(pEntity->GetEntityName()));
-			}
-			else
-			{
-				Msg(" - Name: No Targetname\n");
-			}
-
-			if (pEntity->m_iParent != NULL_STRING)
-				Msg("Parent: %s\n", STRING(pEntity->m_iParent));
-
-			Msg("Model: %s\n", STRING(pEntity->GetModelName()));
-		}
-		break;
-
-	case 107:
-	{
-		trace_t tr;
-		edict_t		*pWorld = engine->PEntityOfEntIndex(0);
-
-		Vector start = EyePosition();
-		Vector forward;
-		EyeVectors(&forward);
-		Vector end = start + forward * 1024;
-		UTIL_TraceLine(start, end, MASK_SOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &tr);
-		if (tr.m_pEnt)
-			pWorld = tr.m_pEnt->edict();
-
-		const char *pTextureName = tr.surface.name;
-		if (pTextureName)
-			Msg("Texture: %s\n", pTextureName);
-	}
-	break;
-
-	case 200:
-	{
-		CBaseCombatWeapon* pWeapon = GetActiveWeapon();
-		if (pWeapon->IsEffectActive(EF_NODRAW))
-			pWeapon->Deploy();
-		else
-			pWeapon->FullHolster();
-
-		break;
-	}		
-
-	case 203: // remove creature.
-		pEntity = FindEntityForward(this, true);
-		if (pEntity)
-			UTIL_Remove(pEntity);
-		break;
-	}
 }
 
 bool CBasePlayer::ClientCommand( const CCommand &args )
@@ -4599,7 +4524,7 @@ void CBasePlayer::Weapon_DropSlot( int weaponSlot )
 	CBaseCombatWeapon *pWeapon;
 
 	// Check for that slot being occupied already
-	for ( int i=0; i < MAX_WEAPONS; i++ )
+	for ( int i=0; i < MAX_PWEAPONS; i++ )
 	{
 		pWeapon = GetWeapon( i );
 		
@@ -4972,11 +4897,7 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 		SendPropFloat		( SENDINFO_VECTORELEM(m_vecVelocity, 1), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
 		SendPropFloat		( SENDINFO_VECTORELEM(m_vecVelocity, 2), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
 
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-		SendPropVector		( SENDINFO( m_vecBaseVelocity ), -1, SPROP_COORD ),
-#else
-		SendPropVector		( SENDINFO( m_vecBaseVelocity ), 20, 0, -1000, 1000 ),
-#endif
+		SendPropVector(SENDINFO(m_vecBaseVelocity), 20, 0, -1000, 1000),
 
 		SendPropEHandle		( SENDINFO( m_hConstraintEntity)),
 		SendPropVector		( SENDINFO( m_vecConstraintCenter), 0, SPROP_NOSCALE ),

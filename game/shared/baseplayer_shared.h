@@ -26,7 +26,7 @@
 #define TRAIN_FAST		0x04 
 #define TRAIN_BACK		0x05
 
-#define DEATH_ANIMATION_TIME	3.5f
+#define DEATH_ANIMATION_TIME	3.0f
 
 enum stepsoundtimes_t
 {
@@ -35,6 +35,8 @@ enum stepsoundtimes_t
 	STEPSOUNDTIME_WATER_KNEE,
 	STEPSOUNDTIME_WATER_FOOT,
 };
+
+#define MAX_PWEAPONS			7
 
 void CopySoundNameWithModifierToken( char *pchDest, const char *pchSource, int nMaxLenInChars, const char *pchToken );
 

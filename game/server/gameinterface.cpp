@@ -714,9 +714,6 @@ void CServerGameDLL::ServerActivate( edict_t *pEdictList, int edictCount, int cl
 	}
 
 	GameBaseServer()->PostInit();
-
-	if (GameBaseShared()->GetPlayerLoadoutHandler())
-		GameBaseShared()->GetPlayerLoadoutHandler()->SetMapTransit(false);
 }
 
 //-----------------------------------------------------------------------------
@@ -1706,9 +1703,6 @@ void CServerGameClients::ClientDisconnect( edict_t *pEdict )
 	CBasePlayer *player = ( CBasePlayer * )CBaseEntity::Instance( pEdict );
 	if ( player )
 	{
-		if (GameBaseShared()->GetPlayerLoadoutHandler())
-			GameBaseShared()->GetPlayerLoadoutHandler()->RemoveDataForPlayer(player);
-
 		if ( !g_fGameOver )
 		{
 			player->SetMaxSpeed( 0.0f );

@@ -32,13 +32,10 @@
 #include <igameresources.h>
 
 // sub dialogs
-#include "ScoreBoardPanel.h"
 #include "spectatorgui.h"
 #include "vguitextwindow.h"
 #include "IGameUIFuncs.h"
 #include "hud.h"
-#include "keypad_menu.h"
-#include "voice_menu.h"
 #include "EndMapVoteMenu.h"
 #include "hl2mp_gamerules.h"
 #include "GameBase_Client.h"
@@ -87,9 +84,7 @@ CON_COMMAND( showpanel, "Shows a viewport panel <name>" )
 	if ( args.ArgC() != 2 )
 		return;
 
-	if (!strcmp(args[1], PANEL_KEYPAD) || 
-		!strcmp(args[1], PANEL_ENDVOTE) ||
-		!strcmp(args[1], PANEL_VOICEWHEEL))
+	if (!strcmp(args[1], PANEL_ENDVOTE))
 		return;
 		
 	 gViewPortInterface->ShowPanel( args[ 1 ], true );
@@ -243,9 +238,7 @@ void CBaseViewport::CreateDefaultPanels( void )
 	AddNewPanel(CreatePanelByName(PANEL_SCOREBOARD), "PANEL_SCOREBOARD");
 	AddNewPanel(CreatePanelByName(PANEL_INFO), "PANEL_INFO");
 	AddNewPanel(CreatePanelByName(PANEL_SPECGUI), "PANEL_SPECGUI");
-	AddNewPanel(CreatePanelByName(PANEL_VOICEWHEEL), "PANEL_VOICEWHEEL");
 	AddNewPanel(CreatePanelByName(PANEL_ENDVOTE), "PANEL_ENDVOTE");
-	AddNewPanel(CreatePanelByName(PANEL_KEYPAD), "PANEL_KEYPAD");
 #endif
 
 	CINSViewportHelper::CreateAllElements(this);
@@ -271,21 +264,9 @@ IViewPortPanel* CBaseViewport::CreatePanelByName(const char *szPanelName)
 	IViewPortPanel* newpanel = NULL;
 
 #ifndef _XBOX
-	if ( Q_strcmp(PANEL_SCOREBOARD, szPanelName) == 0 )
-	{
-		newpanel = new CScoreBoardPanel(this);
-	}
-	else if ( Q_strcmp(PANEL_INFO, szPanelName) == 0 )
+	if ( Q_strcmp(PANEL_INFO, szPanelName) == 0 )
 	{
 		newpanel = new CTextWindow( this );
-	}
-	else if ( Q_strcmp(PANEL_KEYPAD, szPanelName) == 0 )
-	{
-		newpanel = new CKeyPadMenu( this );
-	}
-	else if (Q_strcmp(PANEL_VOICEWHEEL, szPanelName) == 0)
-	{
-		newpanel = new CVoiceMenu(this);
 	}
 	else if (Q_strcmp(PANEL_ENDVOTE, szPanelName) == 0)
 	{
@@ -293,7 +274,7 @@ IViewPortPanel* CBaseViewport::CreatePanelByName(const char *szPanelName)
 	}
 	else if ( Q_strcmp(PANEL_SPECGUI, szPanelName) == 0 )
 	{
-		newpanel = new CSpectatorGUI( this );
+		newpanel = new CSpectatorGUI( this ); // ins warn
 	}
 #endif
 	
@@ -483,12 +464,7 @@ void CBaseViewport::ResetAllPanels(void)
 			continue;
 
 		pViewPanel->Reset();
-
-		Panel* pPanel = dynamic_cast<Panel*>(pViewPanel);
-		if (!pPanel)
-			continue;
-
-		pPanel->OnLevelInit();
+		pViewPanel->OnLevelInit(); // INS warn
 	}
 }
 

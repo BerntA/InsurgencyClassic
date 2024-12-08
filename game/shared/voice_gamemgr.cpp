@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include "player.h"
+#include "ins_player.h"
 #include "ivoiceserver.h"
 #include "usermessages.h"
 
@@ -232,8 +233,8 @@ void CVoiceGameMgr::UpdateMasks()
 			for(int iOtherClient=0; iOtherClient < m_nMaxPlayers; iOtherClient++)
 			{
 				CBaseEntity *pEnt = UTIL_PlayerByIndex(iOtherClient+1);
-				if(pEnt && pEnt->IsPlayer() && 
-					(bAllTalk || m_pHelper->CanPlayerHearPlayer(pPlayer, (CBasePlayer*)pEnt, bProximity )) )
+				if(pEnt && pEnt->IsPlayer() && pPlayer->OnPlayTeam() && pPlayer->IsValidSquad() &&
+					(bAllTalk || m_pHelper->CanPlayerHearPlayer(pPlayer, ToINSPlayer(pEnt), bProximity )) )
 				{
 					gameRulesMask[iOtherClient] = true;
 					ProximityMask[iOtherClient] = bProximity;

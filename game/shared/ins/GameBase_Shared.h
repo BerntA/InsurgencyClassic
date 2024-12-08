@@ -17,13 +17,12 @@
 #include "GameDefinitions_MapData.h"
 
 #ifdef CLIENT_DLL
-#include "c_hl2mp_player.h"
+#include "c_baseplayer.h"
 #include "music_system.h"
 #else
-#include "hl2mp_player.h"
+#include "player.h"
 #include "achievement_manager.h"
 #include "GameDefinitions_Workshop.h"
-#include "player_loadout_handler.h"
 #endif
 
 #define DELAYED_USE_TIME 1.5f
@@ -109,17 +108,8 @@ public:
 	// Workshop Handler:
 	CGameDefinitionsWorkshop* GetServerWorkshopData(void) { return m_pServerWorkshopData; }
 
-	// Loadout Handler:
-	CPlayerLoadoutHandler* GetPlayerLoadoutHandler(void) { return m_pPlayerLoadoutHandler; }
-
-	// Server Commands and Client Commands checks.
-	bool ClientCommand(const CCommand& args);
-
 	// Events
 	void NewPlayerConnection(bool bState, int index);
-
-	// Misc
-	void ComputePlayerWeight(CHL2MP_Player* pPlayer);
 #endif
 
 private:
@@ -127,10 +117,7 @@ private:
 #ifdef CLIENT_DLL
 	CMusicSystem* m_pMusicSystem;
 #else
-	// Server Workshop Handler:
 	CGameDefinitionsWorkshop* m_pServerWorkshopData;
-	// Server Loadout Handler:
-	CPlayerLoadoutHandler* m_pPlayerLoadoutHandler;
 #endif
 
 	// Shared Game Data Info

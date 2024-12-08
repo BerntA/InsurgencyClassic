@@ -155,7 +155,7 @@ void CHudWeaponSelection::VidInit( void )
 		Q_snprintf( szWeaponPath, sizeof( szWeaponPath ), "icons/%s", g_WeaponData[ i ].m_pszWeaponName );
 		CreateTexPath( szWeaponPath, szFullPath, sizeof( szFullPath ) );
 
-		if( ::filesystem->FileExists( VarArgs( "materials/%s.vmt", szFullPath ) ) )
+		if( filesystem->FileExists( VarArgs( "materials/%s.vmt", szFullPath ) ) )
 		{
 			Material.Init( szFullPath, TEXTURE_GROUP_OTHER );
 		}

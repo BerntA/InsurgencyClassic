@@ -69,7 +69,7 @@ void WeaponsResource::LoadAllWeaponSprites( void )
 	if ( !player )
 		return;
 
-	for (int i = 0; i < MAX_WEAPONS; i++)
+	for (int i = 0; i < MAX_PWEAPONS; i++)
 	{
 		if ( player->GetWeapon(i) )
 		{
@@ -159,7 +159,7 @@ CHudTexture *WeaponsResource::GetAmmoIconFromWeapon( int iAmmoId )
 	if ( !player )
 		return NULL;
 
-	for ( int i = 0; i < MAX_WEAPONS; i++ )
+	for ( int i = 0; i < MAX_PWEAPONS; i++ )
 	{
 		C_BaseCombatWeapon *weapon = player->GetWeapon( i );
 		if ( !weapon )
@@ -183,7 +183,7 @@ const FileWeaponInfo_t *WeaponsResource::GetWeaponFromAmmo( int iAmmoId )
 	if ( !player )
 		return NULL;
 
-	for ( int i = 0; i < MAX_WEAPONS; i++ )
+	for ( int i = 0; i < MAX_PWEAPONS; i++ )
 	{
 		C_BaseCombatWeapon *weapon = player->GetWeapon( i );
 		if ( !weapon )

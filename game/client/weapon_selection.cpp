@@ -546,7 +546,7 @@ C_BaseCombatWeapon *CBaseHudWeaponSelection::GetFirstPos( int iSlot )
 	if ( !player )
 		return NULL;
 
-	for ( int i = 0; i < MAX_WEAPONS; i++ )
+	for ( int i = 0; i < MAX_PWEAPONS; i++ )
 	{
 		C_BaseCombatWeapon *pWeapon = player->GetWeapon( i );
 		if ( !pWeapon )
@@ -571,7 +571,7 @@ C_BaseCombatWeapon *CBaseHudWeaponSelection::GetNextActivePos(int iSlot)
 	if ( !player )
 		return NULL;
 
-	for ( int i = 0; i < MAX_WEAPONS; i++ )
+	for ( int i = 0; i < MAX_PWEAPONS; i++ )
 	{
 		C_BaseCombatWeapon *pWeapon = player->GetWeapon( i );
 		if ( !pWeapon )

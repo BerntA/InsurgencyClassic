@@ -15,7 +15,7 @@
 #include <vgui_controls/panel.h>
 
 #include "hudelement.h"
-#include <vgui_controls/panel.h>
+#include "filesystem.h"
 
 #include "inshud.h"
 #include "basic_colors.h"
@@ -177,7 +177,7 @@ int CHudWeaponInfo::CreateAmmoTexID( const char *pszName )
 	char szPathBuffer[ 256 ];
 	CreateTexPath( WEAPONINFO_AMMO_PATH, pszName, szPathBuffer, sizeof( szPathBuffer ) );
 
-	if( ::filesystem->FileExists( VarArgs( "materials/%s.vmt", szPathBuffer ) ) )
+	if (filesystem->FileExists(VarArgs("materials/%s.vmt", szPathBuffer)))
 	{
 		iAmmoTexID = surface( )->CreateNewTextureID( );
 		surface( )->DrawSetTextureFile( iAmmoTexID, szPathBuffer, false, false );
@@ -312,7 +312,7 @@ void CHudWeaponInfo::DrawAmmo( int &iYPos )
 	int iNumChars = Q_strlen( szAmmoLeft );
 
 	wchar_t wszAmmoLeft[ 4 ];
-	localize( )->ConvertANSIToUnicode( szAmmoLeft, wszAmmoLeft, sizeof( wszAmmoLeft ) );
+	g_pVGuiLocalize->ConvertANSIToUnicode( szAmmoLeft, wszAmmoLeft, sizeof( wszAmmoLeft ) );
 
 	int iAmmoFontWide = UTIL_ComputeStringWidth( m_hAmmoFont, wszAmmoLeft );
 

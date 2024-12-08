@@ -66,6 +66,8 @@ void Button::Init()
 
 	_mouseClickMask = 0;
 	_actionMessage = NULL;
+	_cursorEnterMessage = NULL;
+	_cursorExitMessage = NULL;
 	_defaultBorder = NULL;
 	_depressedBorder = NULL;
 	_keyFocusBorder = NULL;
@@ -103,6 +105,16 @@ Button::~Button()
 	if (_actionMessage)
 	{
 		_actionMessage->deleteThis();
+	}
+
+	if (_cursorEnterMessage)
+	{
+		_cursorEnterMessage->deleteThis();
+	}
+
+	if (_cursorExitMessage)
+	{
+		_cursorExitMessage->deleteThis();
 	}
 }
 
@@ -749,6 +761,50 @@ KeyValues *Button::GetCommand()
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: sets the command to send when the button is highlighted
+//-----------------------------------------------------------------------------
+void Button::SetCursorEnterMessage(const char* command)
+{
+	SetCursorEnterMessage(new KeyValues("Command", "command", command));
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: sets the command to send when the button is highlighted
+//-----------------------------------------------------------------------------
+void Button::SetCursorEnterMessage(KeyValues* message)
+{
+	// delete the old message
+	if (_cursorEnterMessage)
+	{
+		_cursorEnterMessage->deleteThis();
+	}
+
+	_cursorEnterMessage = message;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: sets the command to send when the button is highlighted
+//-----------------------------------------------------------------------------
+void Button::SetCursorExitMessage(const char* command)
+{
+	SetCursorExitMessage(new KeyValues("Command", "command", command));
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: sets the message to send when the button is pressed
+//-----------------------------------------------------------------------------
+void Button::SetCursorExitMessage(KeyValues* message)
+{
+	// delete the old message
+	if (_cursorExitMessage)
+	{
+		_cursorExitMessage->deleteThis();
+	}
+
+	_cursorExitMessage = message;
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Message targets that the button has been pressed
 //-----------------------------------------------------------------------------
 void Button::FireActionSignal()
@@ -820,7 +876,19 @@ void Button::GetSettings( KeyValues *outResourceData )
 	{
 		outResourceData->SetString("command", _actionMessage->GetString("command", ""));
 	}
+
+	if (_cursorEnterMessage)
+	{
+		outResourceData->SetString("oncursorenter", _cursorEnterMessage->GetString("oncursorenter", ""));
+	}
+
+	if (_cursorExitMessage)
+	{
+		outResourceData->SetString("oncursorexit", _cursorExitMessage->GetString("oncursorexit", ""));
+	}
+
 	outResourceData->SetInt("default", _buttonFlags.IsFlagSet( DEFAULT_BUTTON ) );
+
 	if ( m_bSelectionStateSaved )
 	{
 		outResourceData->SetInt( "selected", IsSelected() );
@@ -839,6 +907,20 @@ void Button::ApplySettings( KeyValues *inResourceData )
 	{
 		// add in the command
 		SetCommand(cmd);
+	}
+
+	const char* entercmd = inResourceData->GetString("oncursorenter", "");
+	if (*entercmd)
+	{
+		// add in the command
+		SetCursorEnterMessage(entercmd);
+	}
+
+	const char* exitcmd = inResourceData->GetString("oncursorexit", "");
+	if (*exitcmd)
+	{
+		// add in the command
+		SetCursorExitMessage(exitcmd);
 	}
 
 	// set default button state
@@ -902,6 +984,9 @@ void Button::OnSetState(int state)
 //-----------------------------------------------------------------------------
 void Button::OnCursorEntered()
 {
+	if (IsEnabled() && _cursorEnterMessage)
+		PostActionSignal(_cursorEnterMessage->MakeCopy());
+
 	if (IsEnabled() && !IsSelected() )
 	{
 		SetArmed( true );
@@ -913,6 +998,9 @@ void Button::OnCursorEntered()
 //-----------------------------------------------------------------------------
 void Button::OnCursorExited()
 {
+	if (!_buttonFlags.IsFlagSet(BUTTON_KEY_DOWN) && _cursorExitMessage)
+		PostActionSignal(_cursorExitMessage->MakeCopy());
+
 	if ( !_buttonFlags.IsFlagSet( BUTTON_KEY_DOWN ) && !IsSelected() )
 	{
 		SetArmed( false );

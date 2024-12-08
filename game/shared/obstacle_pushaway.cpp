@@ -20,7 +20,7 @@ ConVar sv_pushaway_player_force( "sv_pushaway_player_force", "200000", SV_PUSH_C
 ConVar sv_pushaway_max_player_force( "sv_pushaway_max_player_force", "10000", SV_PUSH_CONVAR_FLAGS | FCVAR_CHEAT, "Maximum of how hard the player is pushed away from physics objects." );
 
 #ifdef CLIENT_DLL
-ConVar sv_turbophysics( "sv_turbophysics", "0", FCVAR_REPLICATED, "Turns on turbo physics" );
+ConVar sv_turbophysics( "sv_turbophysics", "1", FCVAR_REPLICATED, "Turns on turbo physics" );
 #else
 extern ConVar sv_turbophysics;
 #endif

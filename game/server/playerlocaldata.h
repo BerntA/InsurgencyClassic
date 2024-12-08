@@ -41,19 +41,10 @@ public:
 		
 	Vector				m_vecOverViewpoint;			// Viewpoint overriding the real player's viewpoint
 	
-	// Fully ducked
-	CNetworkVar( bool, m_bDucked );
-	// In process of ducking
-	CNetworkVar( bool, m_bDucking );
-	// In process of duck-jumping
-	CNetworkVar( bool, m_bInDuckJump );
-	// During ducking process, amount of time before full duc
-	CNetworkVar( float, m_flDucktime );
-	CNetworkVar( float, m_flDuckJumpTime );
 	// Jump time, time to auto unduck (since we auto crouch jump now).
 	CNetworkVar( float, m_flJumpTime );
 	// Step sound side flip/flip
-	int m_nStepside;;
+	int m_nStepside;
 	// Velocity at time when we hit ground
 	CNetworkVar( float, m_flFallVelocity );
 	// Previous button state
@@ -76,8 +67,6 @@ public:
 	fogparams_t			m_fog;
 	// audio environment
 	CNetworkVarEmbedded( audioparams_t, m_audio );
-
-	CNetworkVar( bool, m_bSlowMovement );
 };
 
 EXTERN_SEND_TABLE(DT_Local);

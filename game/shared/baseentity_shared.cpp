@@ -668,15 +668,8 @@ char const *CBaseEntity::DamageDecal( int bitsDamageType, int gameMaterial ) // 
 	if ( m_nRenderMode != kRenderNormal && gameMaterial == 'G' )
 		return "BulletProof";
 
-	if ( bitsDamageType == DMG_SLASH )
-		return "ManhackCut";
-
-	if (bitsDamageType == DMG_ZOMBIE)
-		return "BigScratch";
-
-	// what do we do when we get a sledgehammer?? :|
-	if (bitsDamageType == DMG_CLUB)
-		return "HandPunch";
+	if (bitsDamageType & DMG_RICOCHET)
+		return "Ricochet";
 
 	// This will get translated at a lower layer based on game material
 	return "Impact.Concrete";
@@ -1581,7 +1574,7 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 
 #if defined( GAME_DLL )
 	CBasePlayer* pPlayerFirer = ToBasePlayer(this);
-	if (pPlayerFirer && !info.m_bIgnoreSkills)
+	if (pPlayerFirer)
 	{
 		CBaseCombatWeapon* pPlayerWeapon = pPlayerFirer->GetActiveWeapon();
 		if (pPlayerWeapon)
@@ -1777,7 +1770,6 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 				CalculateBulletDamageForce( &dmgInfo, info.m_iAmmoType, vecDir, tr.endpos );
 				dmgInfo.ScaleDamageForce( info.m_flDamageForceScale );
 				dmgInfo.SetAmmoType( info.m_iAmmoType );
-				dmgInfo.SetSkillFlags(info.m_nPlayerSkillFlags);
 				tr.m_pEnt->DispatchTraceAttack( dmgInfo, vecDir, &tr );
 			
 				if ( ToBaseCombatCharacter( tr.m_pEnt ) )
@@ -1802,14 +1794,11 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 				CBaseEntity *pHitEnt = tr.m_pEnt;
 				if (!bStartedInWater && !bHitWater && pAttacker && pAttacker->IsPlayer() && pHitEnt && (pHitEnt->IsPlayer() || pHitEnt->IsNPC()))
 				{
-					if (info.m_nPlayerSkillFlags & SKILL_FLAG_EMPOWERED_BULLETS)
-					{
-						flCumulativeDamage += FirePenetrativeBullet(info, tr.endpos, vecDir, pAttacker, pHitEnt, nActualDamageType);
+					flCumulativeDamage += FirePenetrativeBullet(info, tr.endpos, vecDir, pAttacker, pHitEnt, nActualDamageType);
 #ifdef GAME_DLL
-						if (pPlayerFirer)
-							pPlayerFirer->PlaySkillSoundCue(SKILL_SOUND_CUE_AMMO_PENETRATE);
+					if (pPlayerFirer)
+						pPlayerFirer->PlaySkillSoundCue(SKILL_SOUND_CUE_AMMO_PENETRATE);
 #endif
-					}
 				}
 				else if (!bStartedInWater && !bHitWater && pAttacker && pAttacker->IsPlayer() && tr.DidHitWorld() && !tr.IsDispSurface()) // world bullet penetration.
 				{
@@ -1896,7 +1885,6 @@ float CBaseEntity::FirePenetrativeBullet(const FireBulletsInfo_t &info, Vector &
 		CalculateBulletDamageForce(&dmgInfo, info.m_iAmmoType, vecDir, tr.endpos);
 		dmgInfo.ScaleDamageForce(info.m_flDamageForceScale);
 		dmgInfo.SetAmmoType(info.m_iAmmoType);
-		dmgInfo.SetSkillFlags(info.m_nPlayerSkillFlags);
 		pEntHit->DispatchTraceAttack(dmgInfo, vecDir, &tr);
 		dmgDone += dmgInfo.GetDamage();
 	}
@@ -1985,7 +1973,7 @@ ITraceFilter* CBaseEntity::GetBeamTraceFilter( void )
 	return NULL;
 }
 
-void CBaseEntity::DispatchTraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator )
+void CBaseEntity::DispatchTraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr)
 {
 #ifdef GAME_DLL
 	// Make sure our damage filter allows the damage.
@@ -1995,28 +1983,18 @@ void CBaseEntity::DispatchTraceAttack( const CTakeDamageInfo &info, const Vector
 	}
 #endif
 
-	TraceAttack( info, vecDir, ptr, pAccumulator );
+	TraceAttack( info, vecDir, ptr );
 }
 
-void CBaseEntity::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator )
+void CBaseEntity::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	Vector vecOrigin = ptr->endpos - vecDir * 4;
 
 	if ( m_takedamage )
 	{
-#ifdef GAME_DLL
-		if ( pAccumulator )
-		{
-			pAccumulator->AccumulateMultiDamage( info, this );
-		}
-		else
-#endif // GAME_DLL
-		{
-			AddMultiDamage( info, this );
-		}
+		AddMultiDamage(info, this);
 
-		int blood = BloodColor();
-		
+		int blood = BloodColor();		
 		if ( blood != DONT_BLEED )
 		{
 			SpawnBlood( vecOrigin, vecDir, blood, info.GetDamage(), ptr->hitgroup);// a little surface blood.

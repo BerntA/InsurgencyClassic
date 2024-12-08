@@ -292,7 +292,7 @@ public:
 	virtual void			PreThink( void );
 	virtual void			PostThink( void );
 	virtual int				TakeHealth( float flHealth, int bitsDamageType );
-	virtual void			TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator );
+	virtual void			TraceAttack(const CTakeDamageInfo& info, const Vector& vecDir, trace_t* ptr);
 	virtual int				OnTakeDamage( const CTakeDamageInfo &info );
 	virtual void			DamageEffect(float flDamage, int fDamageType);
 	virtual void            CheckIsPlayerStuck(void);
@@ -352,22 +352,19 @@ public:
 
 	// Handle view smoothing when going up stairs
 	void					SmoothViewOnStairs( Vector& eyeOrigin );
-	virtual float			CalcRoll (const QAngle& angles, const Vector& velocity, float rollangle, float rollspeed);
-	void					CalcViewRoll( QAngle& eyeAngles );
+	virtual void			CalcViewRoll(QAngle& eyeAngles);
 
 	virtual void			RemoveAllItems();
 	bool					IsDead() const;
 	bool					HasPhysicsFlag( unsigned int flag ) { return (m_afPhysicsFlags & flag) != 0; }
 
 	// Weapon stuff
-	virtual Vector			Weapon_ShootPosition( );
+	virtual Vector			Weapon_ShootPosition();
+	virtual Vector			Weapon_ShootDirection();
 	virtual void			Weapon_Equip( CBaseCombatWeapon *pWeapon );
 	virtual	void			Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector *pvecTarget /* = NULL */, const Vector *pVelocity /* = NULL */ );
-	virtual	bool			Weapon_Switch(CBaseCombatWeapon *pWeapon, bool bWantDraw = false);		// Switch to given weapon if has ammo (false if failed)
+	virtual	bool			Weapon_Switch(CBaseCombatWeapon *pWeapon, bool bForce = false);		// Switch to given weapon if has ammo (false if failed)
 	virtual void			Weapon_SetLast( CBaseCombatWeapon *pWeapon );
-	virtual void			Weapon_SetNext( CBaseCombatWeapon *pWeapon );
-	virtual void            Weapon_DeployNextWeapon(void); 
-	virtual bool			Weapon_ShouldSetLast( CBaseCombatWeapon *pOldWeapon, CBaseCombatWeapon *pNewWeapon ) { return true; }
 	virtual bool			Weapon_ShouldSelectItem( CBaseCombatWeapon *pWeapon );
 	void					Weapon_DropSlot( int weaponSlot );
 	CBaseCombatWeapon		*Weapon_GetLast( void ) { return m_hLastWeapon.Get(); }
@@ -391,8 +388,6 @@ public:
 	virtual void			UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity );
 	virtual void			PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float fvol, bool force );
 	virtual const char	   *GetOverrideStepSound( const char *pszBaseStepSoundName ) { return pszBaseStepSoundName; }
-	virtual void			GetStepSoundVelocities( float *velwalk, float *velrun );
-	virtual void			SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalking );
 	virtual void			DeathSound( const CTakeDamageInfo &info );
 	virtual const char*		GetSceneSoundToken( void ) { return ""; }
 
@@ -402,7 +397,6 @@ public:
 
 	// custom player functions
 	virtual void			ImpulseCommands( void );
-	virtual void			CheatImpulseCommands( int iImpulse );
 	virtual bool			ClientCommand( const CCommand &args );
 	
 	// Observer functions
@@ -438,7 +432,7 @@ public:
 	CBaseEntity				*HasNamedPlayerItem( const char *pszItemName );
 	bool 					HasWeapons( void );// do I have ANY weapons?
 	virtual void			SelectLastItem(void);
-	virtual void 			SelectItem(const char *pstr);
+	virtual void 			SelectItem(int iWeaponID);
 	void					ItemPreFrame( void );
 	virtual void			ItemPostFrame( void );
 	virtual CBaseEntity		*GiveNamedItem(const char *szName);
@@ -853,8 +847,6 @@ private:
 
 	// these are time-sensitive things that we keep track of
 	float					m_flSwimTime;		// how long player has been underwater
-	float					m_flDuckTime;		// how long we've been ducking
-	float					m_flDuckJumpTime;	
 
 	bool					m_fInitHUD;				// True when deferred HUD restart msg needs to be sent
 	bool					m_fGameHUDInitialized;
@@ -948,13 +940,9 @@ private:
 	char					m_szNetname[MAX_PLAYER_NAME_LENGTH];
 
 protected:
-	// HACK FOR TF2 Prediction
 	friend class CGameMovement;
-	friend class CHL2GameMovement;
 	
 	// Accessors for gamemovement
-	bool IsDucked( void ) const { return m_Local.m_bDucked; }
-	bool IsDucking( void ) const { return m_Local.m_bDucking; }
 	float GetStepSize( void ) const { return m_Local.m_flStepSize; }
 
 	CNetworkVar(float, m_flLaggedMovementValue);

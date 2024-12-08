@@ -93,7 +93,7 @@ void CHUDSquadLife::FireGameEvent( IGameEvent *pEvent )
 		iLocalTeamID = pPlayer->GetTeamID( );
 		iLocalSquadID = pPlayer->GetSquadID( );
 
-		if( PlayerResource( )->GetTeamID( iPlayerID ) == iLocalTeamID && PlayerResource( )->GetSquadID( iPlayerID ) == iLocalSquadID )
+		if(g_PR->GetTeamID( iPlayerID ) == iLocalTeamID && g_PR->GetSquadID( iPlayerID ) == iLocalSquadID )
 			HighlightText( );
 
 		return;

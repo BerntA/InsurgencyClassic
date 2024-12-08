@@ -52,6 +52,11 @@
 #undef CBasePlayer	
 #endif
 
+int g_nKillCamMode = OBS_MODE_NONE;
+int g_nKillCamTarget1 = 0;
+int g_nKillCamTarget2 = 0;
+int g_nUsedPrediction = 1;
+
 bool g_bShouldRenderLocalPlayerExternally = false;
 
 extern ConVar mp_forcecamera; // in gamevars_shared.h
@@ -60,6 +65,10 @@ extern ConVar mp_forcecamera; // in gamevars_shared.h
 
 static Vector WALL_MIN(-WALL_OFFSET,-WALL_OFFSET,-WALL_OFFSET);
 static Vector WALL_MAX(WALL_OFFSET,WALL_OFFSET,WALL_OFFSET);
+
+extern ConVar default_fov;
+extern ConVar sensitivity;
+extern ConVar zoom_sensitivity_ratio;
 
 static C_BasePlayer *s_pLocalPlayer = NULL;
 
@@ -90,6 +99,9 @@ ConVar cl_meathook_neck_pivot_ingame_fwd( "cl_meathook_neck_pivot_ingame_fwd", "
 
 static ConVar cl_clean_textures_on_death( "cl_clean_textures_on_death", "0", FCVAR_DEVELOPMENTONLY,  "If enabled, attempts to purge unused textures every time a freeze cam is shown" );
 
+void RecvProxy_FOV(const CRecvProxyData* pData, void* pStruct, void* pOut);
+void RecvProxy_ViewmodelFOV(const CRecvProxyData* pData, void* pStruct, void* pOut);
+
 void RecvProxy_LocalVelocityX( const CRecvProxyData *pData, void *pStruct, void *pOut );
 void RecvProxy_LocalVelocityY( const CRecvProxyData *pData, void *pStruct, void *pOut );
 void RecvProxy_LocalVelocityZ( const CRecvProxyData *pData, void *pStruct, void *pOut );
@@ -109,31 +121,22 @@ void RecvProxy_ObserverMode  ( const CRecvProxyData *pData, void *pStruct, void 
 BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	RecvPropArray3( RECVINFO_ARRAY(m_chAreaBits), RecvPropInt(RECVINFO(m_chAreaBits[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_chAreaPortalBits), RecvPropInt(RECVINFO(m_chAreaPortalBits[0]))),
+
 	RecvPropInt(RECVINFO(m_iHideHUD)),
 
 	// View
-	
+	RecvPropInt(RECVINFO(m_iDefaultFOV)),
 	RecvPropFloat(RECVINFO(m_flFOVRate)),
+	RecvPropFloat(RECVINFO(m_flViewmodelFOVRate)),
+	RecvPropInt(RECVINFO(m_iScopeFOV)),
 	
-	RecvPropInt		(RECVINFO(m_bDucked)),
-	RecvPropInt		(RECVINFO(m_bDucking)),
-	RecvPropInt		(RECVINFO(m_bInDuckJump)),
-	RecvPropFloat	(RECVINFO(m_flDucktime)),
-	RecvPropFloat	(RECVINFO(m_flDuckJumpTime)),
 	RecvPropFloat	(RECVINFO(m_flJumpTime)),
 	RecvPropFloat	(RECVINFO(m_flFallVelocity)),
 
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[0], m_vecPunchAngle[0])),
-	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[1], m_vecPunchAngle[1])),
-	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[2], m_vecPunchAngle[2] )),
-	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngleVel.m_Value[0], m_vecPunchAngleVel[0] )),
-	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngleVel.m_Value[1], m_vecPunchAngleVel[1] )),
-	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngleVel.m_Value[2], m_vecPunchAngleVel[2] )),
-#else
-	RecvPropVector	(RECVINFO(m_vecPunchAngle)),
-	RecvPropVector	(RECVINFO(m_vecPunchAngleVel)),
-#endif
+	RecvPropVector(RECVINFO(m_vecPunchAngle)),
+	RecvPropVector(RECVINFO(m_vecPunchAngleVel)),
+	RecvPropVector(RECVINFO(m_vecRecoilPunchAngle)),
+	RecvPropVector(RECVINFO(m_vecRecoilPunchAngleVel)),
 
 	RecvPropFloat	(RECVINFO(m_flStepSize)),
 	RecvPropInt		(RECVINFO(m_bAllowAutoMovement)),
@@ -188,7 +191,6 @@ END_RECV_TABLE()
 		RecvPropInt			( RECVINFO( m_nNextThinkTick ) ),
 
 		RecvPropEHandle		( RECVINFO( m_hLastWeapon ) ),
-		RecvPropEHandle		( RECVINFO( m_hNextWeapon ) ),
 		RecvPropEHandle		( RECVINFO( m_hGroundEntity ) ),
 
  		RecvPropFloat		( RECVINFO(m_vecVelocity[0]), 0, RecvProxy_LocalVelocityX ),
@@ -203,10 +205,19 @@ END_RECV_TABLE()
 		RecvPropFloat		( RECVINFO( m_flConstraintWidth )),
 		RecvPropFloat		( RECVINFO( m_flConstraintSpeedFactor )),
 
-		RecvPropFloat		( RECVINFO( m_flDeathTime )),
+		RecvPropInt(RECVINFO(m_iFOV), 0, RecvProxy_FOV),
+		RecvPropInt(RECVINFO(m_iViewmodelFOV), 0, RecvProxy_ViewmodelFOV),
+
+		RecvPropInt(RECVINFO(m_iHealth)),
+		RecvPropEHandle(RECVINFO(m_hViewModel)),
+
+		RecvPropEHandle(RECVINFO(m_hNextActiveWeapon)),
+		RecvPropTime(RECVINFO(m_flNextActiveWeapon)),
 
 		RecvPropInt			( RECVINFO( m_nWaterLevel ) ),
 		RecvPropFloat		( RECVINFO( m_flLaggedMovementValue )),
+
+		RecvPropFloat(RECVINFO(m_flDeathTime)),
 
 		RecvPropInt			(RECVINFO(m_ArmorValue)),
 
@@ -224,63 +235,43 @@ END_RECV_TABLE()
 
 		RecvPropDataTable(RECVINFO_DT(pl), 0, &REFERENCE_RECV_TABLE(DT_PlayerState), DataTableRecvProxy_StaticDataTable),
 
-		RecvPropInt		(RECVINFO(m_iFOV)),
-		RecvPropInt		(RECVINFO(m_iFOVStart)),
-		RecvPropFloat	(RECVINFO(m_flFOVTime)),
-		RecvPropInt		(RECVINFO(m_iDefaultFOV)),
-
-		RecvPropEHandle( RECVINFO(m_hUseEntity) ),
-
-		RecvPropInt		(RECVINFO(m_iHealth)),
-		RecvPropInt     (RECVINFO(m_iMaxHealth)),
-		RecvPropInt		(RECVINFO(m_lifeState)),
-
-		RecvPropFloat	(RECVINFO(m_flMaxspeed)),
-		RecvPropFloat(RECVINFO(m_flMaxAirSpeed)),		
-
-		RecvPropInt		(RECVINFO(m_fFlags)),
-
 		RecvPropInt		(RECVINFO(m_iObserverMode), 0, RecvProxy_ObserverMode ),
 		RecvPropEHandle	(RECVINFO(m_hObserverTarget), RecvProxy_ObserverTarget ),
-		RecvPropEHandle	(RECVINFO(m_hViewModel)),
+
+		// Eye angles
+		RecvPropFloat(RECVINFO(m_angEyeAngles[0])),
+		RecvPropFloat(RECVINFO(m_angEyeAngles[1])),
+
+		// Miscellaneous
+		RecvPropFloat(RECVINFO(m_flMaxspeed)),
+		RecvPropInt(RECVINFO(m_fFlags)),
+		RecvPropInt(RECVINFO(m_lifeState)),
+		RecvPropInt(RECVINFO(m_iSpawnInterpCounter)),
 
 	END_RECV_TABLE()
 
 BEGIN_PREDICTION_DATA_NO_BASE( CPlayerState )
 
 	DEFINE_PRED_FIELD(  deadflag, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	// DEFINE_FIELD( netname, string_t ),
-	// DEFINE_FIELD( fixangle, FIELD_INTEGER ),
-	// DEFINE_FIELD( anglechange, FIELD_FLOAT ),
-	// DEFINE_FIELD( v_angle, FIELD_VECTOR ),
 
 END_PREDICTION_DATA()	
 
 BEGIN_PREDICTION_DATA_NO_BASE( CPlayerLocalData )
 
-	// DEFINE_PRED_TYPEDESCRIPTION( m_skybox3d, sky3dparams_t ),
-	// DEFINE_PRED_TYPEDESCRIPTION( m_fog, fogparams_t ),
-	// DEFINE_PRED_TYPEDESCRIPTION( m_audio, audioparams_t ),
 	DEFINE_FIELD( m_nStepside, FIELD_INTEGER ),
 
 	DEFINE_PRED_FIELD( m_iHideHUD, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
-#if PREDICTION_ERROR_CHECK_LEVEL > 1
-	DEFINE_PRED_FIELD( m_vecPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_vecPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE ),
-#else
-	DEFINE_PRED_FIELD_TOL( m_vecPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
-	DEFINE_PRED_FIELD_TOL( m_vecPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f ),
-#endif
+
+	DEFINE_PRED_FIELD_TOL(m_vecPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f),
+	DEFINE_PRED_FIELD_TOL(m_vecPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f),
+
+	DEFINE_PRED_FIELD_TOL(m_vecRecoilPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f),
+	DEFINE_PRED_FIELD_TOL(m_vecRecoilPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f),
+
 	DEFINE_PRED_FIELD( m_bAllowAutoMovement, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 
-	DEFINE_PRED_FIELD( m_bDucked, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bDucking, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bInDuckJump, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flDucktime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flDuckJumpTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flJumpTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD_TOL( m_flFallVelocity, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.5f ),
-//	DEFINE_PRED_FIELD( m_nOldButtons, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_FIELD( m_nOldButtons, FIELD_INTEGER ),
 	DEFINE_PRED_FIELD( m_flStepSize, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_FIELD( m_flFOVRate, FIELD_FLOAT ),
@@ -295,6 +286,7 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 	DEFINE_PRED_FIELD( m_iFOV, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flFOVTime, FIELD_FLOAT, 0 ),
 	DEFINE_PRED_FIELD( m_iFOVStart, FIELD_INTEGER, 0 ),
+	DEFINE_PRED_FIELD(m_iViewmodelFOV, FIELD_INTEGER, FTYPEDESC_INSENDTABLE),
 
 	DEFINE_PRED_FIELD_TOL( m_flMaxspeed, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.5f ),
 	DEFINE_PRED_FIELD_TOL(m_flMaxAirSpeed, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.5f),
@@ -316,13 +308,8 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 	DEFINE_FIELD( m_afButtonLast, FIELD_INTEGER ),
 	DEFINE_FIELD( m_afButtonPressed, FIELD_INTEGER ),
 	DEFINE_FIELD( m_afButtonReleased, FIELD_INTEGER ),
-	// DEFINE_FIELD( m_vecOldViewAngles, FIELD_VECTOR ),
-	// DEFINE_FIELD( m_pModelLight, dlight_t* ),
-	// DEFINE_FIELD( m_pEnvironmentLight, dlight_t* ),
-	// DEFINE_FIELD( m_pBrightLight, dlight_t* ),
-	DEFINE_PRED_FIELD( m_hLastWeapon, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
 
-	DEFINE_PRED_FIELD( m_hNextWeapon, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_hLastWeapon, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
 
 	DEFINE_PRED_FIELD( m_nTickBase, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 
@@ -332,6 +319,9 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 
 	DEFINE_FIELD( m_surfaceFriction, FIELD_FLOAT ),
 
+	DEFINE_PRED_FIELD(m_hNextActiveWeapon, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE),
+	DEFINE_PRED_FIELD(m_flNextActiveWeapon, FIELD_FLOAT, FTYPEDESC_INSENDTABLE),
+
 END_PREDICTION_DATA()
 
 LINK_ENTITY_TO_CLASS( player, C_BasePlayer );
@@ -339,9 +329,17 @@ LINK_ENTITY_TO_CLASS( player, C_BasePlayer );
 // -------------------------------------------------------------------------------- //
 // Functions.
 // -------------------------------------------------------------------------------- //
-C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOffset" )
+C_BasePlayer::C_BasePlayer() : 
+	m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOffset" ),
+	m_iv_angEyeAngles("C_BasePlayer::m_iv_angEyeAngles")
 {
 	AddVar( &m_vecViewOffset, &m_iv_vecViewOffset, LATCH_SIMULATION_VAR );
+
+	m_angEyeAngles.Init();
+	AddVar(&m_angEyeAngles, &m_iv_angEyeAngles, LATCH_SIMULATION_VAR);
+
+	AddVar(&m_Local.m_vecPunchAngle, &m_Local.m_iv_vecPunchAngle, LATCH_SIMULATION_VAR);
+	AddVar(&m_Local.m_vecRecoilPunchAngle, &m_Local.m_iv_vecRecoilPunchAngle, LATCH_SIMULATION_VAR);
 	
 #ifdef _DEBUG																
 	m_vecLadderNormal.Init();
@@ -369,12 +367,7 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_surfaceFriction = 1.0f;
 	m_chTextureType = 0;
 
-	m_bIsSelectingWeapons = false;
-
-	m_nForceVisionFilterFlags = 0;
-	m_nLocalPlayerVisionFlags = 0;
-
-	ListenForGameEvent( "base_player_teleported" );	
+	m_iSpawnInterpCounterCache = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -383,6 +376,7 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 C_BasePlayer::~C_BasePlayer()
 {
 	DeactivateVguiScreen( m_pCurrentVguiScreen.Get() );
+
 	if ( this == s_pLocalPlayer )
 	{
 		s_pLocalPlayer = NULL;
@@ -405,9 +399,9 @@ void C_BasePlayer::Spawn( void )
 	SetEffects( effects );
 
 	m_iFOV	= 0;	// init field of view.
+	m_iViewmodelFOV = 0;
 
     SetModel( "models/player.mdl" );
-
 	Precache();
 
 	if (IsLocalPlayer())
@@ -420,7 +414,6 @@ void C_BasePlayer::Spawn( void )
 	SharedSpawn();
 
 	m_bWasFreezeFraming = false;
-	m_bIsSelectingWeapons = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -568,12 +561,6 @@ surfacedata_t* C_BasePlayer::GetGroundSurface()
 
 void C_BasePlayer::FireGameEvent( IGameEvent *event )
 {
-	if ( FStrEq( event->GetName(), "base_player_teleported" ) )
-	{
-		//const int index = event->GetInt( "entindex" );
-		// ?
-	}
-
 }
 
 //-----------------------------------------------------------------------------
@@ -619,11 +606,22 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 	//  on this same frame are not stomped because prediction thinks there
 	//  isn't a local player yet!!!
 
+	if (m_iSpawnInterpCounter != m_iSpawnInterpCounterCache)
+	{
+		MoveToLastReceivedPosition(true);
+		ResetLatched();
+		m_iSpawnInterpCounterCache = m_iSpawnInterpCounter;
+	}
+
 	if ( updateType == DATA_UPDATE_CREATED )
 	{
 		// Make sure s_pLocalPlayer is correct
 
 		int iLocalPlayerIndex = engine->GetLocalPlayer();
+
+		if (g_nKillCamMode)
+			iLocalPlayerIndex = g_nKillCamTarget1;
+
 		if ( iLocalPlayerIndex == index )
 		{
 			Assert( s_pLocalPlayer == NULL );
@@ -676,18 +674,8 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 			m_flFreezeFrameDistance = RandomFloat( spec_freeze_distance_min.GetFloat(), spec_freeze_distance_max.GetFloat() );
 			m_flFreezeZOffset = RandomFloat( -30, 20 );
 			m_bSentFreezeFrame = false;
-			m_nForceVisionFilterFlags = 0;
 
-			C_BaseEntity *target = GetObserverTarget();
-			if ( target && target->IsPlayer() )
-			{
-				C_BasePlayer *player = ToBasePlayer( target );
-				if ( player )
-				{
-					m_nForceVisionFilterFlags = player->GetVisionFilterFlags();
-					CalculateVisionUsingCurrentFlags();
-				}
-			}
+			C_BaseEntity* target = GetObserverTarget();;
 
 			IGameEvent *pEvent = gameeventmanager->CreateEvent( "show_freezepanel" );
 			if ( pEvent )
@@ -716,18 +704,51 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 
 			ConVar *pVar = (ConVar *)cvar->FindVar( "snd_soundmixer" );
 			pVar->Revert();
-
-			m_nForceVisionFilterFlags = 0;
-			CalculateVisionUsingCurrentFlags();
 		}
-		
-		// force calculate vision when the local vision flags changed
-		int nCurrentLocalPlayerVisionFlags = GetLocalPlayerVisionFilterFlags();
-		if ( m_nLocalPlayerVisionFlags != nCurrentLocalPlayerVisionFlags )
+
+		gHUD.m_flFOVSensitivityAdjust = 1.0f;
+
+		if (gHUD.m_flMouseSensitivityFactor)
 		{
-			CalculateVisionUsingCurrentFlags();
-			m_nLocalPlayerVisionFlags = nCurrentLocalPlayerVisionFlags;
-		}		
+			gHUD.m_flMouseSensitivity = sensitivity.GetFloat() * gHUD.m_flMouseSensitivityFactor;
+		}
+		else
+		{
+			// update our FOV, including any zooms going on
+			int	iLocalFOV, iDefaultFOV;
+			iDefaultFOV = g_pGameRules->DefaultFOV();
+
+			// PNOTE: GetScopeFOV( ) returns a FOV designed for the scopeview
+			// doesn't relate to actual view - so a constant scales it up
+
+			if (IsZoomed())
+			{
+				iLocalFOV = GetScopeFOV() * 2.0f;
+			}
+			else
+			{
+				iLocalFOV = GetFOV();
+
+				// PNOTE: when sprinting hack the FOV to be lower
+				// to slow down turn speed
+
+				if (IsSprinting())
+					iLocalFOV *= 0.5f;
+			}
+
+			// no override, don't use huge sensitivity
+			if (iLocalFOV == iDefaultFOV)
+			{
+				// reset to saved sensitivity
+				gHUD.m_flMouseSensitivity = 0;
+			}
+			else
+			{
+				// set a new sensitivity that is proportional to the change 
+				// from the FOV default and scaled by a separate compensating factor
+				gHUD.m_flMouseSensitivity = sensitivity.GetFloat() * ((float)iLocalFOV / (float)iDefaultFOV) * zoom_sensitivity_ratio.GetFloat();
+			}
+		}
 	}
 
 	// If we are updated while paused, allow the player origin to be snapped by the
@@ -784,6 +805,11 @@ void C_BasePlayer::OnDataChanged( DataUpdateType_t updateType )
 			FogControllerChanged( updateType == DATA_UPDATE_CREATED );
 		}
 	}
+
+	if (updateType == DATA_UPDATE_CREATED)
+		SetNextClientThink(CLIENT_THINK_ALWAYS);
+
+	UpdateVisibility();
 }
 
 //-----------------------------------------------------------------------------
@@ -825,12 +851,12 @@ void C_BasePlayer::DetermineVguiInputMode( CUserCmd *pCmd )
 
 	// If we're in vgui mode *and* we're holding down mouse buttons,
 	// stay in vgui mode even if we're outside the screen bounds
-	if (m_pCurrentVguiScreen.Get() && (pCmd->buttons & (IN_ATTACK | IN_ATTACK2)) )
+	if (m_pCurrentVguiScreen.Get() && (pCmd->buttons & (IN_ATTACK | IN_SPECIAL1 | IN_SPECIAL2)) )
 	{
 		SetVGuiScreenButtonState( m_pCurrentVguiScreen.Get(), pCmd->buttons );
 
 		// Kill all attack inputs if we're in vgui screen mode
-		pCmd->buttons &= ~(IN_ATTACK | IN_ATTACK2);
+		pCmd->buttons &= ~(IN_ATTACK | IN_SPECIAL1 | IN_SPECIAL2);
 		return;
 	}
 
@@ -839,7 +865,7 @@ void C_BasePlayer::DetermineVguiInputMode( CUserCmd *pCmd )
 
 	// Don't enter vgui mode if we've got combat buttons held down
 	bool bAttacking = false;
-	if ( ((pCmd->buttons & IN_ATTACK) || (pCmd->buttons & IN_ATTACK2)) && !m_pCurrentVguiScreen.Get() )
+	if ( ((pCmd->buttons & IN_ATTACK) || (pCmd->buttons & IN_SPECIAL1) || (pCmd->buttons & IN_SPECIAL2)) && !m_pCurrentVguiScreen.Get() )
 	{
 		bAttacking = true;
 	}
@@ -877,7 +903,7 @@ void C_BasePlayer::DetermineVguiInputMode( CUserCmd *pCmd )
 		SetVGuiScreenButtonState( m_pCurrentVguiScreen.Get(), pCmd->buttons );
 
 		// Kill all attack inputs if we're in vgui screen mode
-		pCmd->buttons &= ~(IN_ATTACK | IN_ATTACK2);
+		pCmd->buttons &= ~(IN_ATTACK | IN_SPECIAL1 | IN_SPECIAL2);
 	}
 }
 
@@ -1018,6 +1044,10 @@ void C_BasePlayer::AddEntity( void )
 
 	// Add in lighting effects
 	CreateLightEffects();
+
+	QAngle vTempAngles = GetLocalAngles();
+	vTempAngles[PITCH] = m_angEyeAngles[PITCH];
+	SetLocalAngles(vTempAngles);
 }
 
 extern float UTIL_WaterLevel( const Vector &position, float minz, float maxz );
@@ -1121,7 +1151,6 @@ bool C_BasePlayer::ShouldInterpolate()
 	return BaseClass::ShouldInterpolate();
 }
 
-
 bool C_BasePlayer::ShouldDraw()
 {
 	if (bb2_render_client_in_mirrors.GetBool())
@@ -1146,22 +1175,22 @@ int C_BasePlayer::DrawModel( int flags )
 //-----------------------------------------------------------------------------
 Vector C_BasePlayer::GetChaseCamViewOffset( CBaseEntity *target )
 {
-	C_HL2MP_Player *player = ToHL2MPPlayer( target );
-	if ( player )
+	C_BasePlayer* player = ToBasePlayer(target);
+	if (player)
 	{
-		if ( player->IsAlive() )
+		if (player->IsAlive()) 
 		{
-			if (player->IsSliding())
-				return VEC_SLIDE_VIEW_SCALED(player);
-			else if (player->GetFlags() & FL_DUCKING)
+			if (player->IsProned())
+				return VEC_PRONE_VIEW_SCALED(player);
+			else if (player->IsCrouched())
 				return VEC_DUCK_VIEW_SCALED(player);
-
-			return VEC_VIEW_SCALED(player);
+			else
+				return VEC_VIEW_SCALED(player);
 		}
 		else
 		{
 			// assume it's the players ragdoll
-			return VEC_DEAD_VIEWHEIGHT_SCALED( player );
+			return VEC_DEAD_VIEWHEIGHT_SCALED(player);
 		}
 	}
 
@@ -1412,31 +1441,23 @@ void C_BasePlayer::CalcInEyeCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	// Apply punch angle
 	VectorAdd( eyeAngles, GetPunchAngle(), eyeAngles );
 
-	if (engine->IsHLTV())
-	{
-		C_BaseAnimating *pTargetAnimating = target->GetBaseAnimating();
+	// eyeAngles = pPlayerTarget->GetAnimEyeAngles(); ??
+	// todo INS -- ADD DUCK, PRONE, ETC
 
-		C_HL2MP_Player *pClient = ToHL2MPPlayer(target);
-		if (pClient && pClient->IsSliding())
-		{
-			eyeOrigin += VEC_SLIDE_VIEW_SCALED(pClient);
-		}
-		else if ( target->GetFlags() & FL_DUCKING )
-		{
-			eyeOrigin += pTargetAnimating ? VEC_DUCK_VIEW_SCALED( pTargetAnimating ) : VEC_DUCK_VIEW;
-		}
-		else
-		{
-			eyeOrigin += pTargetAnimating ? VEC_VIEW_SCALED( pTargetAnimating ) : VEC_VIEW;
-		}
+	C_BaseAnimating* pTargetAnimating = target->GetBaseAnimating();
+	C_HL2MP_Player* pClient = ToHL2MPPlayer(target);
+
+	if (pClient && pClient->IsSliding())
+	{
+		eyeOrigin += VEC_SLIDE_VIEW_SCALED(pClient);
+	}
+	else if (target->GetFlags() & FL_DUCKING)
+	{
+		eyeOrigin += pTargetAnimating ? VEC_DUCK_VIEW_SCALED(pTargetAnimating) : VEC_DUCK_VIEW;
 	}
 	else
 	{
-		Vector offset = GetViewOffset();
-#ifdef HL2MP
-		offset = target->GetViewOffset();
-#endif
-		eyeOrigin += offset; // hack hack
+		eyeOrigin += pTargetAnimating ? VEC_VIEW_SCALED(pTargetAnimating) : VEC_VIEW;
 	}
 
 	engine->SetViewAngles( eyeAngles );
@@ -1502,8 +1523,6 @@ void C_BasePlayer::CalcDeathCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 
 	fov = GetFOV();
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Return the weapon to have open the weapon selection on, based upon our currently active weapon
@@ -1663,6 +1682,18 @@ void C_BasePlayer::UpdateClientData( void )
 // Prediction stuff
 void C_BasePlayer::PreThink( void )
 {
+	QAngle vTempAngles = GetLocalAngles();
+
+	if (GetLocalPlayer() == this)	
+		vTempAngles[PITCH] = EyeAngles()[PITCH];	
+	else	
+		vTempAngles[PITCH] = m_angEyeAngles[PITCH];	
+
+	if (vTempAngles[YAW] < 0.0f)	
+		vTempAngles[YAW] += 360.0f;	
+
+	SetLocalAngles(vTempAngles);
+
 #if !defined( NO_ENTITY_PREDICTION )
 	ItemPreFrame();
 
@@ -1691,38 +1722,37 @@ void C_BasePlayer::PostThink( void )
 #if !defined( NO_ENTITY_PREDICTION )
 	MDLCACHE_CRITICAL_SECTION();
 
-	if ( IsAlive())
+	if (IsAlive())
 	{
-		C_HL2MP_Player *player = ToHL2MPPlayer( this );
 		// Need to do this on the client to avoid prediction errors
-		if (player && player->IsSliding())
+		if (IsProned())
 		{
-			SetCollisionBounds( VEC_SLIDE_HULL_MIN, VEC_SLIDE_HULL_MAX );
+			SetCollisionBounds(VEC_PRONE_HULL_MIN, VEC_PRONE_HULL_MAX);
 		}
-		else if ( GetFlags() & FL_DUCKING )
+		else if (IsCrouched())
 		{
-			SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
+			SetCollisionBounds(VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX);
 		}
 		else
 		{
-			SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );
-		}		
-		
+			SetCollisionBounds(VEC_HULL_MIN, VEC_HULL_MAX);
+		}
+
 		// do weapon stuff
 		ItemPostFrame();
 
-		if ( GetFlags() & FL_ONGROUND )
-		{		
+		if (GetFlags() & FL_ONGROUND)
+		{
 			m_Local.m_flFallVelocity = 0;
 		}
 
 		// Don't allow bogus sequence on player
-		if ( GetSequence() == -1 )
+		if (GetSequence() == -1)
 		{
-			SetSequence( 0 );
+			SetSequence(0);
 		}
 
-		//StudioFrameAdvance(); <- BB2 Warn - Client Anims Should COver this!
+		StudioFrameAdvance(); // INS warn
 	}
 
 	// Even if dead simulate entities
@@ -1928,12 +1958,20 @@ const QAngle& C_BasePlayer::GetPunchAngle()
 	return m_Local.m_vecPunchAngle.Get();
 }
 
-
 void C_BasePlayer::SetPunchAngle( const QAngle &angle )
 {
 	m_Local.m_vecPunchAngle = angle;
 }
 
+const QAngle& C_BasePlayer::GetRecoilPunchAngle(void)
+{
+	return m_Local.m_vecRecoilPunchAngle.Get();
+}
+
+void C_BasePlayer::SetRecoilPunchAngle(const QAngle& angle)
+{
+	m_Local.m_vecRecoilPunchAngle = angle;
+}
 
 float C_BasePlayer::GetWaterJumpTime() const
 {
@@ -1955,7 +1993,6 @@ void C_BasePlayer::SetSwimSoundTime( float flSwimSoundTime )
 	m_flSwimSoundTime = flSwimSoundTime;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Return true if this object can be +used by the player
 //-----------------------------------------------------------------------------
@@ -1964,6 +2001,23 @@ bool C_BasePlayer::IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredC
 	return false;
 }
 
+void RecvProxy_FOV(const CRecvProxyData* pData, void* pStruct, void* pOut)
+{
+	C_BasePlayer* pPlayer = (C_BasePlayer*)pStruct;
+
+	//Hold onto the old FOV as our starting point
+	int iNewFov = pData->m_Value.m_Int;
+
+	if (pPlayer->m_iFOV == iNewFov)
+		return;
+
+	// Get the true current FOV of the player at this point
+	pPlayer->m_iFOVStart = pPlayer->GetFOV();
+
+	//Get our start time for the zoom
+	pPlayer->m_flFOVTime = gpGlobals->curtime;
+	pPlayer->m_iFOV = iNewFov;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -2024,6 +2078,50 @@ float C_BasePlayer::GetFOV( void )
 	}
 
 	return fFOV;
+}
+
+float C_BasePlayer::GetViewmodelFOV(void)
+{
+	if (GetObserverMode() == OBS_MODE_IN_EYE)
+	{
+		C_BasePlayer* pTargetPlayer = dynamic_cast<C_BasePlayer*>(GetObserverTarget());
+
+		if (pTargetPlayer)
+			return pTargetPlayer->GetViewmodelFOV();
+	}
+
+	float flFOV = m_iViewmodelFOV;
+	if (flFOV == 0)
+		flFOV = GetDefaultViewmodelFOV();
+
+	if ((flFOV != m_iViewmodelFOVStart) && (m_Local.m_flViewmodelFOVRate > 0.0f))
+	{
+		float flDeltaTime = (float)(gpGlobals->curtime - m_flViewmodelFOVTime) / m_Local.m_flViewmodelFOVRate;
+
+		if (flDeltaTime >= 1.0f)
+			m_iViewmodelFOVStart = flFOV;
+		else
+			flFOV = SimpleSplineRemapVal(flDeltaTime, 0.0f, 1.0f, m_iViewmodelFOVStart, flFOV);
+	}
+
+	return flFOV;
+}
+
+void RecvProxy_ViewmodelFOV(const CRecvProxyData* pData, void* pStruct, void* pOut)
+{
+	C_BasePlayer* pPlayer = (C_BasePlayer*)pStruct;
+
+	int iNewFOV = pData->m_Value.m_Int;
+
+	if (pPlayer->m_iViewmodelFOV == iNewFOV)
+		return;
+
+	// get the true current FOV of the player at this point
+	pPlayer->m_iViewmodelFOVStart = pPlayer->GetViewmodelFOV();
+
+	// get our start time for the zoom
+	pPlayer->m_flViewmodelFOVTime = gpGlobals->curtime;
+	pPlayer->m_iViewmodelFOV = iNewFOV;
 }
 
 void RecvProxy_LocalVelocityX( const CRecvProxyData *pData, void *pStruct, void *pOut )
@@ -2215,18 +2313,14 @@ void C_BasePlayer::GetPredictionErrorSmoothingVector( Vector &vOffset )
 #endif
 }
 
-
 IRagdoll* C_BasePlayer::GetRepresentativeRagdoll() const
 {
 	return m_pRagdoll;
 }
 
-IMaterial *C_BasePlayer::GetHeadLabelMaterial( void )
+CBaseAnimating* C_BasePlayer::GetRagdollEntity() const
 {
-	if ( GetClientVoiceMgr() == NULL )
-		return NULL;
-
-	return GetClientVoiceMgr()->GetHeadLabelMaterial();
+	return NULL;
 }
 
 bool IsInFreezeCam( void )
@@ -2377,6 +2471,24 @@ bool C_BasePlayer::GetSteamID( CSteamID *pID )
 		}
 	}
 	return false;
+}
+
+void C_BasePlayer::SnapEyeAngles(QAngle& Angle, int iFixAngle)
+{
+	if (iFixAngle == FIXANGLE_NONE)
+		return;
+
+	if (iFixAngle == FIXANGLE_RELATIVE)
+	{
+		QAngle viewAngles;
+		engine->GetViewAngles(viewAngles);
+
+		engine->SetViewAngles(viewAngles + Angle);
+	}
+	else
+	{
+		engine->SetViewAngles(Angle);
+	}
 }
 
 void CC_DumpClientSoundscapeData( const CCommand& args )

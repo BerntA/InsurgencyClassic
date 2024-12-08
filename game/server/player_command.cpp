@@ -48,26 +48,6 @@ void CPlayerMove::StartCommand( CBasePlayer *player, CUserCmd *cmd )
 	player->m_pCurrentCommand = cmd;
 	CBaseEntity::SetPredictionRandomSeed( cmd );
 	CBaseEntity::SetPredictionPlayer( player );
-	
-#if defined (HL2_DLL)
-	// pull out backchannel data and move this out
-
-	int i;
-	for (i = 0; i < cmd->entitygroundcontact.Count(); i++)
-	{
-		int entindex =  cmd->entitygroundcontact[i].entindex;
-		CBaseEntity *pEntity = CBaseEntity::Instance( engine->PEntityOfEntIndex( entindex) );
-		if (pEntity)
-		{
-			CBaseAnimating *pAnimating = pEntity->GetBaseAnimating();
-			if (pAnimating)
-			{
-				pAnimating->SetIKGroundContactInfo( cmd->entitygroundcontact[i].minheight, cmd->entitygroundcontact[i].maxheight );
-			}
-		}
-	}
-
-#endif
 }
 
 //-----------------------------------------------------------------------------

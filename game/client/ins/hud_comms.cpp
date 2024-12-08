@@ -77,7 +77,7 @@ void CommsGroup_t::AddOption( const char *pszName, bool bAddQuotes )
 
 	CommsOption_t &Option = m_Options[ iOptionID ];
 
-	localize( )->ConvertANSIToUnicode( pszNewName, Option.m_wszName, sizeof( Option.m_wszName ) );
+	g_pVGuiLocalize->ConvertANSIToUnicode( pszNewName, Option.m_wszName, sizeof( Option.m_wszName ) );
 	Option.m_iNameLength = Q_strlen( pszNewName );
 }
 

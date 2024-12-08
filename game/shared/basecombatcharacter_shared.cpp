@@ -17,14 +17,19 @@
 // Output : Returns true if the weapon was switched, false if there was no better
 //			weapon to switch to.
 //-----------------------------------------------------------------------------
-bool CBaseCombatCharacter::SwitchToNextBestWeapon(CBaseCombatWeapon *pCurrent)
+bool CBaseCombatCharacter::SwitchToNextBestWeapon(CBaseCombatWeapon* pCurrent)
 {
-	CBaseCombatWeapon *pNewWeapon = g_pGameRules->GetNextBestWeapon(this, pCurrent);
-	
-	if ( ( pNewWeapon != NULL ) && ( pNewWeapon != pCurrent ) )
+#ifdef GAME_DLL
+	if (pCurrent && pCurrent->IsExhaustible() && !pCurrent->HasAmmo())
 	{
-		return Weapon_Switch(pNewWeapon, true);
+		RemoveWeapon(pCurrent);
+		pCurrent = NULL;
 	}
+#endif
+
+	CBaseCombatWeapon* pNewWeapon = GetNextBestWeapon(pCurrent);
+	if (IsAlive() && (pNewWeapon != NULL) && (pNewWeapon != pCurrent))
+		return Weapon_Switch(pNewWeapon);
 
 	return false;
 }
@@ -34,38 +39,23 @@ bool CBaseCombatCharacter::SwitchToNextBestWeapon(CBaseCombatWeapon *pCurrent)
 // Input  :
 // Output : true is switch succeeded
 //-----------------------------------------------------------------------------
-bool CBaseCombatCharacter::Weapon_Switch(CBaseCombatWeapon *pWeapon, bool bWantDraw)
+bool CBaseCombatCharacter::Weapon_Switch(CBaseCombatWeapon* pWeapon, bool bForce)
 {
-	if ( pWeapon == NULL )
-		return false;
-
-	// Already have it out?
-	if ( m_hActiveWeapon.Get() == pWeapon )
-	{
-		if ( !m_hActiveWeapon->IsWeaponVisible() || m_hActiveWeapon->IsHolstered() )
-			return m_hActiveWeapon->Deploy( );
-
-		return false;
-	}
-
-	m_hActiveWeapon = pWeapon;
-	return pWeapon->Deploy( );
+	return false;
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns whether or not we can switch to the given weapon.
 // Input  : pWeapon - 
 //-----------------------------------------------------------------------------
-bool CBaseCombatCharacter::Weapon_CanSwitchTo(CBaseCombatWeapon *pWeapon)
+bool CBaseCombatCharacter::Weapon_CanSwitchTo(CBaseCombatWeapon* pWeapon)
 {
-	if (!pWeapon->CanDeploy())
+	if (!pWeapon || !pWeapon->CanDeploy())
 		return false;
 
-	if (m_hActiveWeapon)
-	{
-		if ( !m_hActiveWeapon->CanHolster() )
-			return false;
-	}
+	CBaseCombatWeapon* pActiveWeapon = m_hActiveWeapon;
+	if (pActiveWeapon && !pActiveWeapon->CanHolster())
+		return false;
 
 	return true;
 }
@@ -74,7 +64,16 @@ bool CBaseCombatCharacter::Weapon_CanSwitchTo(CBaseCombatWeapon *pWeapon)
 // Purpose: 
 // Output : CBaseCombatWeapon
 //-----------------------------------------------------------------------------
-CBaseCombatWeapon *CBaseCombatCharacter::GetActiveWeapon() const
+CBaseCombatWeapon* CBaseCombatCharacter::GetNextBestWeapon(CBaseCombatWeapon* pCurrentWeapon)
+{
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : CBaseCombatWeapon
+//-----------------------------------------------------------------------------
+CBaseCombatWeapon* CBaseCombatCharacter::GetActiveWeapon() const
 {
 	return m_hActiveWeapon;
 }
@@ -82,12 +81,12 @@ CBaseCombatWeapon *CBaseCombatCharacter::GetActiveWeapon() const
 //-----------------------------------------------------------------------------
 // Purpose: Returns weapon if already owns a weapon of this class
 //-----------------------------------------------------------------------------
-CBaseCombatWeapon* CBaseCombatCharacter::Weapon_OwnsThisType( const char *pszWeapon ) const
+CBaseCombatWeapon* CBaseCombatCharacter::Weapon_OwnsThisType(int iWeaponID) const
 {
-	// Check for duplicates
-	for (int i = 0; i < MAX_WEAPONS; i++)
+	for (int i = 0; i < MAX_PWEAPONS; i++)
 	{
-		if (m_hMyWeapons[i].Get() && FClassnameIs(m_hMyWeapons[i], pszWeapon))
+		CBaseCombatWeapon* pWeapon = m_hMyWeapons[i];
+		if (pWeapon && pWeapon->GetWeaponID() == iWeaponID)
 			return m_hMyWeapons[i];
 	}
 	return NULL;
@@ -96,18 +95,11 @@ CBaseCombatWeapon* CBaseCombatCharacter::Weapon_OwnsThisType( const char *pszWea
 //-----------------------------------------------------------------------------
 // Purpose: Returns weapons with the appropriate weapon slot.
 //-----------------------------------------------------------------------------
-CBaseCombatWeapon *CBaseCombatCharacter::Weapon_GetBySlot(int slot) const
+CBaseCombatWeapon* CBaseCombatCharacter::Weapon_GetBySlot(int slot) const
 {
-	for (int i = 0; i < MAX_WEAPONS; i++)
-	{
-		if (m_hMyWeapons[i].Get())
-		{
-			if (m_hMyWeapons[i]->GetSlot() == slot)
-				return m_hMyWeapons[i];
-		}
-	}
-
-	return NULL;
+	if ((slot < 0) || (slot >= MAX_PWEAPONS))
+		return NULL;
+	m_hMyWeapons[slot].Get();
 }
 
 int CBaseCombatCharacter::BloodColor()
@@ -118,7 +110,7 @@ int CBaseCombatCharacter::BloodColor()
 //-----------------------------------------------------------------------------
 // Blood color (see BLOOD_COLOR_* macros in baseentity.h)
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::SetBloodColor( int nBloodColor )
+void CBaseCombatCharacter::SetBloodColor(int nBloodColor)
 {
 	m_bloodColor = nBloodColor;
 }

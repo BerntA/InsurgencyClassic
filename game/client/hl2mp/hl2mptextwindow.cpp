@@ -109,38 +109,3 @@ void CHL2MPTextWindow::ApplySchemeSettings( vgui::IScheme *pScheme )
 {
 	BaseClass::ApplySchemeSettings( pScheme );
 }
-
-CHL2MPSpectatorGUI::CHL2MPSpectatorGUI(IViewPort *pViewPort) : CSpectatorGUI(pViewPort)
-{
-	m_flLastUpdateTime = 0.0f;
-}
-
-bool CHL2MPSpectatorGUI::NeedsUpdate( void )
-{
-	if ( !C_BasePlayer::GetLocalPlayer() )
-		return false;
-
-	if ( m_nLastSpecMode != C_BasePlayer::GetLocalPlayer()->GetObserverMode() )
-		return true;
-
-	if ( m_nLastSpecTarget != C_BasePlayer::GetLocalPlayer()->GetObserverTarget() )
-		return true;
-
-	if (m_flLastUpdateTime < gpGlobals->curtime)
-		return true;
-
-	return BaseClass::NeedsUpdate();
-}
-
-void CHL2MPSpectatorGUI::Update()
-{
-	BaseClass::Update();
-
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-	if( pLocalPlayer )
-	{
-		m_nLastSpecMode = pLocalPlayer->GetObserverMode();
-		m_nLastSpecTarget = pLocalPlayer->GetObserverTarget();
-		m_flLastUpdateTime = gpGlobals->curtime + 1.0f;
-	}
-}

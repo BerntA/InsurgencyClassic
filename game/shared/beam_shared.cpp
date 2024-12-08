@@ -709,7 +709,7 @@ void CBeam::BeamDamage( trace_t *ptr )
 			ClearMultiDamage();
 			Vector dir = ptr->endpos - GetAbsOrigin();
 			VectorNormalize( dir );
-			int nDamageType = DMG_ENERGYBEAM;
+			int nDamageType = DMG_PLASMA;
 
 			if (m_nDissolveType == 0)
 			{

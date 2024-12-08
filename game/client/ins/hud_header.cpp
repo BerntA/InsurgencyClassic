@@ -217,7 +217,7 @@ void CHUDHeader::Paint( void )
 	if( m_bTimerDraw )
 	{
 		wchar_t wszTimer[ 8 ];
-		localize( )->ConvertANSIToUnicode( szTimer, wszTimer, sizeof( wszTimer ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( szTimer, wszTimer, sizeof( wszTimer ) );
 
 		if( iTimerType != ROTIMERTYPE_NORMAL )
 			surface( )->DrawSetTextColor( ( iTimerType == ROTIMERTYPE_NONE ) ? COLOR_DGREY : COLOR_RED );
@@ -277,7 +277,7 @@ void CHUDHeader::Update( const CObjOrder *pObjOrders )
 		// set objective
 		char szObjBuffer[ 32 ];
 		Q_snprintf( szObjBuffer, sizeof( szObjBuffer ), "Objective %s", pObjOrders->Objective( )->GetPhonetischName( ) );
-		localize( )->ConvertANSIToUnicode( szObjBuffer, m_wszOrderObjString, sizeof( m_wszOrderObjString ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( szObjBuffer, m_wszOrderObjString, sizeof( m_wszOrderObjString ) );
 		m_iOrderObjStringLength = Q_strlen( szObjBuffer );
 		m_iOrderObjXPos = m_iOrderTypeXPos + UTIL_ComputeStringWidth( m_hLightFont, pszType ) + m_iOrderObjXGap;
 	}
@@ -295,7 +295,7 @@ void CHUDHeader::Update( const CObjOrder *pObjOrders )
 	}
 
 	// set type
-	localize( )->ConvertANSIToUnicode( pszType, m_wszOrderTypeString, sizeof( m_wszOrderTypeString ) );
+	g_pVGuiLocalize->ConvertANSIToUnicode( pszType, m_wszOrderTypeString, sizeof( m_wszOrderTypeString ) );
 	m_iOrderTypeStringLength = Q_strlen( pszType );
 }
 
@@ -323,7 +323,7 @@ void CHUDHeader::TeamUpdate( C_PlayTeam *pTeam )
 	{
 		char szBuffer[ 8 ];
 		Q_snprintf( szBuffer, sizeof( szBuffer ), "%i", pTeam->GetReinforcementsLeft( iSquadID ) );
-		localize( )->ConvertANSIToUnicode( szBuffer, m_wszWaveString, sizeof( m_wszWaveString ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( szBuffer, m_wszWaveString, sizeof( m_wszWaveString ) );
 		m_iWaveStringLength = Q_strlen( szBuffer );
 	}
 }

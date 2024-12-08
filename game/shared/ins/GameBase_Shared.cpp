@@ -46,7 +46,6 @@ void CGameBaseShared::Init()
 #ifdef CLIENT_DLL
 #else
 	m_pServerWorkshopData = new CGameDefinitionsWorkshop();
-	m_pPlayerLoadoutHandler = new CPlayerLoadoutHandler();
 #endif
 }
 
@@ -93,9 +92,6 @@ void CGameBaseShared::Release()
 #else
 	if (m_pServerWorkshopData)
 		delete m_pServerWorkshopData;
-
-	if (m_pPlayerLoadoutHandler)
-		delete m_pPlayerLoadoutHandler;
 #endif
 }
 
@@ -563,15 +559,6 @@ void CGameBaseShared::OnGameOver(float timeLeft, int iWinner)
 
 ////////////////////////////////////////////////
 // Purpose:
-// Handle client and server commands.
-///////////////////////////////////////////////
-bool CGameBaseShared::ClientCommand(const CCommand &args)
-{
-	return false;
-}
-
-////////////////////////////////////////////////
-// Purpose:
 // Notify everyone that we have a new player in our game!
 ///////////////////////////////////////////////
 void CGameBaseShared::NewPlayerConnection(bool bState, int index)
@@ -583,37 +570,6 @@ void CGameBaseShared::NewPlayerConnection(bool bState, int index)
 		event->SetInt("index", index);
 		gameeventmanager->FireEvent(event);
 	}
-}
-
-void CGameBaseShared::ComputePlayerWeight(CHL2MP_Player *pPlayer)
-{
-	if (!pPlayer)
-		return;
-
-	if (pPlayer->IsPerkFlagActive(PERK_POWERUP_CHEETAH) || (pPlayer->GetTeamNumber() == TEAM_DECEASED))
-	{
-		pPlayer->m_BB2Local.m_flCarryWeight = 0.0f;
-		return;
-	}
-
-	float m_flWeight = 0.0f;
-
-	for (int i = 0; i < MAX_WEAPONS; i++)
-	{
-		CBaseCombatWeapon *pWeapon = pPlayer->GetWeapon(i);
-		if (!pWeapon || (pWeapon->GetSlot() >= MAX_WEAPON_SLOTS) || !pWeapon->VisibleInWeaponSelection())
-			continue;
-
-		m_flWeight += pWeapon->GetWpnData().m_flPhysicalWeight;
-	}
-
-	if (pPlayer->IsHuman() && (pPlayer->GetSkillValue(PLAYER_SKILL_HUMAN_LIGHTWEIGHT) > 0))
-		m_flWeight -= ((m_flWeight / 100.0f) * pPlayer->GetSkillValue(PLAYER_SKILL_HUMAN_LIGHTWEIGHT, TEAM_HUMANS));
-
-	if (m_flWeight <= 0.0f)
-		m_flWeight = 0.0f;
-
-	pPlayer->m_BB2Local.m_flCarryWeight = m_flWeight;
 }
 #endif
 

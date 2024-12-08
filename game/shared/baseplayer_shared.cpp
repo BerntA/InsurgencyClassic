@@ -17,9 +17,10 @@
 	#include "c_world.h"
 	#include "view.h"
     #include "c_te_effect_dispatch.h"
+	#include "c_playerresource.h"
+	#include <game/client/iviewport.h>
+
 	#define CRecipientFilter C_RecipientFilter
-    #include "c_hl2mp_player.h"
-    #include "c_playerresource.h"
 
 #else
 
@@ -27,7 +28,6 @@
 	#include "world.h"
 	#include "doors.h"
 	#include "particle_parse.h"
-    #include "hl2mp_player.h"
 
 	extern int TrainSpeed(int iSpeed, int iMax);
 	
@@ -39,6 +39,7 @@
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "decals.h"
 #include "obstacle_pushaway.h"
+#include "gamemovement.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -127,25 +128,10 @@ void CBasePlayer::ItemPreFrame()
 	// Handle use events
 	PlayerUse();
 
-	CBaseCombatWeapon *pActive = GetActiveWeapon();
-
-	// Allow all the holstered weapons to update
-	for ( int i = 0; i < WeaponCount(); ++i )
-	{
-		CBaseCombatWeapon *pWeapon = GetWeapon( i );
-
-		if ( pWeapon == NULL )
-			continue;
-
-		if ( pActive == pWeapon )
-			continue;
-
-		pWeapon->ItemHolsterFrame();
-	}
-
     if ( gpGlobals->curtime < m_flNextAttack )
 		return;
 
+	CBaseCombatWeapon* pActive = GetActiveWeapon();
 	if (!pActive)
 		return;
 
@@ -168,60 +154,34 @@ void CBasePlayer::ItemPostFrame()
 	// Put viewmodels into basically correct place based on new player origin
 	CalcViewModelView(EyePosition(), EyeAngles());
 
-	// check if the player is using something
-	if ( m_hUseEntity != NULL )
+	// switch weapon when needed
+	if (m_flNextActiveWeapon != 0.0f && gpGlobals->curtime >= m_flNextActiveWeapon)
 	{
-#if !defined( CLIENT_DLL )
-		ImpulseCommands();// this will call playerUse
-#endif
-		return;
-	}
+		CBaseCombatWeapon* pNextWeapon = m_hNextActiveWeapon;
 
-    if ( gpGlobals->curtime < m_flNextAttack )
-	{
-		if (GetActiveWeapon())
-			GetActiveWeapon()->ItemBusyFrame();
-	}
-	else
-	{
-		if ( GetActiveWeapon())
+		if (pNextWeapon)
 		{
-#if defined( CLIENT_DLL )
-			// Not predicting this weapon
-			if ( GetActiveWeapon()->IsPredicted() )
-#endif
-			{
-				GetActiveWeapon()->ItemPostFrame( );
-			}
+			Weapon_SwitchToNext();
+		}
+		else
+		{
+			m_flNextActiveWeapon = 0.0f;
+
+			CBaseViewModel* pViewModel = GetViewModel();
+			if (pViewModel)
+				pViewModel->RemoveEffects(EF_NODRAW);
 		}
 	}
 
-#if !defined( CLIENT_DLL )
-	ImpulseCommands();
-#else
-	// NOTE: If we ever support full impulse commands on the client,
-	// remove this line and call ImpulseCommands instead.
-	m_nImpulse = 0;
-#endif
-
-	CHL2MP_Player *pHL2MP = ToHL2MPPlayer(this);
-	if (pHL2MP)
+	CBaseCombatWeapon* pWeapon = GetActiveWeapon();
+	if (pWeapon)
 	{
-		bool bInfected = false;
-
-#if !defined( CLIENT_DLL )
-		bInfected = pHL2MP->IsPlayerInfected();
-#else
-		bInfected = (g_PR ? g_PR->IsInfected(entindex()) : false);
-#endif
-
-		if (bInfected && (pHL2MP->GetTeamNumber() == TEAM_HUMANS) && IsAlive())
-			pHL2MP->OnUpdateInfected();
-
-		pHL2MP->SharedPostThinkHL2MP();
+		if (gpGlobals->curtime >= m_flNextAttack)
+			pWeapon->ItemPostFrame();
+		else
+			pWeapon->ItemBusyFrame();
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Eye angles
@@ -272,7 +232,6 @@ Vector CBasePlayer::EyePosition( )
 	return BaseClass::EyePosition();
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : 
@@ -280,21 +239,7 @@ Vector CBasePlayer::EyePosition( )
 //-----------------------------------------------------------------------------
 const Vector CBasePlayer::GetPlayerMins( void ) const
 {
-	if ( IsObserver() )
-	{
-		return VEC_OBS_HULL_MIN_SCALED( this );	
-	}
-	else
-	{
-		if ( GetFlags() & FL_DUCKING )
-		{
-			return VEC_DUCK_HULL_MIN_SCALED( this );
-		}
-		else
-		{
-			return VEC_HULL_MIN_SCALED( this );
-		}
-	}
+	return VEC_OBS_HULL_MIN_SCALED(this);
 }
 
 //-----------------------------------------------------------------------------
@@ -304,21 +249,7 @@ const Vector CBasePlayer::GetPlayerMins( void ) const
 //-----------------------------------------------------------------------------
 const Vector CBasePlayer::GetPlayerMaxs( void ) const
 {	
-	if ( IsObserver() )
-	{
-		return VEC_OBS_HULL_MAX_SCALED( this );	
-	}
-	else
-	{
-		if ( GetFlags() & FL_DUCKING )
-		{
-			return VEC_DUCK_HULL_MAX_SCALED( this );
-		}
-		else
-		{
-			return VEC_HULL_MAX_SCALED( this );
-		}
-	}
+	return VEC_OBS_HULL_MAX_SCALED(this);
 }
 
 //-----------------------------------------------------------------------------
@@ -357,145 +288,7 @@ surfacedata_t *CBasePlayer::GetLadderSurface( const Vector &origin )
 
 void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity )
 {
-	bool bWalking;
-	float fvol;
-	Vector knee;
-	Vector feet;
-	float height;
-	float speed;
-	float velrun;
-	float velwalk;
-	int	fLadder;
-
-	if ( m_flStepSoundTime > 0 )
-	{
-		m_flStepSoundTime -= 1000.0f * gpGlobals->frametime;
-		if ( m_flStepSoundTime < 0 )
-		{
-			m_flStepSoundTime = 0;
-		}
-	}
-
-	if ( m_flStepSoundTime > 0 )
-		return;
-
-	if ( GetFlags() & (FL_FROZEN|FL_ATCONTROLS))
-		return;
-
-	if ( GetMoveType() == MOVETYPE_NOCLIP || GetMoveType() == MOVETYPE_OBSERVER )
-		return;
-
-	if ( !sv_footsteps.GetFloat() )
-		return;
-
-	speed = VectorLength( vecVelocity );
-	float groundspeed = Vector2DLength( vecVelocity.AsVector2D() );
-
-	// determine if we are on a ladder
-	fLadder = ( GetMoveType() == MOVETYPE_LADDER );
-
-	GetStepSoundVelocities( &velwalk, &velrun );
-
-	bool onground = ( GetFlags() & FL_ONGROUND );
-	bool movingalongground = ( groundspeed > 0.0001f );
-	bool moving_fast_enough =  ( speed >= velwalk );
-
-	// To hear step sounds you must be either on a ladder or moving along the ground AND
-	// You must be moving fast enough
-
-	if ( !moving_fast_enough || !(fLadder || ( onground && movingalongground )) )
-			return;
-
-	bWalking = speed < velrun;		
-
-	VectorCopy( vecOrigin, knee );
-	VectorCopy( vecOrigin, feet );
-
-	height = GetPlayerMaxs()[ 2 ] - GetPlayerMins()[ 2 ];
-
-	knee[2] = vecOrigin[2] + 0.2 * height;
-
-	// find out what we're stepping in or on...
-	if ( fLadder )
-	{
-		psurface = GetLadderSurface(vecOrigin);
-		fvol = 0.5;
-
-		SetStepSoundTime( STEPSOUNDTIME_ON_LADDER, bWalking );
-	}
-	else if (GetWaterLevel() == WL_Waist)
-	{
-		static int iSkipStep = 0;
-
-		if ( iSkipStep == 0 )
-		{
-			iSkipStep++;
-			return;
-		}
-
-		if ( iSkipStep++ == 3 )
-		{
-			iSkipStep = 0;
-		}
-		psurface = physprops->GetSurfaceData( physprops->GetSurfaceIndex( "wade" ) );
-		fvol = 0.65;
-		SetStepSoundTime( STEPSOUNDTIME_WATER_KNEE, bWalking );
-	}
-	else if ( GetWaterLevel() == WL_Feet )
-	{
-		psurface = physprops->GetSurfaceData( physprops->GetSurfaceIndex( "water" ) );
-		fvol = bWalking ? 0.2 : 0.5;
-
-		SetStepSoundTime( STEPSOUNDTIME_WATER_FOOT, bWalking );
-	}
-	else
-	{
-		if ( !psurface )
-			return;
-
-		SetStepSoundTime( STEPSOUNDTIME_NORMAL, bWalking );
-
-		switch ( psurface->game.material )
-		{
-		default:
-		case CHAR_TEX_CONCRETE:						
-			fvol = bWalking ? 0.2 : 0.5;
-			break;
-
-		case CHAR_TEX_METAL:	
-			fvol = bWalking ? 0.2 : 0.5;
-			break;
-
-		case CHAR_TEX_DIRT:
-			fvol = bWalking ? 0.25 : 0.55;
-			break;
-
-		case CHAR_TEX_VENT:	
-			fvol = bWalking ? 0.4 : 0.7;
-			break;
-
-		case CHAR_TEX_GRATE:
-			fvol = bWalking ? 0.2 : 0.5;
-			break;
-
-		case CHAR_TEX_TILE:	
-			fvol = bWalking ? 0.2 : 0.5;
-			break;
-
-		case CHAR_TEX_SLOSH:
-			fvol = bWalking ? 0.2 : 0.5;
-			break;
-		}
-	}
-	
-	// play the sound
-	// 65% volume if ducking
-	if ( GetFlags() & FL_DUCKING )
-	{
-		fvol *= 0.65;
-	}
-
-	PlayStepSound( feet, psurface, fvol, false );
+	// moved to INS player code
 }
 
 //-----------------------------------------------------------------------------
@@ -506,9 +299,6 @@ void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOri
 //-----------------------------------------------------------------------------
 void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float fvol, bool force )
 {
-	if ( gpGlobals->maxClients > 1 && !sv_footsteps.GetFloat() )
-		return;
-
 #if defined( CLIENT_DLL )
 	// during prediction play footstep sounds only once
 	if ( prediction->InPrediction() && !prediction->IsFirstTimePredicted() )
@@ -564,7 +354,7 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 #endif
 
 	EmitSound_t ep;
-	ep.m_nChannel = CHAN_BODY;
+	ep.m_nChannel = CHAN_AUTO;
 	ep.m_pSoundName = params.soundname;
 	ep.m_flVolume = fvol;
 	ep.m_SoundLevel = params.soundlevel;
@@ -573,13 +363,16 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 	ep.m_pOrigin = &vecOrigin;
 
 	EmitSound( filter, entindex(), ep );
-
-	// Kyle says: ugggh. This function may as well be called "PerformPileOfDesperateGameSpecificFootstepHacks".
 	OnEmitFootstepSound( params, vecOrigin, fvol );
 }
 
 void CBasePlayer::UpdateButtonState( int nUserCmdButtonMask )
 {
+#ifdef CLIENT_DLL // INS WARN HACK
+	if (gViewPortInterface->GetActivePanel() && gViewPortInterface->GetActivePanel()->HasInputElements())
+		nUserCmdButtonMask = 0;
+#endif
+
 	// Track button info so we can detect 'pressed' and 'released' buttons next frame
 	m_afButtonLast = m_nButtons;
 
@@ -593,59 +386,21 @@ void CBasePlayer::UpdateButtonState( int nUserCmdButtonMask )
 	m_afButtonReleased = buttonsChanged & (~m_nButtons);	// The ones not down are "released"
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CBasePlayer::GetStepSoundVelocities( float *velwalk, float *velrun )
-{
-	// UNDONE: need defined numbers for run, walk, crouch, crouch run velocities!!!!	
-	if ( ( GetFlags() & FL_DUCKING) || ( GetMoveType() == MOVETYPE_LADDER ) )
-	{
-		*velwalk = 60;		// These constants should be based on cl_movespeedkey * cl_forwardspeed somehow
-		*velrun = 80;		
-	}
-	else
-	{
-		*velwalk = 90;
-		*velrun = 220;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CBasePlayer::SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalking )
-{
-	switch ( iStepSoundTime )
-	{
-	case STEPSOUNDTIME_NORMAL:
-	case STEPSOUNDTIME_WATER_FOOT:
-		m_flStepSoundTime = bWalking ? 400 : 300;
-		break;
-
-	case STEPSOUNDTIME_ON_LADDER:
-		m_flStepSoundTime = 350;
-		break;
-
-	case STEPSOUNDTIME_WATER_KNEE:
-		m_flStepSoundTime = 600;
-		break;
-
-	default:
-		Assert(0);
-		break;
-	}
-
-	// UNDONE: need defined numbers for run, walk, crouch, crouch run velocities!!!!	
-	if ( ( GetFlags() & FL_DUCKING) || ( GetMoveType() == MOVETYPE_LADDER ) )
-	{
-		m_flStepSoundTime += 100;
-	}
-}
-
 Vector CBasePlayer::Weapon_ShootPosition( )
 {
 	return EyePosition();
+}
+
+Vector CBasePlayer::Weapon_ShootDirection()
+{
+	Vector	forward;
+#ifdef CLIENT_DLL
+	AngleVectors(GetAbsAngles() + m_Local.m_vecRecoilPunchAngle, &forward);
+#else
+	AngleVectors(EyeAngles() + m_Local.m_vecRecoilPunchAngle, &forward);
+#endif
+
+	return	forward;
 }
 
 //-----------------------------------------------------------------------------
@@ -657,65 +412,96 @@ void CBasePlayer::Weapon_SetLast( CBaseCombatWeapon *pWeapon )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: When switching weapons we store the next wep so we can fully finish the holstering.
-//-----------------------------------------------------------------------------
-void CBasePlayer::Weapon_SetNext( CBaseCombatWeapon *pWeapon )
-{
-	m_hNextWeapon = pWeapon;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: We're ready for deployment!
-//-----------------------------------------------------------------------------
-void CBasePlayer::Weapon_DeployNextWeapon( void )
-{
-#ifndef CLIENT_DLL
-	Assert( GetActiveWeapon() );
-
-	CBaseCombatWeapon *pNextWeapon = m_hNextWeapon.Get();
-	if (pNextWeapon)
-		Weapon_Switch(pNextWeapon, true);
-#endif
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Override base class so player can reset autoaim
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-bool CBasePlayer::Weapon_Switch(CBaseCombatWeapon *pWeapon, bool bWantDraw)
+bool CBasePlayer::Weapon_Switch(CBaseCombatWeapon *pWeapon, bool bForce)
 {
-	CBaseCombatWeapon *pLastWeapon = GetActiveWeapon();
+	MDLCACHE_CRITICAL_SECTION();
 
-	if (!bWantDraw)
+	CBaseCombatWeapon* pLastWeapon = GetActiveWeapon();
+
+	// quit out if invalid
+	if (pWeapon == NULL)
+		return false;
+
+	// ensure we are able to switch
+	if (!Weapon_CanSwitchTo(pWeapon))
+		return false;
+
+	// already have it out?
+	if (pLastWeapon == pWeapon)
 	{
-		if ((pLastWeapon))
+		// deploy again if invisible
+		if (!pLastWeapon->IsWeaponVisible())
+			pLastWeapon->Deploy();
+
+		return false;
+	}
+
+	// find the deploy threshold of the lastweapon
+	m_flNextActiveWeapon = 0.0f;
+
+	if (pLastWeapon && pLastWeapon->GetOwner())
+	{
+		if (!pLastWeapon->Holster(pWeapon/*, bForce*/))
+			return false;
+
+		if (!bForce)
 		{
-			if ((m_hNextWeapon.Get() != pWeapon) && (pLastWeapon != m_hNextWeapon.Get()))
-			{
-				Weapon_SetNext(pWeapon);
-				pLastWeapon->StartHolsterSequence();
-				return false;
-			}
+			m_flNextActiveWeapon = pLastWeapon->GetHolsterTime();
+
+			if (m_flNextActiveWeapon == 0.0f)
+				bForce = true;
 		}
 	}
-
-	Weapon_SetNext(NULL);
-
-	if (BaseClass::Weapon_Switch(pWeapon, bWantDraw))
+	else
 	{
-		if (pLastWeapon)
-			Weapon_SetLast(pLastWeapon);
-
-		CBaseViewModel *pViewModel = GetViewModel();
-		Assert(pViewModel != NULL);
-		if (pViewModel)
-			pViewModel->RemoveEffects(EF_NODRAW);
-
-		return true;
+		bForce = true;
 	}
 
-	return false;
+	// set the next active weapon
+	m_hNextActiveWeapon = pWeapon;
+
+	// don't delay when forcing
+	if (bForce)
+		Weapon_SwitchToNext();
+
+	// set the last weapon
+	if (pLastWeapon)
+		Weapon_SetLast(pLastWeapon);
+
+	// don't hide the viewmodel anymore
+	CBaseViewModel* pViewModel = GetViewModel();
+	Assert(pViewModel);
+
+	if (pViewModel)
+		pViewModel->RemoveEffects(EF_NODRAW);
+
+	return true;
+}
+
+void CBasePlayer::Weapon_SwitchToNext(void)
+{
+	CBaseCombatWeapon* pNewWeapon = m_hNextActiveWeapon;
+	if (!pNewWeapon)
+		return;
+
+	// set as active weapon and deploy
+	m_hActiveWeapon = pNewWeapon;
+	pNewWeapon->Deploy();
+
+	// reset
+	m_flNextActiveWeapon = 0.0f;
+	m_hNextActiveWeapon = NULL;
+
+	// reset blends
+#ifdef CLIENT_DLL
+	CBaseViewModel* pVM = GetViewModel();
+	if (pVM)
+		pVM->m_SequenceTransitioner.m_animationQueue.RemoveAll();
+#endif
 }
 
 void CBasePlayer::SelectLastItem(void)
@@ -726,7 +512,7 @@ void CBasePlayer::SelectLastItem(void)
 	if (GetActiveWeapon() && !GetActiveWeapon()->CanHolster())
 		return;
 
-	SelectItem(m_hLastWeapon.Get()->GetClassname());
+	SelectItem(m_hLastWeapon.Get()->GetWeaponID());
 }
 
 //-----------------------------------------------------------------------------
@@ -734,10 +520,9 @@ void CBasePlayer::SelectLastItem(void)
 //-----------------------------------------------------------------------------
 void CBasePlayer::AbortReload( void )
 {
-	if ( GetActiveWeapon() )
-	{
-		GetActiveWeapon()->AbortReload();
-	}
+	CBaseCombatWeapon* pWeapon = GetActiveWeapon();
+	if (pWeapon)
+		pWeapon->AbortReload();
 }
 
 #if !defined( NO_ENTITY_PREDICTION )
@@ -871,16 +656,13 @@ bool CBasePlayer::Weapon_ShouldSelectItem( CBaseCombatWeapon *pWeapon )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePlayer::SelectItem(const char *pstr)
+void CBasePlayer::SelectItem(int iWeaponID)
 {
-	if (!pstr || (GetObserverMode() != OBS_MODE_NONE))
+	if (GetObserverMode() != OBS_MODE_NONE)
 		return;
 
-	CBaseCombatWeapon *pItem = Weapon_OwnsThisType(pstr);
-	if (!pItem)
-		return;
-
-	if (!Weapon_ShouldSelectItem(pItem))
+	CBaseCombatWeapon *pItem = Weapon_OwnsThisType(iWeaponID);
+	if (!pItem || !Weapon_ShouldSelectItem(pItem))
 		return;
 
 	// FIX, this needs to queue them up and delay
@@ -1216,10 +998,9 @@ void CBasePlayer::PlayerUse ( void )
 		// try the hit entity if there is one, or the ground entity if there isn't.
 		CBaseEntity *entity = tr.m_pEnt;
 
-		if ( entity )
+		if (entity && (ToBaseCombatWeapon(entity) == NULL))
 		{
 			IPhysicsObject *pObj = entity->VPhysicsGetObject();
-
 			if ( pObj )
 			{
 				Vector vPushAway = (entity->WorldSpaceCenter() - WorldSpaceCenter());
@@ -1272,7 +1053,6 @@ void CBasePlayer::PlayerUse ( void )
 	// Found an object
 	if ( pUseEntity )
 	{
-
 		//!!!UNDONE: traceline here to prevent +USEing buttons through walls			
 
 		int caps = pUseEntity->ObjectCaps();
@@ -1298,11 +1078,13 @@ void CBasePlayer::PlayerUse ( void )
 		{
 			pUseEntity->AcceptInput( "Use", this, this, emptyVariant, USE_OFF );
 		}
+
+		return;
 	}
-	else if ( m_afButtonPressed & IN_USE )
-	{
-		PlayUseDenySound();
-	}
+
+	CBaseCombatWeapon* pWeapon = GetActiveWeapon();
+	if (pWeapon && pWeapon->Use())
+		return; // INF -- what about client side?
 #endif
 }
 
@@ -1334,6 +1116,30 @@ void CBasePlayer::ViewPunchReset( float tolerance )
 	}
 	m_Local.m_vecPunchAngle = vec3_angle;
 	m_Local.m_vecPunchAngleVel = vec3_angle;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::RecoilViewPunch(const QAngle& angleOffset)
+{
+	m_Local.m_vecRecoilPunchAngleVel += angleOffset * 20.0f;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::RecoilViewPunchReset(float tolerance)
+{
+	if (tolerance != 0)
+	{
+		tolerance *= tolerance;	// square
+		float check = m_Local.m_vecRecoilPunchAngleVel->LengthSqr() + m_Local.m_vecRecoilPunchAngle->LengthSqr();
+		if (check > tolerance)
+			return;
+	}
+	m_Local.m_vecRecoilPunchAngle = vec3_angle;
+	m_Local.m_vecRecoilPunchAngleVel = vec3_angle;
 }
 
 #if defined( CLIENT_DLL )
@@ -1451,7 +1257,7 @@ void CBasePlayer::CalcViewModelView( const Vector& eyeOrigin, const QAngle& eyeA
 {
 	CBaseViewModel *vm = GetViewModel();
 	if (vm)
-		vm->CalcViewModelView(this, eyeOrigin, eyeAngles);
+		vm->CalcViewModelView(this, eyeOrigin, eyeAngles + m_Local.m_vecPunchAngle);
 }
 
 void CBasePlayer::CalcPlayerView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )
@@ -1477,10 +1283,12 @@ void CBasePlayer::CalcPlayerView( Vector& eyeOrigin, QAngle& eyeAngles, float& f
 	// Snack off the origin before bob + water offset are applied
 	Vector vecBaseEyePosition = eyeOrigin;
 
-	CalcViewRoll( eyeAngles );
+	CalcViewRoll(eyeAngles);
+	ApplyPlayerView(eyeOrigin, eyeAngles, fov);
 
 	// Apply punch angle
-	VectorAdd( eyeAngles, m_Local.m_vecPunchAngle, eyeAngles );
+	//VectorAdd( eyeAngles, m_Local.m_vecPunchAngle, eyeAngles );
+	VectorAdd(eyeAngles, m_Local.m_vecRecoilPunchAngle, eyeAngles);
 
 #if defined( CLIENT_DLL )
 	if ( !prediction->InPrediction() )
@@ -1533,59 +1341,17 @@ void CBasePlayer::CalcObserverView( Vector& eyeOrigin, QAngle& eyeAngles, float&
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Compute roll angle for a particular lateral velocity
-// Input  : angles - 
-//			velocity - 
-//			rollangle - 
-//			rollspeed - 
-// Output : float CViewRender::CalcRoll
-//-----------------------------------------------------------------------------
-float CBasePlayer::CalcRoll (const QAngle& angles, const Vector& velocity, float rollangle, float rollspeed)
-{
-    float   sign;
-    float   side;
-    float   value;
-	
-	Vector  forward, right, up;
-	
-    AngleVectors (angles, &forward, &right, &up);
-	
-	// Get amount of lateral movement
-    side = DotProduct( velocity, right );
-	// Right or left side?
-    sign = side < 0 ? -1 : 1;
-    side = fabs(side);
-    
-	value = rollangle;
-	// Hit 100% of rollangle at rollspeed.  Below that get linear approx.
-    if ( side < rollspeed )
-	{
-		side = side * value / rollspeed;
-	}
-    else
-	{
-		side = value;
-	}
-
-	// Scale by right/left sign
-    return side*sign;
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Determine view roll, including data kick
 //-----------------------------------------------------------------------------
 void CBasePlayer::CalcViewRoll( QAngle& eyeAngles )
 {
-	if ( GetMoveType() == MOVETYPE_NOCLIP )
-		return;
-
-	float side = CalcRoll( GetAbsAngles(), GetAbsVelocity(), sv_rollangle.GetFloat(), sv_rollspeed.GetFloat() );
-	eyeAngles[ROLL] += side;
 }
-
 
 void CBasePlayer::DoMuzzleFlash()
 {
+	CBaseViewModel* vm = GetViewModel();
+	if (vm)
+		vm->DoMuzzleFlash();
 }
 
 float CBasePlayer::GetFOVDistanceAdjustFactor()
@@ -1654,7 +1420,7 @@ void CBasePlayer::SharedSpawn()
 
 	pl.deadflag	= false;
 	m_lifeState	= LIFE_ALIVE;
-	// m_iHealth = 100;
+	m_iHealth = 100;
 	m_takedamage		= DAMAGE_YES;
 
 	m_Local.m_flStepSize = sv_stepsize.GetFloat();
@@ -1666,20 +1432,11 @@ void CBasePlayer::SharedSpawn()
 	m_flMaxspeed		= 0.0f;
 	m_flMaxAirSpeed = 0.0f;
 
-	MDLCACHE_CRITICAL_SECTION();
-	SetSequence( SelectWeightedSequence( ACT_IDLE ) );
-
-	if ( GetFlags() & FL_DUCKING ) 
-		SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
-	else
-		SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );
-
 	// dont let uninitialized value here hurt the player
 	m_Local.m_flFallVelocity = 0;
 
 	SetBloodColor( BLOOD_COLOR_RED );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1690,8 +1447,7 @@ int CBasePlayer::GetDefaultFOV( void ) const
 #if defined( CLIENT_DLL )
 	if ( GetObserverMode() == OBS_MODE_IN_EYE )
 	{
-		C_BasePlayer *pTargetPlayer = dynamic_cast<C_BasePlayer*>( GetObserverTarget() );
-
+		C_BasePlayer *pTargetPlayer = ToBasePlayer( GetObserverTarget() );
 		if ( pTargetPlayer && !pTargetPlayer->IsObserver() )
 		{
 			return pTargetPlayer->GetDefaultFOV();
@@ -1699,11 +1455,24 @@ int CBasePlayer::GetDefaultFOV( void ) const
 	}
 #endif
 
-	int iFOV = ( m_iDefaultFOV == 0 ) ? g_pGameRules->DefaultFOV() : m_iDefaultFOV;
-	if ( iFOV > MAX_FOV )
-		iFOV = MAX_FOV;
+	return (m_Local.m_iDefaultFOV == 0 ? g_pGameRules->DefaultFOV() : m_Local.m_iDefaultFOV);
+}
 
-	return iFOV;
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : int
+//-----------------------------------------------------------------------------
+int CBasePlayer::GetDefaultViewmodelFOV(void) const
+{
+	return g_pGameRules->DefaultWeaponFOV();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CBasePlayer::GetScopeFOV(void) const
+{
+	return m_Local.m_iScopeFOV;
 }
 
 void CBasePlayer::AvoidPhysicsProps( CUserCmd *pCmd )
@@ -1851,4 +1620,3 @@ bool fogparams_t::operator != ( const fogparams_t& other ) const
 
 	return false;
 }
-

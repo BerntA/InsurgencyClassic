@@ -85,8 +85,6 @@ ConVar mat_tonemap_percent_bright_pixels( "mat_tonemap_percent_bright_pixels", "
 ConVar mat_tonemap_min_avglum( "mat_tonemap_min_avglum", "3.0", FCVAR_CHEAT );
 ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT );
 
-extern ConVar localplayer_visionflags;
-
 enum PostProcessingCondition {
 	PPP_ALWAYS,
 	PPP_IF_COND_VAR,
@@ -2514,7 +2512,7 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 						}
 					}
 
-					bool bVisionOverride = ( localplayer_visionflags.GetInt() & ( 0x01 ) ); // Pyro-vision Goggles
+					bool bVisionOverride = false; // TODO ???
 
 					if ( bVisionOverride && g_pMaterialSystemHardwareConfig->SupportsPixelShaders_2_0() && pyro_vignette.GetInt() > 0 )
 					{

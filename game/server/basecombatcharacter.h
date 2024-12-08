@@ -112,7 +112,7 @@ class CBaseCombatCharacter : public CBaseFlex
 
 public:
 	CBaseCombatCharacter(void);
-	~CBaseCombatCharacter(void);
+	virtual ~CBaseCombatCharacter(void);
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
@@ -126,7 +126,6 @@ public:
 	virtual const impactdamagetable_t	&GetPhysicsImpactDamageTable( void );
 
 	int					TakeHealth( float flHealth, int bitsDamageType );
-	void				CauseDeath( const CTakeDamageInfo &info );
 
 	virtual	bool		FVisible ( CBaseEntity *pEntity, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL ); // true iff the parameter can be seen by me.
 	virtual bool		FVisible( const Vector &vecTarget, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL )	{ return BaseClass::FVisible( vecTarget, traceMask, ppBlocker ); }
@@ -158,21 +157,22 @@ public:
 	// -----------------------
 	CBaseCombatWeapon*	Weapon_Create( const char *pWeaponName );
 	virtual Activity	Weapon_TranslateActivity(Activity baseAct);
-	void				Weapon_SetActivity( Activity newActivity, float duration );
+	virtual void		Weapon_SetActivity( Activity newActivity, float duration );
 	virtual void		Weapon_FrameUpdate( void );
-	CBaseCombatWeapon*	Weapon_OwnsThisType( const char *pszWeapon ) const;  // True if already owns a weapon of this class
-	CBaseCombatWeapon*	Weapon_GetBySlot(int slot) const;
+	virtual CBaseCombatWeapon*	Weapon_OwnsThisType(int iWeaponID) const;  // True if already owns a weapon of this class
+	virtual CBaseCombatWeapon*	Weapon_GetBySlot(int slot) const;
+	virtual CBaseCombatWeapon* GetNextBestWeapon(CBaseCombatWeapon* pCurrentWeapon);
 	virtual void		Weapon_Equip( CBaseCombatWeapon *pWeapon );			// Adds weapon to player
-	bool				Weapon_Detach( CBaseCombatWeapon *pWeapon );		// Clear any pointers to the weapon.
+	virtual bool		Weapon_Detach( CBaseCombatWeapon *pWeapon );		// Clear any pointers to the weapon.
 	virtual void		Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector *pvecTarget = NULL, const Vector *pVelocity = NULL );
-	virtual	bool		Weapon_Switch(CBaseCombatWeapon *pWeapon, bool bWantDraw = false);		// Switch to given weapon if has ammo (false if failed)
+	virtual	bool		Weapon_Switch(CBaseCombatWeapon *pWeapon, bool bForce = false);		// Switch to given weapon if has ammo (false if failed)
 	virtual	Vector		Weapon_ShootPosition( );		// gun position at current position/orientation
 	virtual	bool		Weapon_CanSwitchTo(CBaseCombatWeapon *pWeapon);
 	virtual bool		Weapon_SlotOccupied( CBaseCombatWeapon *pWeapon );
 	virtual CBaseCombatWeapon *Weapon_GetSlot( int slot ) const;
 
 	// For weapon strip
-	void				Weapon_DropAll( bool bDisallowWeaponPickup = false );
+	virtual void			Weapon_DropAll( bool bDisallowWeaponPickup = false );
 
 	virtual bool			AddPlayerItem( CBaseCombatWeapon *pItem ) { return false; }
 	virtual bool			RemovePlayerItem( CBaseCombatWeapon *pItem ) { return false; }
@@ -299,17 +299,17 @@ protected:
 public:
 
 	// Blood color (see BLOOD_COLOR_* macros in baseentity.h)
-	void SetBloodColor( int nBloodColor );
+	virtual void SetBloodColor( int nBloodColor );
 
 	// Weapons..
-	CBaseCombatWeapon*	GetActiveWeapon() const;
-	int					WeaponCount() const;
-	CBaseCombatWeapon*	GetWeapon( int i ) const;
-	bool				RemoveWeapon( CBaseCombatWeapon *pWeapon );
-	virtual void		RemoveAllWeapons();
-	virtual	Vector		GetAttackSpread( CBaseCombatWeapon *pWeapon, CBaseEntity *pTarget = NULL );
-	virtual	float		GetSpreadBias(  CBaseCombatWeapon *pWeapon, CBaseEntity *pTarget );
-	virtual void		DoMuzzleFlash();
+	virtual CBaseCombatWeapon*	GetActiveWeapon() const;
+	virtual int					WeaponCount() const;
+	virtual CBaseCombatWeapon*	GetWeapon( int i ) const;
+	virtual bool				RemoveWeapon( CBaseCombatWeapon *pWeapon );
+	virtual void				RemoveAllWeapons();
+	virtual	Vector				GetAttackSpread( CBaseCombatWeapon *pWeapon, CBaseEntity *pTarget = NULL );
+	virtual	float				GetSpreadBias(  CBaseCombatWeapon *pWeapon, CBaseEntity *pTarget );
+	virtual void				DoMuzzleFlash();
 
 	// Relationships
 	static void			AllocateDefaultRelationships( );
@@ -323,12 +323,12 @@ public:
 
 	// This is a hack to blat out the current active weapon...
 	// Used by weapon_slam + game_ui
-	void SetActiveWeapon( CBaseCombatWeapon *pNewWeapon );
-	void ClearActiveWeapon() { SetActiveWeapon( NULL ); }
+	virtual void SetActiveWeapon( CBaseCombatWeapon *pNewWeapon );
+	virtual void ClearActiveWeapon() { SetActiveWeapon( NULL ); }
 	virtual void OnChangeActiveWeapon( CBaseCombatWeapon *pOldWeapon, CBaseCombatWeapon *pNewWeapon ) {}
 
 	// I can't use my current weapon anymore. Switch me to the next best weapon.
-	bool SwitchToNextBestWeapon(CBaseCombatWeapon *pCurrent);
+	virtual bool SwitchToNextBestWeapon(CBaseCombatWeapon *pCurrent);
 
 	// This is a hack to copy the relationship strings used by monstermaker
 	void SetRelationshipString( string_t theString ) { m_RelationshipString = theString; }
@@ -383,7 +383,7 @@ private:
 public:
 
 	// Usable character items 
-	CNetworkArray( CBaseCombatWeaponHandle, m_hMyWeapons, MAX_WEAPONS );
+	CNetworkArray( CBaseCombatWeaponHandle, m_hMyWeapons, MAX_PWEAPONS);
 
 	CNetworkHandle( CBaseCombatWeapon, m_hActiveWeapon );
 
@@ -416,7 +416,7 @@ inline float CBaseCombatCharacter::GetAliveDuration( void ) const
 //-----------------------------------------------------------------------------
 inline int	CBaseCombatCharacter::WeaponCount() const
 {
-	return MAX_WEAPONS;
+	return MAX_PWEAPONS;
 }
 
 //-----------------------------------------------------------------------------
@@ -425,7 +425,7 @@ inline int	CBaseCombatCharacter::WeaponCount() const
 //-----------------------------------------------------------------------------
 inline CBaseCombatWeapon *CBaseCombatCharacter::GetWeapon( int i ) const
 {
-	Assert( (i >= 0) && (i < MAX_WEAPONS) );
+	Assert( (i >= 0) && (i < MAX_PWEAPONS) );
 	return m_hMyWeapons[i].Get();
 }
 

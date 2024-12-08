@@ -60,14 +60,6 @@ typedef int DamagePositions_t[ DAMAGELOC_COUNT ][ 2 ];
 
 //=========================================================
 //=========================================================
-#ifdef TESTING
-
-ConVar fdrawdindi( "cl_fdrawdindi", "0" );
-
-#endif
-
-//=========================================================
-//=========================================================
 class DamageDrawData_t
 {
 public:
@@ -266,13 +258,6 @@ bool CHudDamageIndicator::ShouldDraw( void )
 	if( !CHudElement::ShouldDraw( ) )
 		return false;
 
-#ifdef TESTING 
-
-	if( fdrawdindi.GetBool( ) )
-		return true;
-
-#endif
-
 	return ( m_iLastUpdate != DAMAGELOC_INVALID && m_DrawData[ m_iLastUpdate ].m_flTime > gpGlobals->curtime );
 }
 
@@ -284,17 +269,8 @@ void CHudDamageIndicator::Paint( void )
 	{
 		float &flDrawTime = m_DrawData[ i ].m_flTime;
 
-	#ifdef TESTING
-
-		if( !fdrawdindi.GetBool( ) && gpGlobals->curtime > flDrawTime )
+		if (gpGlobals->curtime > flDrawTime)
 			continue;
-
-	#else
-
-		if( gpGlobals->curtime > flDrawTime )
-			continue;
-
-	#endif
 
 		int iAlpha = min( RoundFloatToInt( 255 * ( ( flDrawTime - gpGlobals->curtime ) / GetDrawTime( m_DrawData[ i ].m_bFall ) ) ), 255 );
 

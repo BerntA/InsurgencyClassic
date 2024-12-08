@@ -281,11 +281,6 @@ float CGrabController::ComputeError()
 		}
 	}
 
-	if (pAttached->IsEFlagSet(EFL_IS_BEING_LIFTED_BY_BARNACLE))
-	{
-		m_error *= 3.0f;
-	}
-
 	m_errorTime = 0;
 
 	return m_error;
@@ -775,7 +770,7 @@ void CPlayerPickupController::Use(CBaseEntity *pActivator, CBaseEntity *pCaller,
 
 		// UNDONE: Use vphysics stress to decide to drop objects
 		// UNDONE: Must fix case of forcing objects into the ground you're standing on (causes stress) before that will work
-		if (!pAttached || useType == USE_OFF || (m_pPlayer->m_nButtons & IN_ATTACK2) || m_grabController.ComputeError() > 12)
+		if (!pAttached || useType == USE_OFF || (m_pPlayer->m_nButtons & IN_SPECIAL1) || m_grabController.ComputeError() > 12)
 		{
 			Shutdown();
 			return;

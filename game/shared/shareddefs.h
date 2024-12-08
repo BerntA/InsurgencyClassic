@@ -7,9 +7,12 @@
 
 #ifndef SHAREDDEFS_H
 #define SHAREDDEFS_H
+
 #ifdef _WIN32
 #pragma once
 #endif
+
+#include "ins_shared_global.h"
 
 #define TICK_INTERVAL			(gpGlobals->interval_per_tick)
 
@@ -28,112 +31,107 @@ public:
 	CViewVectors() {}
 
 	CViewVectors( 
-		Vector vView,
 		Vector vHullMin,
 		Vector vHullMax,
+		Vector vView,
 		Vector vDuckHullMin,
 		Vector vDuckHullMax,
 		Vector vDuckView,
+		Vector vProneHullMin,
+		Vector vProneHullMax,
+		Vector vProneView,
 		Vector vObsHullMin,
 		Vector vObsHullMax,
-		Vector vDeadViewHeight,
-		Vector vSlideHullMin,
-		Vector vSlideHullMax,
-		Vector vSlideView
+		Vector vDeadViewHeight
 		)
 	{
-		m_vView = vView;
 		m_vHullMin = vHullMin;
 		m_vHullMax = vHullMax;
+		m_vView = vView;
 		m_vDuckHullMin = vDuckHullMin;
 		m_vDuckHullMax = vDuckHullMax;
 		m_vDuckView = vDuckView;
+		m_vProneHullMin = vProneHullMin;
+		m_vProneHullMax = vProneHullMax;
+		m_vProneView = vProneView;
 		m_vObsHullMin = vObsHullMin;
 		m_vObsHullMax = vObsHullMax;
 		m_vDeadViewHeight = vDeadViewHeight;
-		m_vSlideHullMin = vSlideHullMin;
-		m_vSlideHullMax = vSlideHullMax;
-		m_vSlideView = vSlideView;
 	}
 
-	// Height above entity position where the viewer's eye is.
-	Vector m_vView;
-	
 	Vector m_vHullMin;
 	Vector m_vHullMax;
-	
+	Vector m_vView;
+
 	Vector m_vDuckHullMin;
 	Vector m_vDuckHullMax;
 	Vector m_vDuckView;
-	
+
+	Vector m_vProneHullMin;
+	Vector m_vProneHullMax;
+	Vector m_vProneView;
+
 	Vector m_vObsHullMin;
 	Vector m_vObsHullMax;
-	
-	Vector m_vDeadViewHeight;
 
-	Vector m_vSlideHullMin;
-	Vector m_vSlideHullMax;
-	Vector m_vSlideView;
+	Vector m_vDeadViewHeight;
 };
 
-// Height above entity position where the viewer's eye is.
-#define VEC_VIEW			g_pGameRules->GetViewVectors()->m_vView
-#define VEC_HULL_MIN		g_pGameRules->GetViewVectors()->m_vHullMin
-#define VEC_HULL_MAX		g_pGameRules->GetViewVectors()->m_vHullMax
+#define VEC_HULL_MIN			g_pGameRules->GetViewVectors()->m_vHullMin
+#define VEC_HULL_MAX			g_pGameRules->GetViewVectors()->m_vHullMax
+#define VEC_VIEW				g_pGameRules->GetViewVectors()->m_vView
 
-#define VEC_DUCK_HULL_MIN	g_pGameRules->GetViewVectors()->m_vDuckHullMin
-#define VEC_DUCK_HULL_MAX	g_pGameRules->GetViewVectors()->m_vDuckHullMax
-#define VEC_DUCK_VIEW		g_pGameRules->GetViewVectors()->m_vDuckView
+#define VEC_DUCK_HULL_MIN		g_pGameRules->GetViewVectors()->m_vDuckHullMin
+#define VEC_DUCK_HULL_MAX		g_pGameRules->GetViewVectors()->m_vDuckHullMax
+#define VEC_DUCK_VIEW			g_pGameRules->GetViewVectors()->m_vDuckView
 
-#define VEC_SLIDE_HULL_MIN	g_pGameRules->GetViewVectors()->m_vSlideHullMin
-#define VEC_SLIDE_HULL_MAX	g_pGameRules->GetViewVectors()->m_vSlideHullMax
-#define VEC_SLIDE_VIEW		g_pGameRules->GetViewVectors()->m_vSlideView
+#define VEC_PRONE_HULL_MIN		g_pGameRules->GetViewVectors()->m_vProneHullMin
+#define VEC_PRONE_HULL_MAX		g_pGameRules->GetViewVectors()->m_vProneHullMax
+#define VEC_PRONE_VIEW			g_pGameRules->GetViewVectors()->m_vProneView
+#define VEC_PRONE_DIRECT_VIEW	g_pGameRules->GetViewVectors()->m_vProneView
 
-#define VEC_OBS_HULL_MIN	g_pGameRules->GetViewVectors()->m_vObsHullMin
-#define VEC_OBS_HULL_MAX	g_pGameRules->GetViewVectors()->m_vObsHullMax
+#define VEC_OBS_HULL_MIN		g_pGameRules->GetViewVectors()->m_vObsHullMin
+#define VEC_OBS_HULL_MAX		g_pGameRules->GetViewVectors()->m_vObsHullMax
 
-#define VEC_DEAD_VIEWHEIGHT	g_pGameRules->GetViewVectors()->m_vDeadViewHeight
+#define VEC_DEAD_VIEWHEIGHT		g_pGameRules->GetViewVectors()->m_vDeadViewHeight
 
 // If the player (enemy bots) are scaled, adjust the hull
-#define VEC_VIEW_SCALED( player )				( g_pGameRules->GetViewVectors()->m_vView * player->GetModelScale() )
-#define VEC_HULL_MIN_SCALED( player )			( g_pGameRules->GetViewVectors()->m_vHullMin * player->GetModelScale() )
-#define VEC_HULL_MAX_SCALED( player )			( g_pGameRules->GetViewVectors()->m_vHullMax * player->GetModelScale() )
+#define VEC_HULL_MIN_SCALED( player )			( VEC_HULL_MIN * player->GetModelScale() )
+#define VEC_HULL_MAX_SCALED( player )			( VEC_HULL_MAX * player->GetModelScale() )
+#define VEC_VIEW_SCALED( player )				( VEC_VIEW * player->GetModelScale() )
 
-#define VEC_DUCK_HULL_MIN_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vDuckHullMin * player->GetModelScale() )
-#define VEC_DUCK_HULL_MAX_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vDuckHullMax * player->GetModelScale() )
-#define VEC_DUCK_VIEW_SCALED( player )			( g_pGameRules->GetViewVectors()->m_vDuckView * player->GetModelScale() )
+#define VEC_DUCK_HULL_MIN_SCALED( player )		( VEC_DUCK_HULL_MIN * player->GetModelScale() )
+#define VEC_DUCK_HULL_MAX_SCALED( player )		( VEC_DUCK_HULL_MAX * player->GetModelScale() )
+#define VEC_DUCK_VIEW_SCALED( player )			( VEC_DUCK_VIEW * player->GetModelScale() )
 
-#define VEC_SLIDE_HULL_MIN_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vSlideHullMin * player->GetModelScale() )
-#define VEC_SLIDE_HULL_MAX_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vSlideHullMax * player->GetModelScale() )
-#define VEC_SLIDE_VIEW_SCALED( player )			( g_pGameRules->GetViewVectors()->m_vSlideView * player->GetModelScale() )
+#define VEC_PRONE_HULL_MIN_SCALED( player )		( VEC_PRONE_HULL_MIN * player->GetModelScale() )
+#define VEC_PRONE_HULL_MAX_SCALED( player )		( VEC_PRONE_HULL_MAX * player->GetModelScale() )
+#define VEC_PRONE_VIEW_SCALED( player )			( VEC_PRONE_VIEW * player->GetModelScale() )
 
-#define VEC_OBS_HULL_MIN_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vObsHullMin * player->GetModelScale() )
-#define VEC_OBS_HULL_MAX_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vObsHullMax * player->GetModelScale() )
+#define VEC_OBS_HULL_MIN_SCALED( player )		( VEC_OBS_HULL_MIN * player->GetModelScale() )
+#define VEC_OBS_HULL_MAX_SCALED( player )		( VEC_OBS_HULL_MAX * player->GetModelScale() )
 
-#define VEC_DEAD_VIEWHEIGHT_SCALED( player )	( g_pGameRules->GetViewVectors()->m_vDeadViewHeight * player->GetModelScale() )
+#define VEC_DEAD_VIEWHEIGHT_SCALED( player )	( VEC_DEAD_VIEWHEIGHT * player->GetModelScale() )
 
-#define WATERJUMP_HEIGHT			8
-
+#define WATERJUMP_HEIGHT	8
 #define MAX_CLIMB_SPEED		200
-
-#define TIME_TO_DUCK		0.4
-#define TIME_TO_DUCK_MS		400.0f
-
-#define TIME_TO_UNDUCK		0.2
-#define TIME_TO_UNDUCK_MS	200.0f
-
-#define MAX_WEAPON_SLOTS		4	// hud item selection slots
-#define MAX_WEAPONS				10	// Max number of weapons available
-
-#define WEAPON_NOCLIP			-1	// clip sizes set to this tell the weapon it doesn't use a clip
-
-#define	MAX_AMMO_TYPES	20		// ???
-#define MAX_AMMO_SLOTS  20		// not really slots
 
 #define HUD_PRINTNOTIFY		1
 #define HUD_PRINTCONSOLE	2
 #define HUD_PRINTTALK		3
 #define HUD_PRINTCENTER		4
+
+#define INVALID_TEAM		-1
+#define MAX_TEAM_NAME_LENGTH 18
+
+enum TeamList_t
+{
+	TEAM_UNASSIGNED = 0,	// not assigned to a team
+	TEAM_ONE,				// team one
+	TEAM_TWO,				// team two
+	TEAM_SPECTATOR,			// spectator team
+	MAX_TEAMS				// max teams
+};
 
 //===================================================================================================================
 // Close caption flags
@@ -178,34 +176,10 @@ public:
 // Team Defines
 #define TEAM_ANY				-2
 #define	TEAM_INVALID			-1
-#define TEAM_UNASSIGNED			0	// not assigned to a team
-#define TEAM_SPECTATOR			1	// spectator team
-// Start your team numbers after this
-#define LAST_SHARED_TEAM		TEAM_SPECTATOR
-
-// The first team that's game specific (i.e. not unassigned / spectator)
-#define FIRST_GAME_TEAM			(LAST_SHARED_TEAM+1)
-
-#define MAX_TEAMS				5	// Max number of teams in a game
-#define MAX_TEAM_NAME_LENGTH	32	// Max length of a team's name
 
 #define WEAPON_NOT_CARRIED				0	// Weapon is on the ground
 #define WEAPON_IS_CARRIED_BY_PLAYER		1	// This client is carrying this weapon.
 #define WEAPON_IS_ACTIVE				2	// This client is carrying this weapon and it's the currently held weapon
-
-// Weapon flags
-// -----------------------------------------
-//	Flags - NOTE: KEEP g_ItemFlags IN WEAPON_PARSE.CPP UPDATED WITH THESE
-// -----------------------------------------
-#define ITEM_FLAG_SELECTONEMPTY		(1<<0)
-#define ITEM_FLAG_NOAUTORELOAD		(1<<1)
-#define ITEM_FLAG_NOAUTOSWITCHEMPTY	(1<<2)
-#define ITEM_FLAG_LIMITINWORLD		(1<<3)
-#define ITEM_FLAG_EXHAUSTIBLE		(1<<4)	// A player can totally exhaust their ammo supply and lose this weapon
-#define ITEM_FLAG_DOHITLOCATIONDMG	(1<<5)	// This weapon take hit location into account when applying damage
-#define ITEM_FLAG_NOAMMOPICKUPS		(1<<6)	// Don't draw ammo pickup sprites/sounds when ammo is received
-#define ITEM_FLAG_NOITEMPICKUP		(1<<7)	// Don't draw weapon pickup when this weapon is picked up by the player
-// NOTE: KEEP g_ItemFlags IN WEAPON_PARSE.CPP UPDATED WITH THESE
 
 #define MAX_BEAM_ENTS			10
 
@@ -253,81 +227,73 @@ enum
 	ENTITY_DISSOLVE_BITS = 3
 };
 
-// ---------------------------
-//  Hit Group standards
-// ---------------------------
-#define	HITGROUP_GENERIC	0
-#define	HITGROUP_HEAD		1
-#define	HITGROUP_CHEST		2
-#define	HITGROUP_STOMACH	3
-#define HITGROUP_LEFTARM	4	
-#define HITGROUP_RIGHTARM	5
-#define HITGROUP_LEFTLEG	6
-#define HITGROUP_RIGHTLEG	7
-#define HITGROUP_GEAR		10			// alerts NPC, but doesn't do damage or bleed (1/100th damage)
+enum HitGroups_t
+{
+	HITGROUP_GENERIC = 0,
+	HITGROUP_HEAD,
+	HITGROUP_NECK,
+	HITGROUP_SPINE,
+	HITGROUP_PELVIS,
+	HITGROUP_LEFTTHIGH,
+	HITGROUP_RIGHTTHIGH,
+	HITGROUP_LEFTCALF,
+	HITGROUP_RIGHTCALF,
+	HITGROUP_LEFTFOOT,
+	HITGROUP_RIGHTFOOT,
+	HITGROUP_LEFTUPPERARM,
+	HITGROUP_RIGHTUPPERARM,
+	HITGROUP_LEFTFOREARM,
+	HITGROUP_RIGHTFOREARM,
+	HIRGROUP_COUNT
+};
 
 // HL2 has 600 gravity by default
 // NOTE: The discrete ticks can have quantization error, so these numbers are biased a little to
 // make the heights more exact
-#define PLAYER_FATAL_FALL_SPEED		922.5f // approx 60 feet sqrt( 2 * gravity * 60 * 12 )
-#define PLAYER_MAX_SAFE_FALL_SPEED	385.0f // approx 20 feet sqrt( 2 * gravity * 20 * 12 )
-#define PLAYER_LAND_ON_FLOATING_OBJECT	173 // Can fall another 173 in/sec without getting hurt
-#define PLAYER_MIN_BOUNCE_SPEED		173
-#define PLAYER_FALL_PUNCH_THRESHOLD 303.0f // won't punch player's screen/make scrape noise unless player falling at least this fast - at least a 76" fall (sqrt( 2 * g * 76))
+#define PLAYER_FATAL_FALL_SPEED		1024.0f // approx 60 feet sqrt( 2 * gravity * 60 * 12 )
+#define PLAYER_MAX_SAFE_FALL_SPEED	580.0f // approx 20 feet sqrt( 2 * gravity * 20 * 12 )
+#define PLAYER_LAND_ON_FLOATING_OBJECT	200.0f // Can fall another 173 in/sec without getting hurt
+#define PLAYER_MIN_BOUNCE_SPEED		200.0f
+#define PLAYER_FALL_PUNCH_THRESHOLD 350.0f // won't punch player's screen/make scrape noise unless player falling at least this fast - at least a 76" fall (sqrt( 2 * g * 76))
 #define DAMAGE_FOR_FALL_SPEED		100.0f / ( PLAYER_FATAL_FALL_SPEED - PLAYER_MAX_SAFE_FALL_SPEED ) // damage per unit per second.
 
 // instant damage
 
-// For a means of resolving these consts into debug string text, see function
-// CTakeDamageInfo::DebugGetDamageTypeString(unsigned int DamageType, char *outbuf, unsigned int outbuflength )
-#define DMG_GENERIC			0			// generic damage -- do not use if you want players to flinch and bleed!
-#define DMG_CRUSH			(1 << 0)	// crushed by falling or moving object. 
-										// NOTE: It's assumed crush damage is occurring as a result of physics collision, so no extra physics force is generated by crush damage.
-										// DON'T use DMG_CRUSH when damaging entities unless it's the result of a physics collision. You probably want DMG_CLUB instead.
-#define DMG_BULLET			(1 << 1)	// shot
-#define DMG_SLASH			(1 << 2)	// cut, clawed, stabbed
-#define DMG_BURN			(1 << 3)	// heat burned
-//#define 			(1 << 4)	// FREE
-#define DMG_FALL			(1 << 5)	// fell too far
-#define DMG_BLAST			(1 << 6)	// explosive blast damage
-#define DMG_CLUB			(1 << 7)	// crowbar, punch, headbutt
-#define DMG_SHOCK			(1 << 8)	// electric shock
-#define DMG_SONIC			(1 << 9)	// sound pulse shockwave
-#define DMG_ENERGYBEAM		(1 << 10)	// laser or other high energy beam 
-#define DMG_PREVENT_PHYSICS_FORCE		(1 << 11)	// Prevent a physics force 
-#define DMG_NEVERGIB		(1 << 12)	// with this bit OR'd in, no damage type will be able to gib victims upon death
-#define DMG_ALWAYSGIB		(1 << 13)	// with this bit OR'd in, any damage type can be made to gib victims upon death.
-#define DMG_DROWN			(1 << 14)	// Drowning
-
-
-#define DMG_PARALYZE		(1 << 15)	// slows affected creature down
-#define DMG_NERVEGAS		(1 << 16)	// nerve toxins, very bad
-#define DMG_POISON			(1 << 17)	// blood poisoning - heals over time like drowning damage
-#define DMG_RADIATION		(1 << 18)	// radiation exposure
-#define DMG_DROWNRECOVER	(1 << 19)	// drowning recovery
-#define DMG_ACID			(1 << 20)	// toxic chemicals or acid burns
-#define DMG_SLOWBURN		(1 << 21)	// in an oven
-
-#define DMG_REMOVENORAGDOLL	(1<<22)		// with this bit OR'd in, no ragdoll will be created, and the target will be quietly removed.
-										// use this to kill an entity that you've already got a server-side ragdoll for
-
-#define DMG_PHYSGUN			(1<<23)		// Hit by manipulator. Usually doesn't do any damage.
-#define DMG_PLASMA			(1<<24)		// Shot by Cremator
-#define DMG_AIRBOAT			(1<<25)		// Hit by the airboat's gun
-
-#define DMG_DISSOLVE		(1<<26)		// Dissolving!
-#define DMG_BLAST_SURFACE	(1<<27)		// A blast on the surface of water that cannot harm things underwater
-#define DMG_DIRECT			(1<<28)
-#define DMG_BUCKSHOT		(1<<29)		// not quite a bullet. Little, rounder, different.
-#define DMG_ZOMBIE          (1<<30)     // Scratches / BIG Slash
+#define DMG_GENERIC						0			// generic damage was done
+#define DMG_CRUSH						(1 << 0)	// crushed by falling or moving object. 
+#define DMG_BULLET						(1 << 1)	// shot
+#define DMG_BUCKSHOT					(1 << 2)	// shot
+#define DMG_SLASH						(1 << 3)	// cut, clawed, stabbed
+#define DMG_BURN						(1 << 4)	// heat burned
+#define DMG_VEHICLE						(1 << 5)	// hit by a vehicle
+#define DMG_FALL						(1 << 6)	// fell too far
+#define DMG_BLAST						(1 << 7)	// explosive blast damage
+#define DMG_CLUB						(1 << 8)	// crowbar, punch, headbutt
+#define DMG_SHOCK						(1 << 9)	// electric shock
+#define DMG_DROWN						(1 << 10)	// Drowning
+#define DMG_PHYSGUN						(1 << 11)	// physics gun
+#define DMG_PLASMA						(1 << 12)	// plasma!
+#define DMG_PREVENT_PHYSICS_FORCE		(1 << 13)	// Prevent a physics force 
+#define DMG_REMOVENORAGDOLL				(1 << 14)		// with this bit OR'd in, no ragdoll will be created, and the target will be quietly removed.
+#define DMG_DISSOLVE					(1 << 15)		// Dissolving!
+#define DMG_BLAST_SURFACE				(1 << 16)		// A blast on the surface of water that cannot harm things underwater
+#define DMG_DIRECT						(1 << 17)
+#define DMG_DEVELOPER					(1 << 18)		// damage from a developer
+#define DMG_TELEFRAG					(1 << 19)		// damage from telefraggin
+#define DMG_ENGINEER					(1 << 20)		// damage from an engineer
+#define DMG_MINEFIELD					(1 << 21)		// damage from a minefield
+#define DMG_SNIPERZONE					(1 << 22)		// damage from a sniperzone
+#define DMG_INSTANT						(1 << 23)		// kill instally
+#define DMG_RICOCHET					(1 << 24)		// ricochet
 
 // NOTE: DO NOT ADD ANY MORE CUSTOM DMG_ TYPES. MODS USE THE DMG_LASTGENERICFLAG BELOW, AND
 //		 IF YOU ADD NEW DMG_ TYPES, THEIR TYPES WILL BE HOSED. WE NEED A BETTER SOLUTION.
 
 // TODO: keep this up to date so all the mod-specific flags don't overlap anything.
-#define DMG_LASTGENERICFLAG	DMG_ZOMBIE
+#define DMG_LASTGENERICFLAG	DMG_RICOCHET
 
-
+#define DMG_NO_PHYSICS_FORCE	(DMG_FALL | DMG_BURN | DMG_DROWN | DMG_CRUSH | DMG_PREVENT_PHYSICS_FORCE)
+#define DMG_VALIDFORCE			(DMG_BULLET | DMG_SLASH | DMG_BLAST | DMG_PLASMA)
 
 // settings for m_takedamage
 #define	DAMAGE_NO				0
@@ -336,7 +302,8 @@ enum
 #define	DAMAGE_AIM				3
 
 // Spectator Movement modes
-enum {
+enum SpectatorMovementModes_t
+{
 	OBS_MODE_NONE = 0,	// not in spectator mode
 	OBS_MODE_DEATHCAM,	// special mode for death cam animation
 	OBS_MODE_FREEZECAM,	// zooms to a target, and freeze-frames on them
@@ -416,7 +383,7 @@ enum
 
 // Shared think context stuff
 #define	MAX_CONTEXT_LENGTH		32
-#define NO_THINK_CONTEXT	-1
+#define NO_THINK_CONTEXT		-1
 
 // entity flags, CBaseEntity::m_iEFlags
 enum
@@ -526,17 +493,9 @@ struct FireBulletsInfo_t
 		m_iPlayerDamage = 0;
 		m_pAttacker = NULL;
 		m_nFlags = 0;
-		m_nPlayerSkillFlags = 0;
 		m_pAdditionalIgnoreEnt = NULL;
 		m_flDamageForceScale = 1.0f;
-
-#ifdef _DEBUG
-		m_iAmmoType = -1;
-		m_vecSrc.Init( VEC_T_NAN, VEC_T_NAN, VEC_T_NAN );
-		m_vecDirShooting.Init( VEC_T_NAN, VEC_T_NAN, VEC_T_NAN );
-#endif
 		m_bPrimaryAttack = true;
-		m_bIgnoreSkills = false;
 		m_flDropOffDist = 0.0f;
 		m_bUseServerRandomSeed = false;
 	}
@@ -555,11 +514,9 @@ struct FireBulletsInfo_t
 		m_iPlayerDamage = 0;
 		m_pAttacker = NULL;
 		m_nFlags = 0;
-		m_nPlayerSkillFlags = 0;
 		m_pAdditionalIgnoreEnt = NULL;
 		m_flDamageForceScale = 1.0f;
 		m_bPrimaryAttack = bPrimaryAttack;
-		m_bIgnoreSkills = false;
 		m_flDropOffDist = 0.0f;
 		m_bUseServerRandomSeed = false;
 	}
@@ -576,13 +533,11 @@ struct FireBulletsInfo_t
 	float m_flDamage;
 	int m_iPlayerDamage;	// Damage to be used instead of m_flDamage if we hit a player
 	int m_nFlags;			// See FireBulletsFlags_t
-	int m_nPlayerSkillFlags;
 	float m_flDamageForceScale;
 	CBaseEntity *m_pAttacker;
 	CBaseEntity *m_pAdditionalIgnoreEnt;
 	bool m_bPrimaryAttack;
 	bool m_bUseServerRandomSeed;
-	bool m_bIgnoreSkills;
 };
 
 //-----------------------------------------------------------------------------
@@ -640,6 +595,7 @@ struct ModelScale
 
 struct CSoundParameters;
 typedef short HSOUNDSCRIPTHANDLE;
+
 //-----------------------------------------------------------------------------
 // Purpose: Aggregates and sets default parameters for EmitSound function calls
 //-----------------------------------------------------------------------------
@@ -685,13 +641,6 @@ struct EmitSound_t
 	mutable HSOUNDSCRIPTHANDLE		m_hSoundScriptHandle;
 };
 
-// YWB:  3/12/2007
-// Changing the following #define for Prediction Error checking (See gamemovement.cpp for overview) will to 1 or 2 enables the system, 0 turns it off
-// Level 1 enables it, but doesn't force "full precision" networking, so you can still get lots of errors in position/velocity/etc.
-// Level 2 enables it but also forces origins/angles to be sent full precision, so other fields can be error / tolerance checked
-// NOTE:  This stuff only works on a listen server since it punches a hole from the client .dll to server .dll!!!
-#define PREDICTION_ERROR_CHECK_LEVEL 0
-
 enum
 {
 	SIMULATION_TIME_WINDOW_BITS = 8,
@@ -720,9 +669,6 @@ enum
 #define GLOWS_ENABLE
 #define BB2_LAGCOMP_HIT_MAX 5 // When figuring out which entities to hit, this is the max amount for now! During 1 comp. tick.
 
-#define BB2_NPC_FADE_TIME 1.25f
-#define BB2_NPC_FADE_FREQ ((1.0f / BB2_NPC_FADE_TIME) * 255.0f)
-
 enum
 {
 	GLOW_MODE_NONE = 0,
@@ -730,54 +676,6 @@ enum
 	GLOW_MODE_GLOBAL, // Forces Glowing on any entity.
 	// PLAYER STUFF:
 	GLOW_MODE_TEAMMATE, // Others can glow me if I'm X amount away from them, even if I'm not visible.
-};
-
-enum WeaponUniqueIDs
-{
-	WEAPON_ID_NONE = -1,
-	WEAPON_ID_BERETTA = 0,
-	WEAPON_ID_BERETTA_AKIMBO,
-	WEAPON_ID_GLOCK17,
-	WEAPON_ID_GLOCK17_AKIMBO,
-	WEAPON_ID_DEAGLE,
-	WEAPON_ID_REXMP412,
-	WEAPON_ID_REXMP412_AKIMBO,
-
-	WEAPON_ID_AK74,
-	WEAPON_ID_FAMAS,
-	WEAPON_ID_G36C,
-	WEAPON_ID_WINCHESTER1894,
-
-	WEAPON_ID_REMINGTON700,
-
-	WEAPON_ID_REMINGTON870,
-	WEAPON_ID_BENELLIM4,
-	WEAPON_ID_SAWEDOFF,
-	WEAPON_ID_SAWEDOFF_AKIMBO,
-
-	WEAPON_ID_MINIGUN,
-	WEAPON_ID_FLAMETHROWER,
-
-	WEAPON_ID_MAC11,
-	WEAPON_ID_MP7,
-	WEAPON_ID_MP5,
-	WEAPON_ID_MICROUZI,
-
-	WEAPON_ID_HANDS,
-	WEAPON_ID_ZOMBHANDS,
-	WEAPON_ID_BRICK,
-	WEAPON_ID_KICK,
-	WEAPON_ID_M9BAYONET,
-	WEAPON_ID_FIREAXE,
-	WEAPON_ID_MACHETE,
-	WEAPON_ID_HATCHET,
-	WEAPON_ID_SLEDGEHAMMER,
-	WEAPON_ID_BASEBALLBAT,
-
-	WEAPON_ID_PROPANE,
-	WEAPON_ID_FRAG,
-
-	WEAPON_ID_COUNT
 };
 
 enum EntityObstructionType

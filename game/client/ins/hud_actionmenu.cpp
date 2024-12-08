@@ -273,7 +273,7 @@ void CHudActionMenu::Paint( void )
 	if( pszTitle && pszTitle[ 0 ] )
 	{
 		wchar_t wszBuffer[ 128 ];
-		localize( )->ConvertANSIToUnicode( pszTitle, wszBuffer, sizeof( wszBuffer ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( pszTitle, wszBuffer, sizeof( wszBuffer ) );
 
 		surface( )->DrawSetTextColor( COLOR_GREY );
 		surface( )->DrawSetTextFont( m_Elements );
@@ -455,7 +455,7 @@ int CHudActionMenu::AddItem( int iSectionID, const char *pszName, const char *ps
 
 	if( pszExtText )
 	{
-		localize( )->ConvertANSIToUnicode( pszExtText, pMenuItem->m_wszExtText, sizeof( pMenuItem->m_wszExtText ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( pszExtText, pMenuItem->m_wszExtText, sizeof( pMenuItem->m_wszExtText ) );
 		pMenuItem->m_iExtLength = Q_strlen( pszExtText );
 	}
 	else
@@ -499,16 +499,9 @@ MenuSection_t *CHudActionMenu::FindSection( int iSectionID ) const
 //=========================================================
 void CHudActionMenu::SetupElement( MenuElement_t *pElement, const char *pszText )
 {
-	localize( )->ConvertANSIToUnicode( pszText, pElement->m_wszText, sizeof( pElement->m_wszText ) );
+	g_pVGuiLocalize->ConvertANSIToUnicode( pszText, pElement->m_wszText, sizeof( pElement->m_wszText ) );
 	pElement->m_iLength = Q_strlen( pszText );
 }
-
-
-
-
-
-
-
 
 //=========================================================
 //=========================================================

@@ -20,10 +20,6 @@
 #include "hud_pdump.h"
 #include "datacache/imdlcache.h"
 
-#ifdef HL2_CLIENT_DLL
-#include "c_basehlplayer.h"
-#endif
-
 #include "tier0/vprof.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -825,7 +821,7 @@ void CPrediction::RunCommand( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 		C_BaseCombatWeapon *weapon = dynamic_cast< C_BaseCombatWeapon * >( CBaseEntity::Instance( ucmd->weaponselect ) );
 		if ( weapon )
 		{
-			player->SelectItem(weapon->GetName());
+			player->SelectItem(weapon->GetWeaponID());
 		}
 	}
 

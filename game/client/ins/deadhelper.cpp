@@ -59,7 +59,7 @@ void CDeadHUDHelper::DeadUpdate( void )
 		return;
 
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer( );
-	C_PlayerResource *pPR = PlayerResource( );
+	C_PlayerResource *pPR = g_PR;
 
 	if( !pPlayer || !pPR )
 		return;

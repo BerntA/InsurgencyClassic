@@ -34,11 +34,6 @@
 #include "../common/xbox/xboxstubs.h"
 #endif
 
-#ifdef HL2_CLIENT_DLL
-// FIXME: Autoaim support needs to be moved from HL2_DLL to the client dll, so this include should be c_baseplayer.h
-#include "c_basehlplayer.h"
-#endif
-
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 

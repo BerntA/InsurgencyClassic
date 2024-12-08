@@ -153,7 +153,6 @@ static ConVar cl_drawmonitors( "cl_drawmonitors", "1" );
 static ConVar r_eyewaterepsilon( "r_eyewaterepsilon", "10.0f", FCVAR_CHEAT );
 
 extern ConVar cl_leveloverview;
-extern ConVar localplayer_visionflags;
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -1701,9 +1700,6 @@ void CViewRender::SetupVis( const CViewSetup& view, unsigned int &visFlags, View
 void CViewRender::RenderPlayerSprites()
 {
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
-
-	GetClientVoiceMgr()->DrawHeadLabels();
-
 	RenderObjectiveIcons();
 	DrawHumanIndicators();
 }

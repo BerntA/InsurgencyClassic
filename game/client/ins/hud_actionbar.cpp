@@ -309,7 +309,7 @@ public:
 
 		C_INSPlayer::ParsePlayerName( iEntIndex, true, szPlayerTitle, MAX_PLAYER_TITLE_LENGTH );
 		Q_snprintf( szPlayerInfo, sizeof( szPlayerInfo ), "%s - %im", szPlayerTitle, RoundFloatToInt( UTIL_2DCaculateDistance( pLocalPlayer, pViewingPlayer ) * METERS_PER_INCH ) );
-		localize( )->ConvertANSIToUnicode( szPlayerInfo, wszPlayerName, sizeof( wszPlayerName ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( szPlayerInfo, wszPlayerName, sizeof( wszPlayerName ) );
 	
 		// draw it
 		HFont HeavyFont = HUDActionBar( )->GetHeavyFont( );
@@ -422,7 +422,7 @@ public:
 		wchar_t wszCaptureTypeText[ 32 ];
 		int iCaptureTypeStringLength, iCaptureTypeLength;
 
-		localize( )->ConvertANSIToUnicode( pszCaptureType, wszCaptureTypeText, sizeof( wszCaptureTypeText ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( pszCaptureType, wszCaptureTypeText, sizeof( wszCaptureTypeText ) );
 		iCaptureTypeStringLength = Q_strlen( pszCaptureType );
 		iCaptureTypeLength = UTIL_ComputeStringWidth( LightFont, pszCaptureType );
 
@@ -433,7 +433,7 @@ public:
 
 		Q_snprintf( szCaptureObjText, sizeof( szCaptureObjText ), "Objective %s", pObjective->GetPhonetischName( ) );
 
-		localize( )->ConvertANSIToUnicode( szCaptureObjText, wszCaptureObjText, sizeof( wszCaptureObjText ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( szCaptureObjText, wszCaptureObjText, sizeof( wszCaptureObjText ) );
 		iCaptureObjStringLength = Q_strlen( szCaptureObjText );
 
 		// paint the text

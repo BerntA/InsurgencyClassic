@@ -11,7 +11,6 @@
 
 #include "baseparticleentity.h"
 
-//NOTENOTE: Mirrored in cl_dlls\c_steamjet.cpp
 #define	STEAM_NORMAL	0
 #define	STEAM_HEATWAVE	1
 

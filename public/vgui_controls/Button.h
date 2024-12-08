@@ -144,6 +144,11 @@ public:
 	// Set the message to send when the button is pressed
 	virtual void SetCommand( KeyValues *message );
 
+	virtual void SetCursorEnterMessage(const char* command);
+	virtual void SetCursorEnterMessage(KeyValues* message);
+	virtual void SetCursorExitMessage(const char* command);
+	virtual void SetCursorExitMessage(KeyValues* message);
+
 	// sound handling
 	void SetArmedSound(const char *sound);
 	void SetDepressedSound(const char *sound);
@@ -162,6 +167,8 @@ public:
 
 	bool IsDrawingFocusBox();
 	void DrawFocusBox( bool bEnable );
+
+	void SetUseBgColor(bool state) { SetPaintBackgroundEnabled(state); }
 
 	bool ShouldPaint(){ return _paint; }
 	void SetShouldPaint( bool paint ){ _paint = paint; }
@@ -212,7 +219,9 @@ protected:
 
 	CUtlFlags< unsigned short > _buttonFlags;	// see ButtonFlags_t
 	int                _mouseClickMask;
-	KeyValues		  *_actionMessage;
+	KeyValues*			_actionMessage;
+	KeyValues*			_cursorEnterMessage;
+	KeyValues*			_cursorExitMessage;
 	ActivationType_t   _activationType;
 
 	IBorder			  *_defaultBorder;

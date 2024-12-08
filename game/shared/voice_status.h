@@ -75,7 +75,6 @@ public:
 // CHudBase overrides.
 public:
 	
-	// Initialize the cl_dll's voice manager.
 	virtual int Init(
 		IVoiceStatusHelper *m_pHelper,
 		vgui::VPANEL pParentPanel);
@@ -93,12 +92,6 @@ public:
 	// When the server acknowledges that the local client is talking, then entindex will be gEngfuncs.GetLocalPlayer().
 	// entindex is -2 to represent the local client's voice being acked by the server.
 	void	UpdateSpeakerStatus(int entindex, bool bTalking);
-
-	// Call from the HUD_CreateEntities function so it can add sprites above player heads.
-	void	DrawHeadLabels();
-	void	SetHeadLabelOffset( float offset );
-	float	GetHeadLabelOffset( void ) const;
-	void	SetHeadLabelsDisabled( bool bDisabled ) { m_bHeadLabelsDisabled = bDisabled; }
 
 	// Called when the server registers a change to who this client can hear.
 	void	HandleVoiceMaskMsg(bf_read &msg);
@@ -130,10 +123,6 @@ public:
 
 	// blocks the target client from being heard
 	void	SetPlayerBlockedState(int iPlayerIndex, bool blocked);
-
-	void	SetHeadLabelMaterial( const char *pszMaterial );
-
-	IMaterial *GetHeadLabelMaterial( void ) { return m_pHeadLabelMaterial; }
 
 private:
 
@@ -175,13 +164,8 @@ public:
 
 private:
 
-	IMaterial			*m_pHeadLabelMaterial;	// For labels above players' heads.
-
 	bool				m_bBanMgrInitialized;
-
 	int					m_nControlSize;
-
-	bool				m_bHeadLabelsDisabled;
 
 #ifdef VOICE_VOX_ENABLE
 	CountdownTimer		m_bAboveThresholdTimer;

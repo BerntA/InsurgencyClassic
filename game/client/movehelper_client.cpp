@@ -34,6 +34,7 @@ public:
 	virtual void	Con_NPrintf( int idx, char const* fmt, ... );
 		
 	virtual bool	PlayerFallingDamage(void);
+	virtual void    PlayerDoAnimEvent(PlayerAnimEvent_e evt);
 
 	// These have separate server vs client impementations
 	virtual void	StartSound( const Vector& origin, int channel, char const* sample, float volume, soundlevel_t soundlevel, int fFlags, int pitch );
@@ -263,4 +264,9 @@ bool CMoveHelperClient::PlayerFallingDamage(void)
 bool CMoveHelperClient::IsWorldEntity( const CBaseHandle &handle )
 {
 	return handle == cl_entitylist->GetNetworkableHandle( 0 );
+}
+
+void CMoveHelperClient::PlayerDoAnimEvent(PlayerAnimEvent_e evt)
+{
+	ToINSPlayer(C_BasePlayer::GetLocalPlayer())->DoAnimationEvent(evt);
 }

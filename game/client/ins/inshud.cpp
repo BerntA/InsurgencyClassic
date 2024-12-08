@@ -16,7 +16,7 @@
 #include "hlscolor.h"
 #include "basic_colors.h"
 #include "ins_player_shared.h"
-#include <cl_dll/iviewport.h>
+#include <game/client/iviewport.h>
 #include "view.h"
 #include "in_buttons.h"
 #include "iinput.h"
@@ -232,10 +232,9 @@ void CINSHUDHelper::Init( void )
 	// setup health colors
 	for( int i = 0; i < HEALTHTYPE_COUNT; i++ )
 	{
-		HLSColor WColor( GetHealthColor( i ) );
+		HLSColor WColor(GetHealthColor(i));
 		WColor.m_flLuminance = TARGET_LUMINANCE;
-
-		m_HealthColors[ i ] = WColor.ConvertToRGB( );
+		m_HealthColors[i] = WColor.ConvertToRGB();
 	}
 
 	// init elements
@@ -512,7 +511,7 @@ void CINSHUDHelper::PlayerHelp( void )
 
 //=========================================================
 //=========================================================
-void CINSHUDHelper::SendChat( const char *pszText )
+void CINSHUDHelper::SendChat(const char* pszText, int iType)
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer( );
 
@@ -840,7 +839,7 @@ bool CINSHUDHelper::SquadLife( int &iLeft, int &iPool )
 
 		iPool++;
 
-		if( PlayerResource( )->IsAlive( iEntityIndex ) )
+		if (g_PR->IsAlive(iEntityIndex))
 			iLeft++;
 	}
 

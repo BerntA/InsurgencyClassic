@@ -598,9 +598,9 @@ void Label::Paint()
 			{
 				// draw disabled version, with embossed look
 				// offset image
-				_textImage->SetPos(x + 1, imageYPos + 1);
-				_textImage->SetColor(_disabledFgColor1);
-				_textImage->Paint();
+				//_textImage->SetPos(x + 1, imageYPos + 1);
+				//_textImage->SetColor(_disabledFgColor1);
+				//_textImage->Paint();
 
 				surface()->DrawFlushText();
 
