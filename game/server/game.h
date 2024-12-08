@@ -17,7 +17,6 @@ extern ConVar	servercfgfile;
 extern ConVar	lservercfgfile;
 
 // multiplayer server rules
-extern ConVar	bb2_spawn_protection;
 extern ConVar	falldamage;
 extern ConVar	footsteps;
 extern ConVar	decalfrequency;
