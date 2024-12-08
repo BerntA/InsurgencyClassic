@@ -177,7 +177,6 @@ INetworkStringTable *g_pStringTableParticleEffectNames = NULL;
 INetworkStringTable *g_StringTableEffectDispatch = NULL;
 INetworkStringTable *g_StringTableVguiScreen = NULL;
 INetworkStringTable *g_pStringTableMaterials = NULL;
-INetworkStringTable *g_pStringTableInfoPanel = NULL;
 INetworkStringTable *g_pStringTableServerMapCycle = NULL;
 
 static CGlobalVarsBase dummyvars( true );
@@ -1341,7 +1340,6 @@ void CHLClient::ResetStringTablePointers()
 	g_StringTableEffectDispatch = NULL;
 	g_StringTableVguiScreen = NULL;
 	g_pStringTableMaterials = NULL;
-	g_pStringTableInfoPanel = NULL;
 	g_pStringTableServerMapCycle = NULL;
 }
 
@@ -1364,10 +1362,7 @@ void CHLClient::LevelShutdown( void )
 	IGameSystem::LevelShutdownPreEntityAllSystems();
 
 	C_PhysPropClientside::DestroyAll();
-	C_HL2MP_Player::ResetAllClientEntities();
 	RemoveAllClientGibs();
-	RemoveAllClientAttachments();
-	RemoveAllClientPlayermodels();
 
 	modemanager->LevelShutdown();
 
@@ -1504,42 +1499,37 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 	if (!Q_strcasecmp(tableName, "VguiScreen"))
 	{
 		// Look up the id 
-		g_StringTableVguiScreen = networkstringtable->FindTable( tableName );
+		g_StringTableVguiScreen = networkstringtable->FindTable(tableName);
 
 		// When the material list changes, we need to know immediately
-		g_StringTableVguiScreen->SetStringChangedCallback( NULL, OnVguiScreenTableChanged );
+		g_StringTableVguiScreen->SetStringChangedCallback(NULL, OnVguiScreenTableChanged);
 	}
 	else if (!Q_strcasecmp(tableName, "Materials"))
 	{
 		// Look up the id 
-		g_pStringTableMaterials = networkstringtable->FindTable( tableName );
+		g_pStringTableMaterials = networkstringtable->FindTable(tableName);
 
 		// When the material list changes, we need to know immediately
-		g_pStringTableMaterials->SetStringChangedCallback( NULL, OnMaterialStringTableChanged );
+		g_pStringTableMaterials->SetStringChangedCallback(NULL, OnMaterialStringTableChanged);
 	}
-	else if ( !Q_strcasecmp( tableName, "EffectDispatch" ) )
+	else if (!Q_strcasecmp(tableName, "EffectDispatch"))
 	{
-		g_StringTableEffectDispatch = networkstringtable->FindTable( tableName );
+		g_StringTableEffectDispatch = networkstringtable->FindTable(tableName);
 	}
-	else if ( !Q_strcasecmp( tableName, "InfoPanel" ) )
+	else if (!Q_strcasecmp(tableName, "ParticleEffectNames"))
 	{
-		g_pStringTableInfoPanel = networkstringtable->FindTable( tableName );
-	}
-	else if ( !Q_strcasecmp( tableName, "ParticleEffectNames" ) )
-	{
-		g_pStringTableParticleEffectNames = networkstringtable->FindTable( tableName );
-		networkstringtable->SetAllowClientSideAddString( g_pStringTableParticleEffectNames, true );
+		g_pStringTableParticleEffectNames = networkstringtable->FindTable(tableName);
+		networkstringtable->SetAllowClientSideAddString(g_pStringTableParticleEffectNames, true);
 		// When the particle system list changes, we need to know immediately
-		g_pStringTableParticleEffectNames->SetStringChangedCallback( NULL, OnParticleSystemStringTableChanged );
+		g_pStringTableParticleEffectNames->SetStringChangedCallback(NULL, OnParticleSystemStringTableChanged);
 	}
-	else if ( !Q_strcasecmp( tableName, "ServerMapCycle" ) )
+	else if (!Q_strcasecmp(tableName, "ServerMapCycle"))
 	{
-		g_pStringTableServerMapCycle = networkstringtable->FindTable( tableName );
+		g_pStringTableServerMapCycle = networkstringtable->FindTable(tableName);
 	}
-
-	InstallStringTableCallback_GameRules();
+	else
+		InstallStringTableCallback_GameRules(tableName);
 }
-
 
 //-----------------------------------------------------------------------------
 // Material precache
@@ -2091,10 +2081,6 @@ CMouthInfo *CHLClient::GetClientUIMouthInfo()
 
 void CHLClient::FileReceived( const char * fileName, unsigned int transferID )
 {
-	if ( g_pGameRules )
-	{
-		g_pGameRules->OnFileReceived( fileName, transferID );
-	}
 }
 
 void CHLClient::ClientAdjustStartSoundParams( StartSoundParams_t& params )
@@ -2103,10 +2089,7 @@ void CHLClient::ClientAdjustStartSoundParams( StartSoundParams_t& params )
 
 const char* CHLClient::TranslateEffectForVisionFilter( const char *pchEffectType, const char *pchEffectName )
 {
-	if ( !GameRules() )
-		return pchEffectName;
-
-	return GameRules()->TranslateEffectForVisionFilter( pchEffectType, pchEffectName );
+	return pchEffectName;
 }
 
 bool CHLClient::DisconnectAttempt( void )
@@ -2118,7 +2101,7 @@ bool CHLClient::DisconnectAttempt( void )
 
 bool CHLClient::IsConnectedUserInfoChangeAllowed( IConVar *pCvar )
 {
-	return GameRules() ? GameRules()->IsConnectedUserInfoChangeAllowed( NULL ) : true;
+	return true;
 }
 
 #ifndef NO_STEAM

@@ -890,53 +890,28 @@ void CSoundControllerImp::Shutdown( CSoundPatch *pSound )
 
 CSoundPatch *CSoundControllerImp::SoundCreate( IRecipientFilter& filter, int nEntIndex, const char *pSoundName )
 {
-#ifdef CLIENT_DLL
-	if ( GameRules() )
-	{
-		pSoundName = GameRules()->TranslateEffectForVisionFilter( "sounds", pSoundName );
-	}
-#endif
-
 	CSoundPatch *pSound = new CSoundPatch;
-
 	// FIXME: This is done so we don't have to futz with the public interface
 	EHANDLE hEnt = (nEntIndex != -1) ? g_pEntityList->GetNetworkableHandle( nEntIndex ) : NULL;
 	pSound->Init( &filter, hEnt.Get(), CHAN_AUTO, pSoundName, SNDLVL_NORM );
-
 	return pSound;
 }
 
 CSoundPatch *CSoundControllerImp::SoundCreate( IRecipientFilter& filter, int nEntIndex, int channel, 
 			const char *pSoundName, float attenuation )
 {
-#ifdef CLIENT_DLL
-	if ( GameRules() )
-	{
-		pSoundName = GameRules()->TranslateEffectForVisionFilter( "sounds", pSoundName );
-	}
-#endif
-
 	CSoundPatch *pSound = new CSoundPatch;
 	EHANDLE hEnt = (nEntIndex != -1) ? g_pEntityList->GetNetworkableHandle( nEntIndex ) : NULL;
 	pSound->Init( &filter, hEnt.Get(), channel, pSoundName, ATTN_TO_SNDLVL( attenuation ) );
-
 	return pSound;
 }
 
 CSoundPatch *CSoundControllerImp::SoundCreate( IRecipientFilter& filter, int nEntIndex, int channel, 
 			const char *pSoundName, soundlevel_t soundlevel )
 {
-#ifdef CLIENT_DLL
-	if ( GameRules() )
-	{
-		pSoundName = GameRules()->TranslateEffectForVisionFilter( "sounds", pSoundName );
-	}
-#endif
-
 	CSoundPatch *pSound = new CSoundPatch;
 	EHANDLE hEnt = (nEntIndex != -1) ? g_pEntityList->GetNetworkableHandle( nEntIndex ) : NULL;
 	pSound->Init( &filter, hEnt.Get(), channel, pSoundName, soundlevel );
-
 	return pSound;
 }
 

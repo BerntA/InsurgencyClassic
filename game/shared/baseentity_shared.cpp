@@ -1535,13 +1535,15 @@ CBulletsTraceFilter::CBulletsTraceFilter(const IHandleEntity *passentity, int co
 
 bool CBulletsTraceFilter::ShouldHitEntity(IHandleEntity *pHandleEntity, int contentsMask)
 {
+	extern ConVar friendlyfire;
+
 	CBaseEntity *pEntity = EntityFromEntityHandle(pHandleEntity);
 	if (pEntity)
 	{
 		if ((pEntity->GetCollisionGroup() == COLLISION_GROUP_WEAPON) || pEntity->IsBaseCombatWeapon()) // Don't hit items, armor, etc...
 			return false;
 
-		if ((m_iTeamLink != TEAM_INVALID) && pEntity->IsPlayer() && (pEntity->GetTeamNumber() == m_iTeamLink) && HL2MPRules() && HL2MPRules()->IsTeamplay() && !friendlyfire.GetBool())
+		if ((m_iTeamLink != TEAM_INVALID) && pEntity->IsPlayer() && (pEntity->GetTeamNumber() == m_iTeamLink) && !friendlyfire.GetBool())
 			return false; // Bullets shouldn't trace against teammates. (plrs)
 
 		if (dynamic_cast<CBaseViewModel*>(pEntity) != NULL) // Don't hit viewmodel!
@@ -1676,22 +1678,22 @@ void CBaseEntity::ComputeTracerStartPosition( const Vector &vecShotSrc, Vector *
 //-----------------------------------------------------------------------------
 void CBaseEntity::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
 {
-	const char *pszTracerName = GetTracerType();
+	//const char *pszTracerName = GetTracerType();
 
-	Vector vNewSrc = vecTracerSrc;
+	//Vector vNewSrc = vecTracerSrc;
 
-	int iAttachment = GetTracerAttachment();
+	//int iAttachment = GetTracerAttachment();
 
-	switch ( iTracerType )
-	{
-	case TRACER_LINE:
-		UTIL_Tracer( vNewSrc, tr.endpos, entindex(), iAttachment, 0.0f, false, pszTracerName );
-		break;
+	//switch ( iTracerType )
+	//{
+	//case TRACER_LINE:
+	//	UTIL_Tracer( vNewSrc, tr.endpos, entindex(), iAttachment, 0.0f, false, pszTracerName );
+	//	break;
 
-	case TRACER_LINE_AND_WHIZ:
-		UTIL_Tracer( vNewSrc, tr.endpos, entindex(), iAttachment, 0.0f, true, pszTracerName );
-		break;
-	}
+	//case TRACER_LINE_AND_WHIZ:
+	//	UTIL_Tracer( vNewSrc, tr.endpos, entindex(), iAttachment, 0.0f, true, pszTracerName );
+	//	break;
+	//}
 }
 
 //-----------------------------------------------------------------------------
@@ -1722,7 +1724,7 @@ void CBaseEntity::TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr
 	if ((BloodColor() == DONT_BLEED) || (BloodColor() == BLOOD_COLOR_MECH) || (flDamage == 0))
 		return;
 
-	if (!(bitsDamageType & (DMG_CRUSH | DMG_BULLET | DMG_SLASH | DMG_ZOMBIE | DMG_BLAST | DMG_CLUB | DMG_AIRBOAT | DMG_BUCKSHOT)))
+	if (!(bitsDamageType & (DMG_CRUSH | DMG_BULLET | DMG_SLASH | DMG_BLAST | DMG_CLUB | DMG_BUCKSHOT)))
 		return;
 
 #ifdef GAME_DLL
@@ -1752,12 +1754,6 @@ const char* CBaseEntity::GetTracerType()
 
 void CBaseEntity::ModifyEmitSoundParams( EmitSound_t &params )
 {
-#ifdef CLIENT_DLL
-	if ( GameRules() )
-	{
-		params.m_pSoundName = GameRules()->TranslateEffectForVisionFilter( "sounds", params.m_pSoundName );
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------

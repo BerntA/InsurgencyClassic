@@ -16,7 +16,6 @@
 
 class IReplayFactory;
 
-extern INetworkStringTable *g_pStringTableInfoPanel;
 extern INetworkStringTable *g_pStringTableServerMapCycle;
 
 // Player / Client related functions
@@ -151,8 +150,6 @@ private:
 	// This can just be a wrapper on MapEntity_ParseAllEntities, but CS does some tricks in here
 	// with the entity list.
 	void LevelInit_ParseAllEntities( const char *pMapEntities );
-	void LoadMessageOfTheDay();
-	void LoadSpecificMOTDMsg( const ConVar &convar, const char *pszStringName );
 };
 
 

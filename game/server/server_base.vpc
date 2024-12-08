@@ -474,6 +474,7 @@ $Project
 			{
 				$File "ins\GameBase_Server.cpp"
 				$File "ins\GameBase_Server.h"
+				$File "ins\ins_gameinterface.cpp"
 				$File "$SRCDIR\game\shared\ins\GameBase_Shared.cpp"
 				$File "$SRCDIR\game\shared\ins\GameBase_Shared.h"
 				$File "$SRCDIR\game\shared\ins\GameDefinitions_Shared.cpp"
@@ -517,6 +518,7 @@ $Project
 
 			$Folder "Player"
 			{
+				$File "ins\ins_client.cpp"
 				$File "$SRCDIR\game\shared\ins\iplayeranimstate.h"
 				$File "$SRCDIR\game\shared\ins\voicegrpdata.cpp"
 				$File "$SRCDIR\game\shared\ins\voicemgrbase.cpp"

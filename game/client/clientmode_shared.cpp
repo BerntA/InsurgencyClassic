@@ -37,6 +37,7 @@
 #include "inshud.h"
 #include "imc_config.h"
 #include "rendertexture.h"
+#include "playercust.h"
 
 #include "fmod_manager.h"
 #include "GameBase_Client.h"
@@ -289,6 +290,7 @@ void ClientModeShared::Init()
 	ListenForGameEvent("round_start");
 	ListenForGameEvent("changelevel");
 	ListenForGameEvent("game_achievement");
+	ListenForGameEvent("player_spawn");
 
 #ifndef _XBOX
 	HLTVCamera()->Init();
@@ -863,6 +865,30 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	{
 		const char *szMap = event->GetString("map");
 		GameBaseClient->Changelevel(szMap);
+	}
+	else if (Q_strcmp("player_spawn", eventname) == 0)
+	{
+		// PNOTE: this is very broken when the player changes his
+		// squad because it doesn't have the class information
+		// in the client yet and causes the wrong model to 
+		// be returned
+
+		if (event->GetBool("dead"))
+			return;
+
+		C_INSPlayer* pPlayer = ToINSPlayer(UTIL_PlayerByUserId(event->GetInt("userid")));
+		if (!pPlayer || !pPlayer->IsLocalPlayer() || !pPlayer->IsCustomized())
+			return;
+
+		modelcustomization_t& MdlCust = GetModelCustomization(pPlayer);
+
+		if (MdlCust.bLoaded)
+		{
+			int a, b, c;
+			LoadModelCustomization(MdlCust, true, a, b, c);
+		}
+		else
+			Warning("Player Model Loaded, but Customization is not Initialized\n");
 	}
 	else if (Q_strcmp("game_achievement", eventname) == 0)
 	{
