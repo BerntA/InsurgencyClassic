@@ -626,7 +626,7 @@ CBasePlayer *UTIL_GetNearestPlayer(const Vector &origin, bool bNoMatterWhat)
 
 		if (bNoMatterWhat == false)
 		{
-			if (!pPlayer->IsAlive() || pPlayer->IsObserver() || (pPlayer->GetTeamNumber() <= TEAM_SPECTATOR))
+			if (!pPlayer->IsAlive() || pPlayer->IsObserver() || (pPlayer->GetTeamNumber() == TEAM_SPECTATOR) || (pPlayer->GetTeamNumber() == TEAM_UNASSIGNED))
 				continue;
 		}
 
@@ -639,56 +639,6 @@ CBasePlayer *UTIL_GetNearestPlayer(const Vector &origin, bool bNoMatterWhat)
 	}
 
 	return pNearest;
-}
-
-CBasePlayer *UTIL_GetNearestHumanPlayer( const Vector &origin )
-{
-	float distToNearest = FLT_MAX;
-	CBasePlayer *pNearest = NULL;
-
-	for (int i = 1; i <= gpGlobals->maxClients; i++ )
-	{
-		CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-		if ( !pPlayer )
-			continue;
-
-		if (!pPlayer->IsAlive() || pPlayer->IsObserver() || (pPlayer->GetTeamNumber() != TEAM_HUMANS))
-			continue;
-
-		float flDist = (pPlayer->GetLocalOrigin() - origin).LengthSqr();
-		if ( flDist < distToNearest )
-		{
-			pNearest = pPlayer;
-			distToNearest = flDist;
-		}
-	}
-
-	return pNearest;
-}
-
-CBasePlayer *UTIL_GetMostDistantPlayer(CBasePlayer *pIgnore, const Vector &origin)
-{
-	CBasePlayer *pPlayerInTheDistantHorizon = NULL;
-	float distance = 0.0f;
-
-	for (int i = 1; i <= gpGlobals->maxClients; i++)
-	{
-		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
-		if (!pPlayer)
-			continue;
-
-		if (!pPlayer->IsAlive() || pPlayer->IsObserver() || (pPlayer->GetTeamNumber() != TEAM_HUMANS) || (pPlayer == pIgnore))
-			continue;
-
-		float flDist = (pPlayer->GetLocalOrigin() - origin).LengthSqr();
-		if (flDist > distance)
-		{
-			pPlayerInTheDistantHorizon = pPlayer;
-			distance = flDist;
-		}
-	}
-
-	return pPlayerInTheDistantHorizon;
 }
 
 CBasePlayer *UTIL_GetNearestVisiblePlayer(CBaseEntity *pLooker, int mask, bool bNoMatterWhat)
@@ -707,7 +657,7 @@ CBasePlayer *UTIL_GetNearestVisiblePlayer(CBaseEntity *pLooker, int mask, bool b
 
 		if (bNoMatterWhat == false)
 		{
-			if (!pPlayer->IsAlive() || pPlayer->IsObserver() || (pPlayer->GetTeamNumber() <= TEAM_SPECTATOR))
+			if (!pPlayer->IsAlive() || pPlayer->IsObserver() || (pPlayer->GetTeamNumber() == TEAM_SPECTATOR) || (pPlayer->GetTeamNumber() == TEAM_UNASSIGNED))
 				continue;
 		}
 
@@ -734,7 +684,7 @@ CBasePlayer *UTIL_FindPlayerWithinRange(CBaseEntity *pLooker, int mask)
 	for (int i = 1; i <= gpGlobals->maxClients; i++)
 	{
 		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
-		if (!pPlayer || pPlayer->IsObserver() || !pPlayer->CollisionProp() || (pPlayer->GetTeamNumber() < TEAM_HUMANS) || !pPlayer->IsAlive() || (pPlayer->GetFlags() & FL_NOTARGET))
+		if (!pPlayer || pPlayer->IsObserver() || !pPlayer->CollisionProp() || (pPlayer->GetTeamNumber() == TEAM_SPECTATOR) || (pPlayer->GetTeamNumber() == TEAM_UNASSIGNED) || !pPlayer->IsAlive() || (pPlayer->GetFlags() & FL_NOTARGET))
 			continue;
 
 		float flDist = (pPlayer->GetLocalOrigin() - vLookPos).Length2D();
@@ -1507,17 +1457,12 @@ void UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpa
 
 bool UTIL_TeamsMatch( const char *pTeamName1, const char *pTeamName2 )
 {
-	// Everyone matches unless it's teamplay
-	if ( !g_pGameRules->IsTeamplay() )
-		return true;
-
 	// Both on a team?
 	if ( *pTeamName1 != 0 && *pTeamName2 != 0 )
 	{
 		if ( !stricmp( pTeamName1, pTeamName2 ) )	// Same Team?
 			return true;
 	}
-
 	return false;
 }
 

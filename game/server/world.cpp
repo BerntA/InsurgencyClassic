@@ -544,8 +544,8 @@ void CWorld::Precache( void )
 	}
 
 	InstallGameRules();
-	Assert( g_pGameRules );
-	g_pGameRules->Init();
+	Assert(g_pGameRules);
+	//g_pGameRules->Init();
 
 	CSoundEnt::InitSoundEnt();
 

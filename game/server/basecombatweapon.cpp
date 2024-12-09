@@ -22,13 +22,10 @@
 #include "igamesystem.h"
 #include "collisionutils.h"
 #include "func_break.h"
+#include "clipdef.h"
 #include "GameBase_Server.h"
 #include "GameBase_Shared.h"
 #include "eventlist.h"
-
-#ifdef HL2MP
-	#include "hl2mp_gamerules.h"
-#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -51,16 +48,20 @@ short		g_sModelIndexBloodSpray;	// holds the sprite index for splattered blood
 //-----------------------------------------------------------------------------
 void W_Precache(void)
 {
-	PrecacheFileWeaponInfoDatabase(filesystem, GameBaseShared()->GetEncryptionKey());
+	// PrecacheFileWeaponInfoDatabase(filesystem, GameBaseShared()->GetEncryptionKey());
 
 	g_sModelIndexFireball = CBaseEntity::PrecacheModel ("sprites/zerogxplode.vmt"); // fireball
-
+	g_sModelIndexWExplosion = CBaseEntity::PrecacheModel("sprites/WXplo1.vmt");
 	g_sModelIndexSmoke = CBaseEntity::PrecacheModel ("sprites/steam1.vmt"); // smoke
 	g_sModelIndexBubbles = CBaseEntity::PrecacheModel ("sprites/bubble.vmt"); //bubbles
+	g_sModelIndexBloodSpray = CBaseEntity::PrecacheModel("sprites/bloodspray.vmt");
+	g_sModelIndexBloodDrop = CBaseEntity::PrecacheModel("sprites/blood.vmt");
+	g_sModelIndexLaserDot = CBaseEntity::PrecacheModel("sprites/laserdot.vmt");
 	g_sModelIndexLaser = CBaseEntity::PrecacheModel( (char *)g_pModelNameLaser );
 
 	GameBaseShared()->GetSharedGameDetails()->Precache();
 
+	CBaseEntity::PrecacheModel("sprites/fire1.vmt"); // precache C_EntityFlame
 	CBaseEntity::PrecacheModel("effects/bubble.vmt"); // bubble trails
 	CBaseEntity::PrecacheModel("models/weapons/w_bullet.mdl");
 
@@ -86,48 +87,38 @@ int CBaseCombatWeapon::UpdateTransmitState( void)
 	}
 }
 
-
-void CBaseCombatWeapon::Operator_FrameUpdate( CBaseCombatCharacter *pOperator )
+void CBaseCombatWeapon::Operator_FrameUpdate(CBaseCombatCharacter* pOperator)
 {
-	StudioFrameAdvance( ); // animate
+	StudioFrameAdvance(); // animate
 
-	if ( IsSequenceFinished() )
+	if (IsSequenceFinished())
 	{
-		if ( SequenceLoops() )
+		if (SequenceLoops())
 		{
 			// animation does loop, which means we're playing subtle idle. Might need to fidget.
-			int iSequence = SelectWeightedSequence( GetActivity() );
-			if ( iSequence != ACTIVITY_NOT_AVAILABLE )
+			int iSequence = SelectWeightedSequence(GetActivity());
+			if (iSequence != ACTIVITY_NOT_AVAILABLE)
 			{
-				ResetSequence( iSequence );	// Set to new anim (if it's there)
+				ResetSequence(iSequence);	// Set to new anim (if it's there)
 			}
 		}
-#if 0
-		else
-		{
-			// animation that just ended doesn't loop! That means we just finished a fidget
-			// and should return to our heaviest weighted idle (the subtle one)
-			SelectHeaviestSequence( GetActivity() );
 		}
-#endif
-	}
 
 	// Animation events are passed back to the weapon's owner/operator
-	DispatchAnimEvents( pOperator );
+	DispatchAnimEvents(pOperator);
 
 	// Update and dispatch the viewmodel events
-	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-
-	if ( pOwner == NULL )
+	CBasePlayer* pOwner = ToBasePlayer(GetOwner());
+	if (pOwner == NULL)
 		return;
 
-	CBaseViewModel *vm = pOwner->GetViewModel();	
-	if ( vm != NULL )
+	CBaseViewModel* vm = pOwner->GetViewModel();
+	if (vm != NULL)
 	{
 		vm->StudioFrameAdvance();
-		vm->DispatchAnimEvents( this );
+		vm->DispatchAnimEvents(this);
 	}
-}
+	}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -136,35 +127,6 @@ void CBaseCombatWeapon::Operator_FrameUpdate( CBaseCombatCharacter *pOperator )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator )
 {
-	if ( (pEvent->type & AE_TYPE_NEWEVENTSYSTEM) && (pEvent->type & AE_TYPE_SERVER) )
-	{
-		if ( pEvent->event == AE_NPC_WEAPON_FIRE )
-		{			
-			return; // unused
-		}
-		else if ( pEvent->event == AE_WPN_PLAYWPNSOUND )
-		{
-			int iSnd = GetWeaponSoundFromString(pEvent->options);
-			if ( iSnd != -1 )
-			{
-				WeaponSound( (WeaponSound_t)iSnd );
-			}
-		}
-		else if (pEvent->event == AE_WPN_MELEE_START)
-		{
-			int type = atoi(pEvent->options);
-			if (type)
-				MeleeAttackStart(type);
-
-			return;
-		}
-		else if (pEvent->event == AE_WPN_MELEE_END)
-		{
-			MeleeAttackEnd();
-			return;
-		}
-	}
-
 	DevWarning( 2, "Unhandled animation event %d from %s --> %s\n", pEvent->event, pOperator->GetClassname(), GetClassname() );
 }
 
@@ -174,7 +136,6 @@ void CBaseCombatWeapon::HandleAnimEvent( animevent_t *pEvent )
 {
 	//If the player is receiving this message, pass it through
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-
 	if ( pOwner != NULL )
 	{
 		Operator_HandleAnimEvent( pEvent, pOwner );
@@ -182,108 +143,134 @@ void CBaseCombatWeapon::HandleAnimEvent( animevent_t *pEvent )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Make the weapon visible and tangible
+// Purpose: 
+// Input  : *pPicker - 
 //-----------------------------------------------------------------------------
-CBaseEntity* CBaseCombatWeapon::Respawn( void )
+bool CBaseCombatWeapon::CanDrop(void)
 {
-	Vector vecOrigin = g_pGameRules->VecWeaponRespawnSpot(this);
+	return (!m_bInReload && GetIdealActivity() != GetDrawActivity() && GetIdealActivity() != GetHolsterActivity());
+}
 
-	// make a copy of this weapon that is invisible and inaccessible to players (no touch function). The weapon spawn/respawn code
-	// will decide when to make the weapon visible and touchable.
-	CBaseEntity *pNewWeapon = CBaseEntity::Create(GetClassname(), vecOrigin, GetLocalAngles(), GetOwnerEntity());
-	if ( pNewWeapon )
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CBaseCombatWeapon::DoThrow(void)
+{
+	CBasePlayer* pPlayer = GetOwner();
+
+	Throw(NULL);
+
+	if (pPlayer)
 	{
-		CBaseCombatWeapon *pNewCombatWeapon = (CBaseCombatWeapon*)pNewWeapon;
-		if (pNewCombatWeapon)
-			pNewCombatWeapon->SetWeaponStartAmmo(this->GetWeaponStartAmmo());
+		if (pPlayer && !pPlayer->SwitchToNextBestWeapon(NULL))
+		{
+			CBaseViewModel* pVM = pPlayer->GetViewModel();
 
-		pNewWeapon->AddEffects( EF_NODRAW );// invisible for now
-		pNewWeapon->SetTouch( NULL );// no touch
-		pNewWeapon->SetThink( &CBaseCombatWeapon::AttemptToMaterialize );
+			if (pVM)
+				pVM->AddEffects(EF_NODRAW);
+		}
 
-		UTIL_DropToFloor( this, MASK_SOLID );
+		pPlayer->Weapon_Detach(this);
+	}
 
-		// not a typo! We want to know when the weapon the player just picked up should respawn! This new entity we created is the replacement,
-		// but when it should respawn is based on conditions belonging to the weapon that was taken.
-		pNewWeapon->SetNextThink(gpGlobals->curtime);
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBaseCombatWeapon::OnDrop(void)
+{
+	SendWeaponAnim(ACT_VM_IDLE);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Drop/throw the weapon with the given velocity.
+//-----------------------------------------------------------------------------
+bool CBaseCombatWeapon::Drop(bool bNoSwitch, const Vector* pVelocity)
+{
+	// we've dropped!
+	OnDrop();
+
+	// switch to next best
+	CBasePlayer* pPlayer = GetOwner();
+	if (!pPlayer)
+		return false;
+
+	// set position
+	Vector vThrowPos = pPlayer->Weapon_ShootPosition() - Vector(0, 0, 12);
+	SetAbsOrigin(vThrowPos);
+
+	QAngle angGunAngles;
+	VectorAngles(pPlayer->BodyDirection2D(), angGunAngles);
+	SetAbsAngles(angGunAngles);
+
+	// force basic throw if no switching
+	if (bNoSwitch && IsActiveWeapon())
+	{
+		// do throw
+		Throw(pVelocity);
+
+		// set as hidden
+		CBaseViewModel* pVM = pPlayer->GetViewModel();
+
+		if (pVM)
+			pVM->AddEffects(EF_NODRAW);
+
+		// detach the weapon
+		pPlayer->Weapon_Detach(this);
+
+		return true;
+	}
+
+	return DoThrow();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBaseCombatWeapon::Throw(const Vector* pVelocity)
+{
+	// work out velocity
+	Vector vecVelocity;
+	vecVelocity.Init();
+
+	if (pVelocity)
+	{
+		vecVelocity = *pVelocity;
 	}
 	else
 	{
-		Warning("Respawn failed to create %s!\n", GetClassname() );
+		CBasePlayer* pPlayer = GetOwner();
+		if (pPlayer)
+			vecVelocity = pPlayer->BodyDirection3D() * random->RandomInt(200.0f, 300.f) + Vector(0, 0, 100);
 	}
 
-	return pNewWeapon;
-}
+	// clear follow stuff, setup for collision
+	StopAnimation();
+	StopFollowingEntity();
+	SetMoveType(MOVETYPE_VPHYSICS);
+	m_iState = WEAPON_NOT_CARRIED;
+	RemoveEffects(EF_NODRAW);
+	FallInit();
+	SetGroundEntity(NULL);
+	SetTouch(NULL);
 
-//-----------------------------------------------------------------------------
-// Purpose: Weapons ignore other weapons when LOS tracing
-//-----------------------------------------------------------------------------
-class CWeaponLOSFilter : public CTraceFilterSkipTwoEntities
-{
-	DECLARE_CLASS( CWeaponLOSFilter, CTraceFilterSkipTwoEntities );
-public:
+	IPhysicsObject* pObj = VPhysicsGetObject();
 
-	CWeaponLOSFilter( IHandleEntity *pHandleEntity, IHandleEntity *pHandleEntity2, int collisionGroup ) : CTraceFilterSkipTwoEntities( pHandleEntity, pHandleEntity2, collisionGroup )
+	if (pObj != NULL)
 	{
+		AngularImpulse angImp(200, 200, 200);
+		pObj->AddVelocity(&vecVelocity, &angImp);
 	}
-
-	virtual bool ShouldHitEntity(IHandleEntity *pServerEntity, int contentsMask)
+	else
 	{
-		CBaseEntity *pEntity = (CBaseEntity *)pServerEntity;
-
-		if ((pEntity->GetCollisionGroup() == COLLISION_GROUP_WEAPON) || pEntity->IsBaseCombatWeapon())
-			return false;
-
-		if (pEntity->GetHealth() > 0)
-		{
-			CBreakable *pBreakable = dynamic_cast<CBreakable *>(pEntity);
-			if (pBreakable  && pBreakable->IsBreakable() && pBreakable->GetMaterialType() == matGlass)
-				return false;
-		}
-
-		return BaseClass::ShouldHitEntity(pServerEntity, contentsMask);
+		SetAbsVelocity(vecVelocity);
 	}
-};
 
-//-----------------------------------------------------------------------------
-// Purpose: Check the weapon LOS for an owner at an arbitrary position
-//			If bSetConditions is true, LOS related conditions will also be set
-//-----------------------------------------------------------------------------
-bool CBaseCombatWeapon::WeaponLOSCondition( const Vector &ownerPos, const Vector &targetPos, bool bSetConditions )
-{
-	return false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Base class always returns not bits
-//-----------------------------------------------------------------------------
-int CBaseCombatWeapon::WeaponRangeAttack1Condition( float flDot, float flDist )
-{
-	return -1;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Base class always returns not bits
-//-----------------------------------------------------------------------------
-int CBaseCombatWeapon::WeaponRangeAttack2Condition( float flDot, float flDist )
-{
-	return -1;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Base class always returns not bits
-//-----------------------------------------------------------------------------
-int CBaseCombatWeapon::WeaponMeleeAttack1Condition( float flDot, float flDist )
-{
-	return -1;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Base class always returns not bits
-//-----------------------------------------------------------------------------
-int CBaseCombatWeapon::WeaponMeleeAttack2Condition( float flDot, float flDist )
-{
-	return -1;
+	SetNextThink(gpGlobals->curtime + 1.0f);
+	SetOwnerEntity(NULL);
+	SetOwner(NULL);
 }
 
 //====================================================================================
@@ -291,32 +278,7 @@ int CBaseCombatWeapon::WeaponMeleeAttack2Condition( float flDot, float flDist )
 //====================================================================================
 void CBaseCombatWeapon::Delete( void )
 {
-	SetTouch( NULL );
-	// FIXME: why doesn't this just remove itself now?
-	SetThink(&CBaseCombatWeapon::SUB_Remove);
-	SetNextThink( gpGlobals->curtime + 0.1f );
-}
-
-void CBaseCombatWeapon::DestroyItem( void )
-{
-	CBaseCombatCharacter *pOwner = m_hOwner.Get();
-
-	if ( pOwner )
-	{
-		// if attached to a player, remove. 
-		pOwner->RemovePlayerItem( this );
-	}
-
-	Kill( );
-}
-
-void CBaseCombatWeapon::Kill( void )
-{
-	SetTouch( NULL );
-	// FIXME: why doesn't this just remove itself now?
-	// FIXME: how is this different than Delete(), and why do they have the same code in them?
-	SetThink(&CBaseCombatWeapon::SUB_Remove);
-	SetNextThink( gpGlobals->curtime + 0.1f );
+	UTIL_Remove(this);
 }
 
 //====================================================================================
@@ -327,24 +289,19 @@ void CBaseCombatWeapon::Kill( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::FallInit( void )
 {
-	SetModel( GetWorldModel() );
+	SetModel(GetWorldModel());
 	VPhysicsDestroyObject();
 
-	if ( !VPhysicsInitNormal( SOLID_BBOX, GetSolidFlags() | FSOLID_TRIGGER, false ) )
+	if (!VPhysicsInitNormal(SOLID_BBOX, GetSolidFlags() | FSOLID_TRIGGER, false))
 	{
-		SetMoveType( MOVETYPE_FLYGRAVITY );
-		SetSolid( SOLID_BBOX );
-		AddSolidFlags( FSOLID_TRIGGER );
+		SetMoveType(MOVETYPE_FLYGRAVITY);
+		SetSolid(SOLID_BBOX);
+		AddSolidFlags(FSOLID_TRIGGER);
 	}
-	else
-	{
-	}	
 
-	SetPickupTouch();
-	
-	SetThink( &CBaseCombatWeapon::FallThink );
+	SetThink(&CBaseCombatWeapon::FallThink);
 
-	SetNextThink( gpGlobals->curtime + 0.1f );
+	SetNextThink(gpGlobals->curtime + 0.1f);
 }
 
 //-----------------------------------------------------------------------------
@@ -355,11 +312,11 @@ void CBaseCombatWeapon::FallInit( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::FallThink ( void )
 {
-	SetNextThink( gpGlobals->curtime + 0.1f );
+	SetNextThink(gpGlobals->curtime + 0.1f);
 
 	bool shouldMaterialize = false;
-	IPhysicsObject *pPhysics = VPhysicsGetObject();
-	if ( pPhysics )
+	IPhysicsObject* pPhysics = VPhysicsGetObject();
+	if (pPhysics)
 	{
 		shouldMaterialize = pPhysics->IsAsleep();
 	}
@@ -368,15 +325,15 @@ void CBaseCombatWeapon::FallThink ( void )
 		shouldMaterialize = (GetFlags() & FL_ONGROUND) ? true : false;
 	}
 
-	if ( shouldMaterialize )
+	if (shouldMaterialize)
 	{
 		// clatter if we have an owner (i.e., dropped by someone)
 		// don't clatter if the gun is waiting to respawn (if it's waiting, it is invisible!)
-		if ( GetOwnerEntity() )
+		if (GetOwnerEntity())
 		{
-			EmitSound( "BaseCombatWeapon.WeaponDrop" );
+			EmitSound("BaseCombatWeapon.WeaponDrop");
 		}
-		Materialize(); 
+		Materialize();
 	}
 }
 
@@ -388,66 +345,14 @@ void CBaseCombatWeapon::FallThink ( void )
 //-----------------------------------------------------------------------------// 
 void CBaseCombatWeapon::Materialize( void )
 {
-	if ( IsEffectActive( EF_NODRAW ) )
-	{	
-		RemoveEffects( EF_NODRAW );
+	if (IsEffectActive(EF_NODRAW))
+	{
+		RemoveEffects(EF_NODRAW);
 		DoMuzzleFlash();
 	}
-#ifdef HL2MP
-	if ( HasSpawnFlags( SF_NORESPAWN ) == false )
-	{
-		VPhysicsInitNormal( SOLID_BBOX, GetSolidFlags() | FSOLID_TRIGGER, false );
-		SetMoveType( MOVETYPE_VPHYSICS );
-	}
-#else
-	SetSolid( SOLID_BBOX );
-	AddSolidFlags( FSOLID_TRIGGER );
-#endif
 
-	SetPickupTouch();
-
-	SetThink (NULL);
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: See if the game rules will let this weapon respawn
-//-----------------------------------------------------------------------------
-void CBaseCombatWeapon::AttemptToMaterialize( void )
-{
-	Materialize();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Weapon has been picked up, should it respawn?
-//-----------------------------------------------------------------------------
-void CBaseCombatWeapon::CheckRespawn( void )
-{
-	if (!CanRespawnWeapon() || m_bSuppressRespawn)
-		return;
-
-	switch ( g_pGameRules->WeaponShouldRespawn( this ) )
-	{
-	case GR_WEAPON_RESPAWN_YES:
-		Respawn();
-		break;
-	case GR_WEAPON_RESPAWN_NO:
-		return;
-		break;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int	CBaseCombatWeapon::ObjectCaps( void )
-{ 
-	int caps = BaseClass::ObjectCaps();
-	if ( !IsFollowingEntity() && !HasSpawnFlags(SF_WEAPON_NO_PLAYER_PICKUP) )
-	{
-		caps |= FCAP_IMPULSE_USE;
-	}
-
-	return caps;
+	SetThink(NULL);
+	AutoRemove(); // TODO add flag to disable this, for custom maps??
 }
 
 //-----------------------------------------------------------------------------
@@ -455,24 +360,12 @@ int	CBaseCombatWeapon::ObjectCaps( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
 {
-	if (IsDissolving())
+	if (IsDissolving() || HasSpawnFlags(SF_WEAPON_NO_PLAYER_PICKUP))
 		return;
 
-	if (HasSpawnFlags(SF_WEAPON_NO_PLAYER_PICKUP))
+	CBasePlayer* pPlayer = ToBasePlayer(pActivator);
+	if (pPlayer == NULL)
 		return;
 
-	CHL2MP_Player *pClient = ToHL2MPPlayer(pActivator);
-	if (pClient)
-	{
-		m_OnPlayerUse.FireOutput(pActivator, pCaller);
-
-		// Bump the weapon to try equipping it before picking it up physically. This is
-		// important in a few spots in the game where the player could potentially +use pickup
-		// and then THROW AWAY a vital weapon, rendering them unable to continue the game.
-		if (pClient->BumpWeapon(this))
-			OnPickedUp(pClient);
-
-		//pClient->PickupObject(this, false);
-	}
+	pPlayer->BumpWeapon(this, true);
 }
-

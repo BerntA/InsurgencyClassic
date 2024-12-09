@@ -383,10 +383,8 @@ float CBaseCombatWeapon::GetWeaponIdleTime(void)
 void CBaseCombatWeapon::AutoRemove(void)
 {
 #ifdef GAME_DLL
-
 	SetThink(&CBaseEntity::SUB_Remove);
 	SetNextThink(gpGlobals->curtime + 30.0f);
-
 #endif
 }
 

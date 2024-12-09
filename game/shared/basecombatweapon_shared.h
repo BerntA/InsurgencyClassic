@@ -304,8 +304,8 @@ public:
 	virtual void Delete(void);
 
 	// Animation
-	virtual void Operator_FrameUpdate(CBasePlayer* pOperator);
-	virtual void Operator_HandleAnimEvent(animevent_t* pEvent, CBasePlayer* pOperator);
+	virtual void Operator_FrameUpdate(CBaseCombatCharacter* pOperator);
+	virtual void Operator_HandleAnimEvent(animevent_t* pEvent, CBaseCombatCharacter* pOperator);
 	virtual void HandleAnimEvent(animevent_t* pEvent);
 
 	// Misc
