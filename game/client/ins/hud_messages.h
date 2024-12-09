@@ -19,54 +19,38 @@
 #include "deadhelper.h"
 #include "inshud.h"
 
-//=========================================================
-//=========================================================
 namespace vgui
 {
 	class IScheme;
 };
 
-class CHudChatInputLine;
-class CHudChatEntry;
-
 //=========================================================
 //=========================================================
-class CHudMessages : public CHudMessagesBase, public CDeadHUDHelper, public IINSChatMessages, public IINSChatListener
+class CHudMessages : public CHudMessagesBase, public CDeadHUDHelper, public IINSChatMessages
 {
-	DECLARE_CLASS_SIMPLE( CHudMessages, CHudMessagesBase );
+	DECLARE_CLASS_SIMPLE(CHudMessages, CHudMessagesBase);
 
 public:
-	CHudMessages( const char *pszElementName );
-	~CHudMessages( );
+	CHudMessages(const char* pszElementName);
+	~CHudMessages();
 
-	void StartMessageMode( int iType );
-	vgui::Panel *GetInputPanel( void );
+	void PrintRadio(const char* pszMessage, int iEntID);
 
-	void PrintChat( CColoredString &String, int iType );
-	void PrintChat( const char *pszMessage );
-	void PrintRadio( const char *pszMessage, int iEntID );
-
-	static bool IsValidSayType( int iType );
-
-	void MsgFunc_FFMsg( bf_read &msg );
+	void MsgFunc_FFMsg(bf_read& msg);
 
 private:
-	void ApplySettings( KeyValues *pResourceData );
-	void FireGameEvent( IGameEvent *pEvent );
+	void ApplySettings(KeyValues* pResourceData);
+	void FireGameEvent(IGameEvent* pEvent);
 
-	void Init( void );
-	void Update( void );
-	void RecaculateInput( void );
-	void OnThink( void );
+	void Init(void);
+	void Update(void);
+	void OnThink(void);
 
-	const char *FontName( void ) const { return "ChatFont"; }
-
-private:
-	CHudChatInputLine *m_pInputLine;
+	const char* FontName(void) const { return "ChatFont"; }
 };
 
 //=========================================================
 //=========================================================
-extern CHudMessages *g_pPlayerChat;
+extern CHudMessages* g_pPlayerChat;
 
 #endif // HUD_MESSAGES_H

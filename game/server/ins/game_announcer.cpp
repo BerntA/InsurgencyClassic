@@ -6,8 +6,7 @@
 
 #include "cbase.h"
 #include "game_announcer.h"
-#include "hl2mp_gamerules.h"
-#include "hl2mp_player.h"
+#include "ins_player.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"

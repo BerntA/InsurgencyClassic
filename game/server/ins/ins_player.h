@@ -95,11 +95,6 @@ struct DamageGiven_t : public DamageInfo_t
 	EHANDLE m_hPlayer;
 };
 
-/*struct DamageGiven_t : public DamageGiven_t
-{
-	char m_szName[ MAX_PLAYER_NAME_LENGTH ];
-};*/
-
 //=========================================================
 //=========================================================
 class CINSPlayer : public CBasePlayer, public IINSPlayerAnimStateHelper, public IInventoryManager
@@ -561,11 +556,6 @@ public:
 
 	void DisableAutoSwitch( bool bState ) { m_bDisableAutoSwitch = bState; }
 
-	void SetGimped( bool bState );
-	bool IsGimped( void ) const;
-
-	bool HandleChatMessage( char *pszMessage );
-
 	void ClientSettingsChanged( void );
 
 private:
@@ -625,9 +615,6 @@ private:
 
 	// Misc
 	void ImpulseCommands( int iImpulse );
-
-	bool AllowNameChange( void );
-	void AttemptNameUpdate( void );
 
 public:
 
@@ -785,7 +772,6 @@ private:
 	int m_iVoiceType;
 	bool m_bCanShowDeathMenu;
 	float m_flTimeJoined;
-	bool m_bAllowNameUpdate;
 	float m_flNextTalkTime;
 	Vector m_vecTotalForce, m_vecTotalBulletForce;
 	bool m_bDeadFade;
@@ -798,8 +784,6 @@ private:
 	float m_flInvincibilityTheshold;
 
     float m_flHeadTurnThreshold;
-
-	bool m_bGimped;
 };
 
 //=========================================================

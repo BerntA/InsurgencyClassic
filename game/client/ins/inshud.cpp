@@ -135,7 +135,6 @@ DEFINE_HUDLISTENER( IINSTeamListener, g_TeamListeners );
 DEFINE_HUDLISTENER( IINSDamageListener, g_DamageListeners );
 DEFINE_HUDLISTENER( IINSObjListener, g_ObjListeners );
 DEFINE_HUDLISTENER( IINSPostRenderListener, g_RenderListeners );
-DEFINE_HUDLISTENER( IINSChatListener, g_ChatListeners );
 DEFINE_HUDLISTENER( IINSFireMode, g_FMListeners );
 DEFINE_HUDLISTENER( IINSPlayerDeath, g_DeathListeners );
 DEFINE_HUDLISTENER( IINSReinforcement, g_ReinforcementListeners );
@@ -168,13 +167,6 @@ void __MsgFunc_Pain( bf_read &msg )
 void __MsgFunc_Damage( bf_read &msg )
 {
 	GetINSHUDHelper( )->SendDamageUpdate( msg );
-}
-
-//=========================================================
-//=========================================================
-void __MsgFunc_SayText( bf_read &msg )
-{
-	GetINSHUDHelper( )->SendChatUpdate( msg );
 }
 
 //=========================================================
@@ -225,7 +217,6 @@ void CINSHUDHelper::Init( void )
 	// hook messages
 	HOOK_MESSAGE( Damage );
 	HOOK_MESSAGE( Pain );
-	HOOK_MESSAGE( SayText );
 	HOOK_MESSAGE( FireMode );
 	HOOK_MESSAGE( ReinforceMsg );
 
@@ -381,39 +372,6 @@ void CINSHUDHelper::SendPostRender( void )
 
 //=========================================================
 //=========================================================
-void CINSHUDHelper::SendChatUpdate( bf_read &msg )
-{
-	int iType, iSenderID;
-	bool bThirdPerson = false;
-
-	// collect information
-	iType = msg.ReadByte( );
-	iSenderID = 0;
-
-	if( iType != SAYTYPE_SERVER )
-	{
-		bThirdPerson = msg.ReadOneBit( ) ? true : false;
-		iSenderID = msg.ReadByte( );
-	}
-
-	char szString[ MAX_CHATMSG_LENGTH ];
-	msg.ReadString( szString, sizeof( szString ) );
-
-	const char *pszString = UTIL_CleanChatString( szString );
-
-	// parse information
-	if( !pszString )
-		return;
-
-	CColoredString ParsedString;
-	UTIL_ParseChatMessage( ParsedString, iSenderID, iType, bThirdPerson, pszString );
-
-	for( int i = 0; i < g_RenderListeners.Count( ); i++ )
-		g_ChatListeners[ i ]->PrintChat( ParsedString, iType );
-}
-
-//=========================================================
-//=========================================================
 void CINSHUDHelper::SendFireModeUpdate( bf_read &msg )
 {
 	int iMode = msg.ReadByte( );
@@ -507,34 +465,6 @@ void CINSHUDHelper::StatusBroadcast( void )
 void CINSHUDHelper::PlayerHelp( void )
 {
 	engine->ServerCmd( PCMD_NEEDSHELP );
-}
-
-//=========================================================
-//=========================================================
-void CINSHUDHelper::SendChat(const char* pszText, int iType)
-{
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer( );
-
-	if( !pPlayer )
-		return;
-
-	// copy text
-	char szTextBuffer[ MAX_CHATMSG_LENGTH ];
-    Q_strncpy( szTextBuffer, pszText, MAX_CHATMSG_LENGTH );
-
-	// handle the string
-	bool bThirdPerson = false;
-	const char *pszHandledText = UTIL_HandleChatString( szTextBuffer, bThirdPerson );
-
-	if( !pszHandledText )
-		return;
-
-	// ... command and type
-	char szSendText[ MAX_CHATBUFFER_LENGTH ];
-	Q_snprintf( szSendText, sizeof( szSendText ), "say2 %i %s", bThirdPerson ? 1 : 0, pszHandledText );
-
-	// send to the server
-	engine->ServerCmd( szSendText );
 }
 
 //=========================================================

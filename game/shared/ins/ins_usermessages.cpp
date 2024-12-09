@@ -20,7 +20,6 @@ void RegisterUserMessages(void)
 	usermessages->Register("SayText", -1);
 	usermessages->Register("SayText2", -1);
 	usermessages->Register("TextMsg", -1);
-	usermessages->Register("TextMsgFast", -1);
 	usermessages->Register("HudMsg", -1);
 	usermessages->Register("ShowMenu", -1);
 	usermessages->Register("ResetHUD", 1);	// called every respawn

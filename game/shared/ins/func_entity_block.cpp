@@ -5,13 +5,16 @@
 //========================================================================================//
 
 #include "cbase.h"
+
 #ifdef GAME_DLL
 #include "baseentity.h"
 #else
 #include "c_baseentity.h"
 #define CFuncEntityBlock C_FuncEntityBlock
 #endif
-#include "hl2mp_gamerules.h"
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
 
 enum DynamicBlockerStates
 {

@@ -14,9 +14,7 @@
 #include "ins_shared.h"
 
 #ifdef GAME_DLL
-
 #include "hint_helper.h"
-
 #endif
 
 //=========================================================
@@ -68,8 +66,6 @@ extern void UTIL_CreateExplosion( const Vector &vecOrigin, CBaseEntity *pAttacke
 extern void UTIL_SendHint( CINSPlayer *pPlayer, int iHintID );
 extern const char *UTIL_FindPlaceName( const Vector &vecPos );
 
-extern 
-
 //=========================================================
 //=========================================================
 #else
@@ -89,13 +85,6 @@ void RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc, float flRa
 extern int UTIL_WeaponStatisticType( int iHitGroup );
 
 #endif
-
-//=========================================================
-//=========================================================
-extern char *UTIL_HandleChatString( char *pszString, bool &bThirdPerson );
-extern char *UTIL_CleanChatString( char *pszString );
-
-extern void UTIL_ParseChatMessage( CColoredString &String, int iSenderID, int iType, bool bThirdPerson, const char *pszMessage );
 
 //=========================================================
 //=========================================================
@@ -155,21 +144,9 @@ extern void UTIL_FastRotate( float flAngle, float &flX, float &flY );
 //=========================================================
 #ifdef CLIENT_DLL
 
-extern bool UTIL_IsVentRunning( void );
-
-#endif
-
-//=========================================================
-//=========================================================
-#ifdef CLIENT_DLL
-
 extern void UTIL_RemoveCommandFlags( const ConCommandBase *pCommand, int iFlags );
 
 #endif
-
-//=========================================================
-//=========================================================
-extern void UTIL_PrintCheatMessage( CBasePlayer *pPlayer );
 
 //=========================================================
 //=========================================================
@@ -204,13 +181,7 @@ extern int UTIL_FindOrientation( CBaseEntity *pEntity, Vector &vecReferance );
 #ifdef CLIENT_DLL
 
 extern const char *g_pszOrientationNames[ ORIENTATION_COUNT ];
-
 extern const char *g_pszFireModeNames[ FIREMODE_COUNT ];
-
-extern char *ConvertCRtoNL( char *str );
-extern wchar_t *ConvertCRtoNL( wchar_t *str );
-extern void StripEndNewlineFromString( char *str );
-extern void StripEndNewlineFromString( wchar_t *str );
 
 extern void UTIL_ParseMapName( char *pszBuffer, int iLength );
 

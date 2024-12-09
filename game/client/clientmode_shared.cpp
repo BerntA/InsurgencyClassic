@@ -576,13 +576,19 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 		if (Q_strcmp(pszCurrentBinding, "messagemode") == 0 || Q_strcmp(pszCurrentBinding, "say") == 0)
 		{
 			if (down)
-				StartMessageMode(MM_SAY);
+				StartMessageMode(SAYTYPE_GLOBAL);
 			return 0;
 		}
 		else if (Q_strcmp(pszCurrentBinding, "messagemode2") == 0 || Q_strcmp(pszCurrentBinding, "say_team") == 0)
 		{
 			if (down)
-				StartMessageMode(MM_SAY_TEAM);
+				StartMessageMode(SAYTYPE_TEAM);
+			return 0;
+		}
+		else if (Q_strcmp(pszCurrentBinding, "messagemode3") == 0 || Q_strcmp(pszCurrentBinding, "say_squad") == 0)
+		{
+			if (down)
+				StartMessageMode(SAYTYPE_SQUAD);
 			return 0;
 		}
 	}

@@ -147,17 +147,6 @@ public:
 
 //=========================================================
 //=========================================================
-class IINSChatListener
-{
-public:
-	IINSChatListener( );
-	virtual ~IINSChatListener( );
-
-	virtual void PrintChat( CColoredString &ChatMessage, int iType ) = 0;
-};
-
-//=========================================================
-//=========================================================
 class IINSFireMode
 {
 public:
@@ -260,9 +249,6 @@ public:
 class IINSChatMessages
 {
 public:
-	virtual void PrintChat( CColoredString &String, int iType ) = 0;
-	virtual void PrintChat( const char *pszMessage ) = 0;
-
 	virtual void PrintRadio( const char *pszMessage, int iEntID ) = 0;
 };
 
@@ -295,7 +281,6 @@ public:
 	void SendPainUpdate( bf_read &msg );
 	void SendObjUpdate( C_INSObjective *pObjective );
 	void SendPostRender( void );
-	void SendChatUpdate( bf_read &msg );
 	void SendFireModeUpdate( bf_read &msg );
 	void SendDeathUpdate( void );
 	void SendReinforcementUpdate( bf_read &msg );
@@ -318,7 +303,6 @@ public:
 	void PlayerOrderResponse( int iResponseID );
 	void StatusBroadcast( void );
 	void PlayerHelp( void );
-	void SendChat( const char *pszText, int iType );
 
 	// Interfaces
 	void UnitOrderStart( void );

@@ -1117,7 +1117,7 @@ void UTIL_HudMessageAll( const hudtextparms_t &textparms, const char *pMessage )
 
 void UTIL_ClientPrintFilter( IRecipientFilter& filter, int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
 {
-	UserMessageBegin( filter, "TextMsg" ); // use TextMsgFast ??? INS WARN
+	UserMessageBegin( filter, "TextMsg" );
 		WRITE_BYTE( msg_dest );
 		WRITE_STRING( msg_name );
 

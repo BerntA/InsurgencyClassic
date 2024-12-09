@@ -740,7 +740,7 @@ void CRunningMode::RoundWon( int iTeamID, int iWinType, CBaseEntity *pWinningObj
 	}
 
 	// update player data right away
-	PlayerResource( )->UpdatePlayerData( );
+	g_pPlayerResource->UpdatePlayerData();
 
 	// point the spectators at the winning object
 	// NOTE: this doesn't work

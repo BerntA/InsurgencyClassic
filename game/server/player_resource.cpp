@@ -73,11 +73,8 @@ int CPlayerResource::UpdateTransmitState()
 // Purpose: Wrapper for the virtual GrabPlayerData Think function
 //-----------------------------------------------------------------------------
 void CPlayerResource::ResourceThink(void)
-{
-	m_nUpdateCounter++;
-
+{	
 	UpdatePlayerData();
-
 	SetNextThink(gpGlobals->curtime + 0.1f);
 }
 
@@ -86,6 +83,7 @@ void CPlayerResource::ResourceThink(void)
 //-----------------------------------------------------------------------------
 void CPlayerResource::UpdatePlayerData(void)
 {
+	m_nUpdateCounter++;
 	for (int i = 1; i <= gpGlobals->maxClients; i++)
 	{
 		CINSPlayer* pPlayer = ToINSPlayer(UTIL_PlayerByIndex(i));

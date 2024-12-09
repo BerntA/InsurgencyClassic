@@ -516,7 +516,7 @@ public:
 
 	virtual void DoMuzzleFlash();
 
-	virtual void			CheckChatText( char *p, int bufsize ) {}
+	virtual void			CheckChatText(char* p, int bufsize);
 
 	virtual void			CreateRagdollEntity( void ) { return; }
 

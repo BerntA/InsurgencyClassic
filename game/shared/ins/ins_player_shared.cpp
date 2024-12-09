@@ -1889,10 +1889,3 @@ bool CINSPlayer::IsMoveFrozen( void ) const
 	CWeaponINSBase *pWeapon = GetActiveINSWeapon( );
 	return ( pWeapon && !pWeapon->AllowPlayerMovement( ) );
 }
-
-//=========================================================
-//=========================================================
-bool CINSPlayer::AllowNameChange( void )
-{
-	return ( InSquad( ) && !IsObserver( ) );
-}

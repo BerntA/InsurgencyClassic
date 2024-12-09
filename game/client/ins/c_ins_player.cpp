@@ -246,9 +246,6 @@ C_INSPlayer::C_INSPlayer()
 
 	m_flHeadLookThreshold = 0.0f;
 
-	m_szTempName[ 0 ] = '\0';
-	m_szRespawnName[ 0 ] = '\0';
-
 	// zero [
 	m_pFlashlightBeam = NULL;
 	// zero ]
@@ -281,9 +278,6 @@ void C_INSPlayer::PreThink(void)
 
 	// handle leaning
 	HandleLeaning();
-
-	// change name
-	AttemptNameUpdate( );
 }
 
 //=========================================================
@@ -1383,68 +1377,6 @@ void C_INSPlayer::ReleaseFlashlight( void )
 void C_INSPlayer::InitalSpawn( void )
 {
 	engine->ServerCmd( PCMD_INITALSPAWN );
-}
-
-//=========================================================
-//=========================================================
-void C_INSPlayer::NameChangeCallback( ConVar *pName, const char *pszOldString )
-{
-	// check input values
-	if( !pName || !pszOldString || *pszOldString == '\0' )
-		return;
-	
-	// find name
-	const char *pszName = pName->GetString( );
-
-	if( !pszName || *pszName == '\0' )
-		return;
-
-	// check for being in squad
-	if( AllowNameChange( ) )
-		return;
-
-	// check it's not the same
-	if( Q_strcmp( pszName, pszOldString ) == 0 )
-		return;
-
-	if( Q_strcmp( pszName, m_szTempName ) == 0 )
-		return;
-
-	// tell the player
-	IINSChatMessages *pChatMessages = GetINSHUDHelper( )->ChatMessages( );
-
-	if( pChatMessages )
-		pChatMessages->PrintChat( "Your name will be changed after you redeploy." );
-
-	// set temp name and respawn name
-	Q_strncpy( m_szTempName, pszOldString, sizeof( m_szTempName ) );
-	Q_strncpy( m_szRespawnName, pszName, sizeof( m_szRespawnName ) );
-	
-	// set back the player to his old name (nobody will see it, no events are sent)
-	UpdateName( pszOldString );
-	pName->SetValue( pszOldString );
-}
-
-//=========================================================
-//=========================================================
-void C_INSPlayer::UpdateName( const char *pszName )
-{
-	char szCommand[ 128 ];
-	Q_snprintf( szCommand, sizeof( szCommand ), "name %s", pszName );
-	engine->ClientCmd( szCommand );
-}
-
-//=========================================================
-//=========================================================
-void C_INSPlayer::AttemptNameUpdate( void )
-{
-	if( m_szRespawnName[ 0 ] == '\0' )
-		return;
-
-	UpdateName( m_szRespawnName );
-
-	m_szTempName[ 0 ] = '\0';
-	m_szRespawnName[ 0 ] = '\0';
 }
 
 //=========================================================

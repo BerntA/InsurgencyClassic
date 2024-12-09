@@ -244,7 +244,6 @@ CINSPlayer::CINSPlayer()
 	m_iTeamID = INVALID_TEAM;
 
 	m_INSLocal.m_bAllowTeamChange = true;
-	m_bAllowNameUpdate = false;
 
 	m_flLastFFAttack = 0.0f;
 
@@ -803,8 +802,6 @@ void CINSPlayer::UpdateClientData( void )
 void CINSPlayer::FinishDeathThink( void )
 {
 	BaseClass::FinishDeathThink( );
-
-	m_bAllowNameUpdate = true;
 
 	// fade out the black, when possible
 	float flFadeOutLength = 0.0f;
@@ -3007,34 +3004,6 @@ void CINSPlayer::NotePlayerTalked( void )
 
 //=========================================================
 //=========================================================
-void CINSPlayer::AttemptNameUpdate( void )
-{
-	if( !AllowNameChange( ) )
-		return;
-
-	const char *pszName = engine->GetClientConVarValue( entindex( ), "name" );
-
-	const char *pszOldName = GetPlayerName( );
-
-	// msg everyone if someone changes their name,  and it isn't the first time (changing no name to current name)
-	if( *pszOldName != '\0' && Q_strcmp( pszOldName, pszName ) != 0 )
-	{
-		IGameEvent *pEvent = gameeventmanager->CreateEvent( "player_changename" );
-
-		if( pEvent )
-		{
-			pEvent->SetInt( "userid", GetUserID( ) );
-			pEvent->SetString( "oldname", pszOldName );
-			pEvent->SetString( "newname", pszName );
-			gameeventmanager->FireEvent( pEvent );
-		}
-
-		SetPlayerName( pszName );
-	}
-}
-
-//=========================================================
-//=========================================================
 void CINSPlayer::ClearPain(void)
 {
 	SendPain( PAINTYPE_RESET );
@@ -3415,45 +3384,6 @@ bool CINSPlayer::SendHints( void ) const
 //=========================================================
 void CINSPlayer::SendStatNotice( int iAmount, const char* pszType )
 {
-#pragma message ( "ins_player.cpp(3418) : warning: CINSPlayer::SendStatNotice not implemented" )
-/*
-	CReliablePlayerRecipientFilter filter(this);
-	signed char cAmount=iAmount;
-
-
-	UserMessageBegin( filter , "MoraleNotice" );
-		WRITE_BYTE( cAmount );
-		WRITE_STRING( pszType );
-	MessageEnd( );
-*/
-}
-
-//=========================================================
-//=========================================================
-bool CINSPlayer::HandleChatMessage( char *pszMessage )
-{
-	static const char *pszGimpMessage = "Everyone point and laugh at the Gimp!";
-
-	if( !m_bGimped )
-		return false;
-
-	Q_strncpy( pszMessage, pszGimpMessage, MAX_CHATMSG_LENGTH );
-
-	return true;
-}
-
-//=========================================================
-//=========================================================
-void CINSPlayer::SetGimped( bool bState )
-{
-	m_bGimped = bState;
-}
-
-//=========================================================
-//=========================================================
-bool CINSPlayer::IsGimped( void ) const
-{
-	return m_bGimped;
 }
 
 //=========================================================
@@ -3467,6 +3397,7 @@ void CINSPlayer::ImpulseCommands(int iImpulse)
 
 	switch (iImpulse)
 	{
+
 	case 100:
 	{
 		if (FlashlightIsOn())
@@ -3475,14 +3406,14 @@ void CINSPlayer::ImpulseCommands(int iImpulse)
 			FlashlightTurnOn();
 		break;
 	}
+
 	}
-	}
+}
 
 //=========================================================
 //=========================================================
 void CINSPlayer::ClientSettingsChanged( void )
 {
-	AttemptNameUpdate( );
 }
 
 //=========================================================

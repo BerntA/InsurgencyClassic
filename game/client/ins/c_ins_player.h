@@ -368,11 +368,6 @@ public:
 
 	void SetAllowHeadTurn( bool bState ) { m_bAllowHeadTurn = bState; }
 
-	bool AllowNameChange( void );
-	void NameChangeCallback( ConVar *pName, char const *pszOldString );
-	void UpdateName( const char *pszName );
-	void AttemptNameUpdate( void );
-
 	// zero (#0000391 "Flashlight not visible for other players") [
 	void NotifyShouldTransmit( ShouldTransmitState_t );
 	// zero ]
@@ -496,9 +491,6 @@ private:
 	float m_flHeadLookThreshold;
 
 	float m_flNextStanceThreshold;
-
-	char m_szTempName[ MAX_PLAYER_NAME_LENGTH ];
-	char m_szRespawnName[ MAX_PLAYER_NAME_LENGTH ];
 
 	// zero (#0000391 "Flashlight not visible for other players") [
 public:

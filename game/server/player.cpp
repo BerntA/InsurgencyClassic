@@ -52,8 +52,6 @@
 #include "fogcontroller.h"
 #include "gameinterface.h"
 #include "dt_utlvector_send.h"
-#include "hl2mp_gamerules.h"
-#include "hl2mp_player.h"
 #include "GameBase_Shared.h"
 #include "GameBase_Server.h"
 
@@ -5668,6 +5666,29 @@ float CBasePlayer::GetStickDist()
 	controlStick.y = m_flSideMove;
 
 	return controlStick.Length();
+}
+
+void CBasePlayer::CheckChatText(char* p, int bufsize)
+{
+	// Look for escape sequences and replace
+
+	char* buf = new char[bufsize];
+	int pos = 0;
+
+	// Parse say text for escape sequences
+	for (char* pSrc = p; pSrc != NULL && *pSrc != 0 && pos < bufsize - 1; pSrc++)
+	{
+		// copy each char across
+		buf[pos] = *pSrc;
+		pos++;
+	}
+
+	buf[pos] = '\0';
+
+	// copy buf back into p
+	Q_strncpy(p, buf, bufsize);
+
+	delete[] buf;
 }
 
 //-----------------------------------------------------------------------------
