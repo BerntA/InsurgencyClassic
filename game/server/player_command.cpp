@@ -13,6 +13,7 @@
 #include "player_command.h"
 #include "movehelper_server.h"
 #include "tier0/vprof.h"
+#include "datacache/imdlcache.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -170,6 +171,7 @@ void CPlayerMove::SetupMove( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper *p
 		move->m_vecConstraintCenter = player->m_hConstraintEntity.Get()->GetAbsOrigin();
 	else
 		move->m_vecConstraintCenter = player->m_vecConstraintCenter;
+
 	move->m_flConstraintRadius = player->m_flConstraintRadius;
 	move->m_flConstraintWidth = player->m_flConstraintWidth;
 	move->m_flConstraintSpeedFactor = player->m_flConstraintSpeedFactor;
@@ -188,6 +190,7 @@ void CPlayerMove::FinishMove( CBasePlayer *player, CUserCmd *ucmd, CMoveData *mo
 
 	// NOTE: Don't copy this.  the movement code modifies its local copy but is not expecting to be authoritative
 	//player->m_flMaxspeed			= move->m_flClientMaxSpeed;
+
 	player->SetAbsOrigin( move->GetAbsOrigin() );
 	player->SetAbsVelocity( move->m_vecVelocity );
 	player->SetPreviouslyPredictedOrigin( move->GetAbsOrigin() );
@@ -213,6 +216,7 @@ void CPlayerMove::FinishMove( CBasePlayer *player, CUserCmd *ucmd, CMoveData *mo
 		Assert( move->m_vecConstraintCenter == player->m_hConstraintEntity.Get()->GetAbsOrigin() );
 	else
 		Assert( move->m_vecConstraintCenter == player->m_vecConstraintCenter );
+
 	Assert( move->m_flConstraintRadius == player->m_flConstraintRadius );
 	Assert( move->m_flConstraintWidth == player->m_flConstraintWidth );
 	Assert( move->m_flConstraintSpeedFactor == player->m_flConstraintSpeedFactor );
@@ -353,11 +357,11 @@ void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	// Do weapon selection
 	if ( ucmd->weaponselect != 0 )
 	{
-		CBaseCombatWeapon *weapon = dynamic_cast<CBaseCombatWeapon *>(CBaseEntity::Instance(ucmd->weaponselect));
+		CBaseCombatWeapon *weapon = ToBaseCombatWeapon(CBaseEntity::Instance(ucmd->weaponselect));
 		if ( weapon )
 		{
 			VPROF( "player->SelectItem()" );
-			player->SelectItem(weapon->GetName());
+			player->SelectItem(weapon->GetWeaponID());
 		}
 	}
 

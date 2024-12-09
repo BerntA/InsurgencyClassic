@@ -37,21 +37,10 @@ $Project "client"
 			$File	"hl2\c_thumper_dust.cpp"
 			$File	"hl2\fx_hl2_impacts.cpp"
 			$File	"hl2\fx_hl2_tracers.cpp"
-			$File	"hl2\hl2_clientmode.cpp"
-			$File	"hl2\hl_in_main.cpp"
-			$File	"hl2\hl_prediction.cpp"
 			$File	"hl2\shieldproxy.cpp"
 			$File	"hl2\vgui_rootpanel_hl2.cpp"
 			$File	"$SRCDIR\game\shared\hl2\hl2_shared_misc.cpp"
 			$File	"$SRCDIR\game\shared\hl2\hl2_shared_misc.h"
-		}
-
-		$Folder	"HL2MP"
-		{
-			$File	"hl2mp\clientmode_hl2mpnormal.cpp"
-			$File	"hl2mp\clientmode_hl2mpnormal.h"
-			$File	"hl2mp\hl2mp_hud_chat.cpp"
-			$File	"hl2mp\hl2mp_hud_chat.h"
 		}
 	}
 }

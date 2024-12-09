@@ -21,11 +21,9 @@
 
 #ifdef CLIENT_DLL
 	#include "c_te_effect_dispatch.h"
-    #include "c_hl2mp_player.h"
 	#include "GameBase_Client.h"
 #else
 	#include "te_effect_dispatch.h"
-    #include "hl2mp_player.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!

@@ -123,7 +123,7 @@ edict_t *CPluginBotManager::CreateBot( const char *botname )
 	pPlayer->AddFlag( FL_CLIENT | FL_FAKECLIENT );
 
 	pPlayer->ChangeTeam( TEAM_UNASSIGNED );
-	pPlayer->RemoveAllItems();
+	//pPlayer->RemoveAllItems();
 	pPlayer->Spawn();
 
 	return pEdict;

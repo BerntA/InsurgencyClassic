@@ -16,10 +16,6 @@
 #include "rumble_shared.h"
 #include "GameBase_Shared.h"
 
-#if defined(HL2_DLL) || defined(HL2_CLIENT_DLL)
-	#include "hl_movedata.h"
-#endif
-
 #ifndef CLIENT_DLL
 #include "env_player_surface_trigger.h"
 static ConVar dispcoll_drawplane("dispcoll_drawplane", "0");

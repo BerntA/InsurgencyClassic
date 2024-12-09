@@ -559,6 +559,8 @@ $Project
 				$File "ins/inshud.cpp"
 				$File "ins/inshud.h"
 				$File "ins/ins_coloredstring.cpp"
+				$File "ins/ins_hud_chat.cpp"
+				$File "ins/ins_hud_chat.h"
 			}
 			
 			$Folder "Shaders"
@@ -626,6 +628,10 @@ $Project
 
 			$Folder "Player"
 			{
+				$File "ins/ins_in_main.cpp"
+				$File "ins/ins_prediction.cpp"
+				$File "ins/clientmode_ins.cpp"
+				$File "ins/clientmode_ins.h"
 				$File "ins/action_helper.cpp"
 				$File "ins/action_helper.h"
 				$File "ins/action_helper_types.h"
@@ -1288,7 +1294,6 @@ $Project
 		$File	"$SRCDIR\game\shared\gamestringpool.h"
 		$File	"$SRCDIR\game\shared\gamevars_shared.h"
 		$File	"$SRCDIR\game\shared\groundlink.h"
-		$File	"$SRCDIR\game\shared\hl2\hl_movedata.h"
 		$File	"$SRCDIR\game\shared\IEffects.h"
 		$File	"$SRCDIR\game\shared\igamemovement.h"
 		$File	"$SRCDIR\game\shared\igamesystem.h"

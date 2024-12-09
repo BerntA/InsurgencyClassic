@@ -9,10 +9,8 @@
 #define PLAYER_COMMAND_H
 #pragma once
 
-
 #include "edict.h"
 #include "usercmd.h"
-
 
 class IMoveHelper;
 class CMoveData;

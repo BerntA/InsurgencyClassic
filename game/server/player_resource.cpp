@@ -5,8 +5,9 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "cbase.h"
-#include "hl2mp_player.h"
 #include "player_resource.h"
+#include "ins_gamerules.h"
+#include "ins_player.h"
 #include <coordsize.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -16,7 +17,7 @@
 IMPLEMENT_SERVERCLASS_ST_NOBASE(CPlayerResource, DT_PlayerResource)
 SendPropArray3(SENDINFO_ARRAY3(m_bConnected), SendPropInt(SENDINFO_ARRAY(m_bConnected), 1, SPROP_UNSIGNED)),
 SendPropArray3(SENDINFO_ARRAY3(m_iPing), SendPropInt(SENDINFO_ARRAY(m_iPing), 10, SPROP_UNSIGNED)),
-SendPropArray3(SENDINFO_ARRAY3(m_iTeam), SendPropInt(SENDINFO_ARRAY(m_iTeam), 4)),
+SendPropArray3(SENDINFO_ARRAY3(m_iTeam), SendPropInt(SENDINFO_ARRAY(m_iTeam), 2, SPROP_UNSIGNED)),
 SendPropArray3(SENDINFO_ARRAY3(m_bAlive), SendPropInt(SENDINFO_ARRAY(m_bAlive), 1, SPROP_UNSIGNED)),
 SendPropArray3(SENDINFO_ARRAY3(m_iHealth), SendPropInt(SENDINFO_ARRAY(m_iHealth), -1, SPROP_VARINT | SPROP_UNSIGNED)),
 SendPropArray3(SENDINFO_ARRAY3(m_iMorale), SendPropInt(SENDINFO_ARRAY(m_iMorale), 13)),
@@ -30,7 +31,10 @@ END_DATADESC()
 
 LINK_ENTITY_TO_CLASS(player_manager, CPlayerResource);
 
-CPlayerResource *g_pPlayerResource;
+void CPlayerResource::Create(void)
+{
+	CBaseEntity::Create("player_manager", vec3_origin, vec3_angle);
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -87,9 +91,9 @@ void CPlayerResource::UpdatePlayerData(void)
 		{
 			m_bConnected.Set(i, 1);
 			m_iTeam.Set(i, pPlayer->GetTeamNumber());
-			m_bAlive.Set(i, pPlayer->IsAlive() ? 1 : 0);			
+			m_bAlive.Set(i, pPlayer->IsAlive() ? 1 : 0);
 			m_iHealth.Set(i, MAX(0, pPlayer->GetHealth()));
-			
+
 			const CGamePlayerStats& PlayerStats = pPlayer->GetUpdateStats();
 			m_iMorale.Set(i, pPlayer->GetMorale());
 			m_iKills.Set(i, PlayerStats.m_iKills);
@@ -113,4 +117,12 @@ void CPlayerResource::UpdatePlayerData(void)
 			m_bConnected.Set(i, 0);
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CPlayerResource::UpdatePlayerTeamID(int index, int iTeamID)
+{
+	m_iTeam.Set(index, iTeamID);
 }

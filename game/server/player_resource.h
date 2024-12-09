@@ -25,6 +25,10 @@ public:
 	virtual void UpdatePlayerData(void);
 	virtual int  UpdateTransmitState(void);
 
+	virtual void UpdatePlayerTeamID(int index, int iTeamID);
+
+	static void Create(void);
+
 protected:
 	// Data for each player that's propagated to all clients
 	// Stored in individual arrays so they can be sent down via datatables
@@ -39,7 +43,5 @@ protected:
 
 	int	m_nUpdateCounter;
 };
-
-extern CPlayerResource* g_pPlayerResource;
 
 #endif // PLAYER_RESOURCE_H

@@ -12,7 +12,7 @@
 #include "ins_player_shared.h"
 #include "c_playerresource.h"
 #include "inshud.h"
-#include "clientmode_hl2mpnormal.h"
+#include "clientmode_ins.h"
 
 #include "tier0/memdbgon.h"
 

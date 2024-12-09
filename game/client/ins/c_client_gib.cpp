@@ -6,8 +6,6 @@
 
 #include "cbase.h"
 #include "c_client_gib.h"
-#include "c_hl2mp_player.h"
-#include "hl2mp_gamerules.h"
 #include "physpropclientside.h"
 #include "vcollide_parse.h"
 #include "mapentities_shared.h"
@@ -17,7 +15,6 @@
 #include "props_shared.h"
 #include "c_te_effect_dispatch.h"
 #include "datacache/imdlcache.h"
-#include "weapon_hl2mpbase.h"
 #include "view.h"
 #include "tier0/vprof.h"
 
@@ -379,8 +376,8 @@ C_ClientRagdollGib::C_ClientRagdollGib(void)
 
 C_ClientRagdollGib::~C_ClientRagdollGib()
 {
-	if (m_iPlayerIndex == GetLocalPlayerIndex())
-		m_pPlayerRagdoll = NULL;
+	//if (m_iPlayerIndex == GetLocalPlayerIndex())
+	//	m_pPlayerRagdoll = NULL;
 }
 
 bool C_ClientRagdollGib::LoadRagdoll()

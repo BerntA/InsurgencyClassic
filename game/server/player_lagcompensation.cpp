@@ -656,8 +656,7 @@ void CLagCompensationManager::AnalyzeFastBacktracks(
 	VectorNormalize(vecForward);
 
 	CBaseCombatWeapon* pActiveWeapon = player->GetActiveWeapon();
-	bool bCanUseBiggerHull = IsLagCompFlagActive(LAGCOMP_TRACE_BOX) ||
-		(pActiveWeapon ? (pActiveWeapon->m_iMeleeAttackType.Get() == MELEE_TYPE_SLASH || pActiveWeapon->m_iMeleeAttackType.Get() == MELEE_TYPE_BASH_SLASH) : false);
+	bool bCanUseBiggerHull = IsLagCompFlagActive(LAGCOMP_TRACE_BOX);
 
 	if (bCanUseBiggerHull || IsLagCompFlagActive(LAGCOMP_TRACE_BOX_ONLY))
 	{

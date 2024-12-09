@@ -717,7 +717,7 @@ void UTIL_FireBullets( IFireBullets *pWeapon, const Vector &vecOrigin, const Vec
 #ifdef GAME_DLL
 
 	// tell the other clients of the effect
-	TE_FireBullets( pAttacker->entindex( ), vecOrigin, vecDir, iSeed );
+	TE_FireBullets( pAttacker->entindex( ), vecOrigin, vecDir, iSeed ); // TODO !!!
 
 	// apply damage
 	ApplyMultiDamage( );

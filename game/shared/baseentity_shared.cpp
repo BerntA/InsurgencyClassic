@@ -30,7 +30,6 @@
 	#include "player_pickup.h"
 	#include "waterbullet.h"
 	#include "func_break.h"
-    #include "hl2mp_player.h"
     #include "te_bullet_shot.h"
 	#include "ilagcompensationmanager.h"
 #endif

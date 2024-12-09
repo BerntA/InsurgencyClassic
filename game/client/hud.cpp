@@ -23,7 +23,6 @@
 #include "mempool.h"
 #include "filesystem.h"
 #include <vgui_controls/AnimationController.h>
-#include "hl2mp_gamerules.h"
 #include <math.h>
 #include "inshud.h"
 

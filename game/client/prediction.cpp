@@ -818,7 +818,7 @@ void CPrediction::RunCommand( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	// Do weapon selection
 	if ( ucmd->weaponselect != 0 )
 	{
-		C_BaseCombatWeapon *weapon = dynamic_cast< C_BaseCombatWeapon * >( CBaseEntity::Instance( ucmd->weaponselect ) );
+		C_BaseCombatWeapon* weapon = ToBaseCombatWeapon(CBaseEntity::Instance(ucmd->weaponselect));
 		if ( weapon )
 		{
 			player->SelectItem(weapon->GetWeaponID());

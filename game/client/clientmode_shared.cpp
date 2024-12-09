@@ -44,6 +44,7 @@
 #include "GameBase_Shared.h"
 #include "c_client_gib.h"
 #include "c_leaderboard_handler.h"
+#include "spectatorgui.h"
 
 #if defined( _X360 )
 #include "xbox/xbox_console.h"
@@ -614,35 +615,10 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 //-----------------------------------------------------------------------------
 // Purpose: See if spectator input occurred. Return 0 if the key is swallowed.
 //-----------------------------------------------------------------------------
-int ClientModeShared::HandleSpectatorKeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding )
+int ClientModeShared::HandleSpectatorKeyInput(int down, ButtonCode_t keynum, const char* pszCurrentBinding)
 {
-	// we are in spectator mode, open spectator menu
-	if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+duck" ) == 0 )
-	{
-		//m_pViewport->ShowPanel( PANEL_SPECMENU, true ); Disable this one for BB2... Maybe replace it later?
-		return 0; // we handled it, don't handle twice or send to server
-	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+attack" ) == 0 )
-	{
-		engine->ClientCmd( "spec_next" );
+	if (down && pszCurrentBinding && (g_pSpectatorGUI != NULL) && !g_pSpectatorGUI->HandleInput(pszCurrentBinding))
 		return 0;
-	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+attack2" ) == 0 )
-	{
-		engine->ClientCmd( "spec_prev" );
-		return 0;
-	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+jump" ) == 0 )
-	{
-		engine->ClientCmd( "spec_mode" );
-		return 0;
-	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+strafe" ) == 0 )
-	{
-		HLTVCamera()->SetAutoDirector( true );
-		return 0;
-	}
-
 	return 1;
 }
 
@@ -692,20 +668,12 @@ vgui::Panel *ClientModeShared::GetMessagePanel()
 //-----------------------------------------------------------------------------
 void ClientModeShared::StartMessageMode(int iMessageModeType)
 {
-	// Can only show chat UI in multiplayer!!!
-	if (gpGlobals->maxClients == 1)
-		return;
-
 	if (m_pChatElement)
 		m_pChatElement->StartMessageMode(iMessageModeType);
 }
 
 void ClientModeShared::StopMessageMode(void)
 {
-	// Can only show chat UI in multiplayer!!!
-	if (gpGlobals->maxClients == 1)
-		return;
-
 	if (m_pChatElement && m_pChatElement->GetMessageMode())
 		m_pChatElement->StopMessageMode();
 }
