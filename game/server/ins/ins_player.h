@@ -16,6 +16,7 @@
 #include "ins_playerlocaldata.h"
 #include "ins_playeranimstate.h"
 #include "ins_player_shared.h"
+#include "playerstats.h"
 #include "squad_data.h"
 #include "team_lookup.h"
 #include "command_register.h"
@@ -152,7 +153,7 @@ public:
 	void CheckObserverSettings(void);
 	bool IsRealObserver(void) const;
 
-	bool ClientCommand(const char *pszCommand);
+	bool ClientCommand(const CCommand& args);
 
 	CWeaponINSBase *GetActiveINSWeapon(void) const;
 	CBaseCombatWeapon *GetPrimaryWeapon(void) const;

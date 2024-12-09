@@ -201,15 +201,15 @@ IVoiceGameMgrHelper *g_pVoiceGameMgrHelper = &g_VoiceGameMgrHelper;
 //=========================================================
 /*void CC_INS_ChangeLevel(void)
 {
-	if( engine->Cmd_Argc( ) < 2 )
+	if( args.ArgC() < 2 )
 		return;
 
 	int iProfileID = 0;
 
-	if( engine->Cmd_Argc( ) == 3 )
-		iProfileID = atoi( engine->Cmd_Argv( 2 ) );
+	if( args.ArgC() == 3 )
+		iProfileID = atoi( args[2] );
 
-	CINSRules::ChangeLevel( engine->Cmd_Argv( 1 ), iProfileID );
+	CINSRules::ChangeLevel( args[1], iProfileID );
 }
 
 static ConCommand insmap( "ins_changelevel", CC_INS_ChangeLevel, "Change the Map (with Additional Profile Specifier)" );*/
@@ -834,46 +834,43 @@ void CINSRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 
 //=========================================================
 //=========================================================
-bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
+bool CINSRules::ClientCommand(CBasePlayer* pBasePlayer, const CCommand& args)
 {
-	CINSPlayer *pPlayer = ToINSPlayer( pEdict );
-
-	// ensure that this is a player
-	if( !pPlayer || !pEdict->IsPlayer( ) )
+	CINSPlayer *pPlayer = ToINSPlayer(pBasePlayer);
+	if (!pPlayer)
 		return false;
 	
 	// firstly, send to the voice manager
-	if( GetVoiceGameMgr( )->ClientCommand( pPlayer, pszCommand ) )
+	if (GetVoiceGameMgr()->ClientCommand(pPlayer, args))
 		return true;
 
 	// secondly, send to the player
-	if( pPlayer->ClientCommand( pszCommand ) )
+	if (pPlayer->ClientCommand(args))
 		return true;
+
+	const char* pszCommand = args[0];
 
 	if( FStrEq( pszCommand, GRCMD_TEAMSETUP ) )
 	{
 		// GRCMD_TEAMSETUP "teamid"
-		if( engine->Cmd_Argc( ) != 2 )
+		if (args.ArgC() != 2)
 			return true;
 
-		SetupPlayerTeam( pPlayer, atoi( engine->Cmd_Argv( 1 ) ) );
-
-		// just in case someone types it in directly
+		SetupPlayerTeam(pPlayer, atoi(args[1]));
 		pPlayer->ShowViewPortPanel( PANEL_CHANGETEAM, false );
-
 		return true;
 	}
 	else if( FStrEq( pszCommand, GRCMD_SQUADSETUP ) )
 	{
 		// GRCMD_SQUADSETUP "encodedsquad" "whendie"
-		if( engine->Cmd_Argc( ) != 3 )
+		if( args.ArgC() != 3 )
 			return true;
 
 		if( !pPlayer->OnPlayTeam( ) )
 			return true;
 
-		EncodedSquadData_t EncodedSquadData = atoi( engine->Cmd_Argv( 1 ) );
-		SetupPlayerSquad( pPlayer, false, &EncodedSquadData, atoi( engine->Cmd_Argv( 2 ) ) ? true : false );
+		EncodedSquadData_t EncodedSquadData = atoi( args[1] );
+		SetupPlayerSquad( pPlayer, false, &EncodedSquadData, atoi( args[2] ) ? true : false );
 
 		// only force a close when running
 		pPlayer->ShowViewPortPanel( PANEL_SQUADSELECT, false );
@@ -883,12 +880,12 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 	else if( FStrEq( pszCommand, GRCMD_FULLSETUP ) )
 	{
 		// GRCMD_TEAMSETUP "teamid" "encodedsquad"
-		if( engine->Cmd_Argc( ) != 3 )
+		if( args.ArgC() != 3 )
 			return true;
 
-		SetupPlayerTeam( pPlayer, atoi( engine->Cmd_Argv( 1 ) ) );
+		SetupPlayerTeam( pPlayer, atoi( args[1] ) );
 
-		EncodedSquadData_t EncodedSquadData = atoi( engine->Cmd_Argv( 1 ) );
+		EncodedSquadData_t EncodedSquadData = atoi( args[1] );
 		SetupPlayerSquad( pPlayer, false, &EncodedSquadData, false );
 
 		return true;
@@ -896,10 +893,10 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 	else if( FStrEq( pszCommand, GRCMD_INVALIDSCRIPTS ) )
 	{
 		// GRCMD_INVALIDSCRIPTS "playercrc32"
-		if( engine->Cmd_Argc( ) != 2 )
+		if( args.ArgC() != 2 )
 			return true;
 		
-		unsigned int iPlayerCRC32 = atoi( engine->Cmd_Argv( 1 ) );
+		unsigned int iPlayerCRC32 = atoi( args[1] );
 
 		Warning( "*** Invalid Scripts Detected: %s has %u and needs %u\n",
 			pPlayer->GetPlayerName( ), iPlayerCRC32, g_ScriptCheckShared.GetScriptCRC32( ) );
@@ -911,10 +908,10 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 	else if( FStrEq( pszCommand, GRCMD_MODIFYLAYOUT ) )
 	{
 		// GRCMD_MODIFYLAYOUT "layouttype" "id"
-		if( engine->Cmd_Argc( ) != 3 )
+		if( args.ArgC() != 3 )
 			return true;
 
-		pPlayer->CustomiseLayout( atoi( engine->Cmd_Argv( 1 ) ), atoi( engine->Cmd_Argv( 2 ) ) );
+		pPlayer->CustomiseLayout( atoi( args[1] ), atoi( args[2] ) );
 
 		return true;
 	}
@@ -953,14 +950,14 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 	else if( FStrEq( pszCommand, GRCMD_OBJORDERS ) )
 	{
 		// GRCMD_OBJORDERS "objective"
-		if( engine->Cmd_Argc( ) != 2 )
+		if( args.ArgC() != 2 )
 			return false;
 		
 		// ensure they are valid and a commander
 		if( !pPlayer->IsRunningAround( ) || !pPlayer->IsCommander( ) )
 			return true;
 
-		int iObjectiveID = atoi( engine->Cmd_Argv( 1 ) );
+		int iObjectiveID = atoi( args[1] );
 
 		// ensure valid obj
 		if( !IsValidObjective( iObjectiveID ) )
@@ -1010,7 +1007,7 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 	else if( FStrEq( pszCommand, GRCMD_UNITORDERS ) )
 	{
 		// GRCMD_UNITORDERS "type" "x" "y" "z"
-		if( engine->Cmd_Argc( ) < 5 )
+		if( args.ArgC() < 5 )
 			return true;
 
 		// ensure they are valid and a commander
@@ -1020,10 +1017,10 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 		int iOrderType;
 		Vector vecPosition;
 		
-		iOrderType = atoi( engine->Cmd_Argv( 1 ) );
-		vecPosition.x = atof( engine->Cmd_Argv( 2 ) );
-		vecPosition.y = atof( engine->Cmd_Argv( 3 ) );
-		vecPosition.z = atof( engine->Cmd_Argv( 4 ) );
+		iOrderType = atoi( args[1] );
+		vecPosition.x = atof( args[2] );
+		vecPosition.y = atof( args[3] );
+		vecPosition.z = atof( args[3] );
 
 		if( !CUnitOrder::IsValidOrder( iOrderType ) )
 			return true;
@@ -1059,7 +1056,7 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 	else if( FStrEq( pszCommand, GRCMD_PLAYERORDERS ) )
 	{
 		// GRCMD_PLAYERORDERS "type"
-		if( engine->Cmd_Argc( ) != 2 )
+		if( args.ArgC() != 2 )
 			return true;
 
 		// need to be running around and a command
@@ -1070,13 +1067,13 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 		CINSSquad *pSquad = pPlayer->GetSquad( );
 
 		if( pSquad )
-			pSquad->AssignPlayerOrders( atoi( engine->Cmd_Argv( 1 ) ) );
+			pSquad->AssignPlayerOrders( atoi( args[1] ) );
 
 		return true;
 	}
 	else if( FStrEq( pszCommand, GRCMD_REGLEADER ) )
 	{
-		if( engine->Cmd_Argc( ) != 2 )
+		if( args.ArgC() != 2 )
 			return true;
 
 		// ensure its in clan mode
@@ -1139,20 +1136,20 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 	else if( FStrEq( pszCommand, "forcewin" ) )
 	{
 		// GRCMD_FORCEWIN "team" "wintype" ( "winentity" )
-		if( engine->Cmd_Argc( ) < 3 )
+		if( args.ArgC() < 3 )
 			return true;
 
 		if( !IsModeRunning( ) )
 			return true;
 
 		int iTeamID, iWinType;
-		iTeamID = atoi( engine->Cmd_Argv( 1 ) );
-		iWinType = atoi( engine->Cmd_Argv( 2 ) );
+		iTeamID = atoi( args[1] );
+		iWinType = atoi( args[2] );
 
 		int iWinningEntity = -1;
 
-		if( engine->Cmd_Argc( ) == 4 )
-			iWinningEntity = atoi( engine->Cmd_Argv( 3 ) );
+		if( args.ArgC() == 4 )
+			iWinningEntity = atoi( args[3] );
 
 		CBaseEntity *pWinningEntity = NULL;
 
@@ -1170,82 +1167,6 @@ bool CINSRules::ClientCommand( const char *pszCommand, CBaseEntity *pEdict )
 	}
 
 #endif
-
-	// developer only commands from now on
-	if( !IsModeRunning( ) || !pPlayer->IsDeveloper( ) )
-		return false;
-
-	if( FStrEq( pszCommand, "forcecmd" ) )
-	{
-		const int iMaxArgs = 5;
-		int iNumberCmds = engine->Cmd_Argc( );
-
-		if( iNumberCmds < 2 || iNumberCmds > iMaxArgs )
-			return false;
-
-		char szCmd[ 256 ];
-		szCmd[ 0 ] = '\0';
-
-		for( int i = 1; i < iNumberCmds; i++ )
-		{
-			const char *pszCmdToken = engine->Cmd_Argv( i );
-
-			if( i != 1 )
-				Q_strncat( szCmd, " ", sizeof( szCmd ), COPY_ALL_CHARACTERS );
-
-			Q_strncat( szCmd, pszCmdToken, sizeof( szCmd ), COPY_ALL_CHARACTERS );
-		}
-
-		Q_strncat( szCmd, "\n", sizeof( szCmd ), COPY_ALL_CHARACTERS );
-
-		engine->ServerCommand( szCmd );
-
-		return true;
-	}
-	else if( FStrEq( pszCommand, "kickplayer" ) )
-	{
-		if( engine->Cmd_Argc( ) < 2 )
-			return false;
-
-		int iPlayerID = atoi( engine->Cmd_Argv( 1 ) );
-		CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerID );
-
-		if( pPlayer )
-			PlayerKick( pPlayer );
-
-		return true;
-	}
-	else if( FStrEq( pszCommand, "bangbang" ) )
-	{
-		for( int i = TEAM_ONE; i <= TEAM_TWO; i++ )
-		{
-			CPlayTeam *pTeam = GetGlobalPlayTeam( i );
-
-			if( !pTeam )
-				continue;
-
-			for( int j = 0; j < pTeam->GetNumPlayers( ); j++ )
-			{
-				CINSPlayer *pPlayer = pTeam->GetPlayer( j );
-
-				if( pPlayer && !pPlayer->IsDeveloper( ) && pPlayer->IsRunningAround( ) )
-					UTIL_CreateExplosion( pPlayer->GetAbsOrigin( ), pPlayer, NULL, 500, 100, 0 ); 
-			}
-		}
-
-		return true;
-	}
-	else if( FStrEq( pszCommand, "gimp" ) )
-	{
-		if( engine->Cmd_Argc( ) < 2 )
-			return false;
-
-		int iPlayerID = atoi( engine->Cmd_Argv( 1 ) );
-		CINSPlayer *pPlayer = ToINSPlayer( UTIL_PlayerByIndex( iPlayerID ) );
-
-		if( pPlayer )
-			pPlayer->SetGimped( !pPlayer->IsGimped( ) );
-	}
 
 	return false;
 }

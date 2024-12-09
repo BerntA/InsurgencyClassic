@@ -707,10 +707,6 @@ void CINSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	// create ragdoll
 	CreateRagdollEntity( vecForce );
 
-	// only count alive players
-	if( m_lastNavArea )
-		m_lastNavArea->DecrementPlayerCount( GetTeamID( ) );
-
 	// unmask stats
 	UnmaskStats( );
 
@@ -1112,13 +1108,15 @@ void CINSPlayer::CheckObserverSettings(void)
 
 //=========================================================
 //=========================================================
-bool CINSPlayer::ClientCommand( const char *pszCommand )
+bool CINSPlayer::ClientCommand(const CCommand& args)
 {
+	const char* pszCommand = args[0];
+
 	if ( stricmp( pszCommand, "skin" ) == 0 )
 	{
-		if (engine->Cmd_Argc()>=2)
+		if (args.ArgC()>=2)
 		{
-			int iSkin=strtol(engine->Cmd_Argv(1),NULL,16); //base 16, see notes in playercust.h
+			int iSkin=strtol(args[1],NULL,16); //base 16, see notes in playercust.h
 			modelcustomization_t& MdlCust=GetModelCustomization(this);
 			if (MdlCust.aSkins.Count()>iSkin)
 			{
@@ -1145,10 +1143,10 @@ bool CINSPlayer::ClientCommand( const char *pszCommand )
 	}
 	else if ( stricmp( pszCommand, "body" ) == 0 )
 	{
-		if (engine->Cmd_Argc()>=3)
+		if (args.ArgC()>=3)
 		{
-			int iBody=strtol(engine->Cmd_Argv(1),NULL,16); //base 16, see notes in playercust.h
-			int iModel=strtol(engine->Cmd_Argv(2),NULL,16); //base 16, see notes in playercust.h
+			int iBody=strtol(args[1],NULL,16); //base 16, see notes in playercust.h
+			int iModel=strtol(args[2],NULL,16); //base 16, see notes in playercust.h
 			modelcustomization_t& MdlCust=GetModelCustomization(this);
 			if (MdlCust.aBodygroups.Count()>iBody)
 			{
@@ -1198,10 +1196,10 @@ bool CINSPlayer::ClientCommand( const char *pszCommand )
 	else if( FStrEq( pszCommand, PCMD_PORESPONSE ) )
 	{
 		// PCMD_PORESPONSE "type"
-		if( engine->Cmd_Argc( ) != 2 )
+		if( args.ArgC() != 2 )
 			return true;
 
-		PlayerOrderResponse( atoi( engine->Cmd_Argv( 1 ) ) );
+		PlayerOrderResponse( atoi( args[1] ) );
 	}
 	else if( FStrEq( pszCommand, PCMD_FINISHDI ) )
 	{
@@ -1258,11 +1256,10 @@ bool CINSPlayer::ClientCommand( const char *pszCommand )
 	}
 	else if( stricmp( pszCommand, "cmdr" ) == 0 )
 	{
-		if( engine->Cmd_Argc( ) != 3 )
+		if( args.ArgC() != 3 )
 			return false;
 
-		UTIL_UpdateCommandRegister( this, atoi( engine->Cmd_Argv( 1 ) ), atoi( engine->Cmd_Argv( 2 ) ) );
-
+		UTIL_UpdateCommandRegister( this, atoi( args[1] ), atoi( args[2] ) );
 		return true;
 	}
 	else if( stricmp( pszCommand, "markme" ) == 0)
@@ -1271,42 +1268,10 @@ bool CINSPlayer::ClientCommand( const char *pszCommand )
 			return false;
 
 		m_nRenderFX = ( ( m_nRenderFX == kRenderFxNone ) ? kRenderFxHologram : kRenderFxNone );
-
 		return true;
 	}
 	
-#ifdef TESTING
-
-	else if( FStrEq( pszCommand, "sendaction" ) )
-	{
-		// "sendaction" "action"
-		if( engine->Cmd_Argc( ) != 2 )
-			return true;
-
-		int iActionID = atoi( engine->Cmd_Argv( 1 ) );
-
-		if( IsValidAction( iActionID ) )
-			SendAction( iActionID );
-
-		return true;
-	}
-	else if( FStrEq( pszCommand, "fplayerorder" ) )
-	{
-		// "fplayerorder" "order"
-		if( engine->Cmd_Argc( ) != 2 )
-			return true;		
-
-		CINSSquad *pSquad = GetSquad( );
-
-		if( pSquad )
-			pSquad->ForcePlayerOrders( atoi( engine->Cmd_Argv( 1 ) ) );
-
-		return true;
-	}
-
-#endif
-
-	return BaseClass::ClientCommand(pszCommand);
+	return BaseClass::ClientCommand(args);
 }
 
 //=========================================================
@@ -1575,7 +1540,6 @@ void CINSPlayer::Spawn( void )
 void CINSPlayer::InitialSpawn( void )
 {
 	BaseClass::InitialSpawn( );
-
 	ChangeTeam( TEAM_UNASSIGNED );
 }
 
@@ -1912,7 +1876,7 @@ void CINSPlayer::ChangeTeam( int iTeamID )
 		Spawn( );
 
 	// send it off now!
-	PlayerResource( )->UpdatePlayerTeamID( entindex( ), m_iTeamID );
+	g_pPlayerResource->UpdatePlayerTeamID(entindex(), m_iTeamID);
 
 	// send the message
 	if( !IsBot( ) && iOldTeam != INVALID_TEAM )
@@ -3494,73 +3458,25 @@ bool CINSPlayer::IsGimped( void ) const
 
 //=========================================================
 //=========================================================
-void CINSPlayer::ImpulseCommands( int iImpulse )
+void CINSPlayer::ImpulseCommands(int iImpulse)
 {
-	BaseClass::ImpulseCommands( iImpulse );
+	BaseClass::ImpulseCommands(iImpulse);
 
-	if( !IsRunningAround( ) )
+	if (!IsRunningAround())
 		return;
 
-	switch( iImpulse )
+	switch (iImpulse)
 	{
-		case 100:
-		{
-			if( FlashlightIsOn( ) )
-				FlashlightTurnOff( );
-			else 
-				FlashlightTurnOn( );
-
-			break;
-		}
-
-		case 201:
-		{
-			if( gpGlobals->curtime < m_flNextDecalTime )
-				break;
-
-			Vector vecForward;
-			EyeVectors( &vecForward );
-
-			trace_t tr;
-			UTIL_TraceLine( EyePosition( ), EyePosition( ) + vecForward * 128.0f, MASK_SOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &tr );
-
-			if( tr.fraction != 1.0f )
-			{
-				m_flNextDecalTime = gpGlobals->curtime + decalfrequency.GetFloat( );
-
-				CSprayCan *pCan = CREATE_UNSAVED_ENTITY( CSprayCan, "spraycan" );
-
-				if( pCan )
-					pCan->Spawn( this );
-			}
-
-			break;
-		}
-
-	#ifdef TESTING
-
-		case 172:
-		{
-			Vector vecForward;
-			EyeVectors( &vecForward );
-
-			trace_t tr;
-			UTIL_TraceLine( EyePosition( ), EyePosition( ) + vecForward * 2048.0f, MASK_SOLID, this, COLLISION_GROUP_PLAYER, &tr );
-
-			if( tr.fraction != 1.0f )
-			{
-				CBaseEntity *pHitEntity = tr.m_pEnt;
-
-				if( pHitEntity->IsPlayer( ) )
-					ClientPrint( this, HUD_PRINTTALK, ToBasePlayer( pHitEntity )->GetPlayerName( ) );
-			}
-
-			break;
-		}
-
-	#endif
+	case 100:
+	{
+		if (FlashlightIsOn())
+			FlashlightTurnOff();
+		else
+			FlashlightTurnOn();
+		break;
 	}
-}
+	}
+	}
 
 //=========================================================
 //=========================================================
@@ -3714,116 +3630,44 @@ void CINSRagdoll::SUB_Vanish(void)
 	UTIL_Remove(this);
 }
 
-//=========================================================
-//=========================================================
-/*ConVar sv_update_can_use_time( "sv_update_can_use_time", "0.1" );
-
-void CINSPlayer::UpdateCanUse()
+CON_COMMAND_F(kill, "Commit suicide", FCVAR_CHEAT)
 {
-    // Check update timer.
-    if( m_flUpdateCanUseTime > gpGlobals->curtime )
-        return;
-
-    // Get use entity.
-    CBaseEntity *pUseEntity = FindUseEntity();
-    int iUseEntIndex;
-    char *szEntClassname = NULL;
-    if( pUseEntity )
-    {
-        iUseEntIndex = pUseEntity->entindex();
-        szEntClassname = new char[ strlen( pUseEntity->GetClassname() ) + 1 ];
-        strcpy( szEntClassname, pUseEntity->GetClassname() );
-    }
-    else
-    {
-        iUseEntIndex = -1;
-    }
-    
-    // Send update message.
-    CSingleUserRecipientFilter filter( this );
-	filter.MakeReliable();
-
-    UserMessageBegin( filter, "UseItem" );
-	WRITE_LONG( iUseEntIndex );
-    WRITE_BOOL( iUseEntIndex == -1 ? false : ( strstr( szEntClassname, "door" ) >= szEntClassname ) );
-	MessageEnd();
-
-    if( iUseEntIndex != -1 )
-		delete szEntClassname;
-
-    // Increment update timer.
-    m_flUpdateCanUseTime = gpGlobals->curtime + sv_update_can_use_time.GetFloat();
-}*/
-
-//=========================================================
-//=========================================================
-void CC_Player_Kill( void )
-{
-	CINSPlayer *pPlayer = ToINSPlayer( UTIL_GetCommandClient( ) );
-
-	if( !pPlayer )
+	CINSPlayer* pPlayer = ToINSPlayer(UTIL_GetCommandClient());
+	if (!pPlayer)
 		return;
 
-	if( !pPlayer->IsDeveloper( ) || ( pPlayer->IsDeveloper( ) && engine->Cmd_Argc( ) == 1 ) )
+	if (!pPlayer->IsDeveloper() || (pPlayer->IsDeveloper() && args.ArgC() == 1))
 	{
-		pPlayer->CommitSuicide( );
+		pPlayer->CommitSuicide();
 		return;
 	}
 
-	if( engine->Cmd_Argc( ) < 2 )
+	if (args.ArgC() < 2)
 		return;
 
-	if( engine->Cmd_Argc( ) == 2 )
+	if (args.ArgC() == 2)
 	{
-		int iPlayerID = atoi( engine->Cmd_Argv( 1 ) );
-
-		CINSPlayer *pPlayer = ToINSPlayer( UTIL_PlayerByIndex( iPlayerID ) );
-
-		if( pPlayer )
-			pPlayer->CommitSuicide( PDEATHTYPE_SOULSTOLEN, true );
+		int iPlayerID = atoi(args[1]);
+		CINSPlayer* pPlayer = ToINSPlayer(UTIL_PlayerByIndex(iPlayerID));
+		if (pPlayer)
+			pPlayer->CommitSuicide(PDEATHTYPE_SOULSTOLEN, true);
 	}
 	else
 	{
-		int iTeamID = atoi( engine->Cmd_Argv( 2 ) );
+		int iTeamID = atoi(args[2]);
 
-		if( !IsPlayTeam( iTeamID ) )
+		if (!IsPlayTeam(iTeamID))
 			return;
 
-		CPlayTeam *pTeam = GetGlobalPlayTeam( iTeamID );
-
-		if( !pTeam )
+		CPlayTeam* pTeam = GetGlobalPlayTeam(iTeamID);
+		if (!pTeam)
 			return;
 
-		for( int i = 0; i < pTeam->GetNumPlayers( ); i++ )
+		for (int i = 0; i < pTeam->GetNumPlayers(); i++)
 		{
-			CINSPlayer *pTeamPlayer = ToINSPlayer( pTeam->GetPlayer( i ) );
-
-			if( pTeamPlayer )
-				pTeamPlayer->CommitSuicide( PDEATHTYPE_SOULSTOLEN, true );
+			CINSPlayer* pTeamPlayer = ToINSPlayer(pTeam->GetPlayer(i));
+			if (pTeamPlayer)
+				pTeamPlayer->CommitSuicide(PDEATHTYPE_SOULSTOLEN, true);
 		}
 	}
-
-}
-
-static ConCommand kill( "kill", CC_Player_Kill, "Kill Yourself" );
-
-//=========================================================
-//=========================================================
-void CC_Player_Holster( void )
-{
-	CINSPlayer *pPlayer = ToINSPlayer( UTIL_GetCommandClient( ) );
-
-	if( !pPlayer )
-		return;
-
-	if( !sv_cheats->GetBool( ) )
-	{
-		UTIL_PrintCheatMessage( pPlayer );
-		return;
-	}
-
-	CBaseCombatWeapon *pWeapon = pPlayer->GetActiveWeapon( );
-
-	if( pWeapon )
-		pWeapon->Holster( );
 }

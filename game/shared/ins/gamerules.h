@@ -114,7 +114,7 @@ public:
 
 	// Player Management
 	virtual bool ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char *reject, int maxrejectlen ) = 0;
-	virtual bool ClientCommand( const char *pcmd, CBaseEntity *pEdict ) = 0;
+	virtual bool ClientCommand(CBasePlayer* pBasePlayer, const CCommand& args) = 0;
 	virtual void ClientSettingsChanged( CBasePlayer *pPlayer ) = 0;
 	virtual void ClientDisconnected( edict_t *pClient ) = 0;
 	

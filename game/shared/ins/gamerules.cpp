@@ -113,7 +113,7 @@ bool CGameRules::ShouldCollide( int collisionGroup0, int collisionGroup1 )
 	if ( collisionGroup0 > collisionGroup1 )
 	{
 		// swap so that lowest is always first
-		swap(collisionGroup0,collisionGroup1);
+		::V_swap(collisionGroup0,collisionGroup1);
 	}
 
 	if ( collisionGroup0 == COLLISION_GROUP_DEBRIS && collisionGroup1 == COLLISION_GROUP_PUSHAWAY )
@@ -126,10 +126,6 @@ bool CGameRules::ShouldCollide( int collisionGroup0, int collisionGroup1 )
 	// NOTE: All of this code assumes the collision groups have been sorted!!!!
 	// NOTE: Don't change their order without rewriting this code !!!
 	// --------------------------------------------------------------------------
-
-	// Don't bother if either is in a vehicle...
-	if (( collisionGroup0 == COLLISION_GROUP_IN_VEHICLE ) || ( collisionGroup1 == COLLISION_GROUP_IN_VEHICLE ))
-		return false;
 
 	if ( ( collisionGroup1 == COLLISION_GROUP_DOOR_BLOCKER ) && ( collisionGroup0 != COLLISION_GROUP_NPC ) )
 		return false;
@@ -179,23 +175,10 @@ bool CGameRules::ShouldCollide( int collisionGroup0, int collisionGroup1 )
 	// Weapons are triggers, too, so they should still touch because of that
 	if ( collisionGroup1 == COLLISION_GROUP_WEAPON )
 	{
-		if ( collisionGroup0 == COLLISION_GROUP_VEHICLE || 
-			collisionGroup0 == COLLISION_GROUP_PLAYER ||
-			collisionGroup0 == COLLISION_GROUP_NPC )
+		if (collisionGroup0 == COLLISION_GROUP_PLAYER || collisionGroup0 == COLLISION_GROUP_NPC)
 		{
 			return false;
 		}
-	}
-
-	// collision with vehicle clip entity??
-	if ( collisionGroup0 == COLLISION_GROUP_VEHICLE_CLIP || collisionGroup1 == COLLISION_GROUP_VEHICLE_CLIP )
-	{
-		// yes then if it's a vehicle, collide, otherwise no collision
-		// vehicle sorts lower than vehicle clip, so must be in 0
-		if ( collisionGroup0 == COLLISION_GROUP_VEHICLE )
-			return true;
-		// vehicle clip against non-vehicle, no collision
-		return false;
 	}
 
 	return true;
@@ -208,19 +191,16 @@ static CViewVectors g_DefaultViewVectors(
 	// Standing
 	Vector( -16, -16, 0 ),
 	Vector(  16,  16, 72 ),
-
 	Vector( 0, 0, 64 ),
 
 	// Crouching
 	Vector( -16, -16, 0 ),
 	Vector(  16,  16, 45 ),
-
 	Vector( 0, 0, 45 ),
 
 	// Prone
 	Vector( -16, -16, 0 ),
 	Vector(  16,  16, 16 ),
-
 	Vector( 0,  0, 24 ),
 	
 	// OBS
@@ -350,34 +330,7 @@ void CGameRules::ChangeLevel( void )
 	GetNextLevelName( szNextMap, sizeof( szNextMap ) );
 
 	Msg( "CHANGE LEVEL: %s\n", szNextMap );
-
 	engine->ChangeLevel( szNextMap, NULL );
-}
-
-//=========================================================
-//=========================================================
-// Helper function to parse arguments to player commands.
-const char* FindEngineArg( const char *pName )
-{
-	int nArgs = engine->Cmd_Argc();
-	for ( int i=1; i < nArgs; i++ )
-	{
-		if ( stricmp( engine->Cmd_Argv(i), pName ) == 0 )
-			return (i+1) < nArgs ? engine->Cmd_Argv(i+1) : "";
-	}
-	return 0;
-}
-
-//=========================================================
-//=========================================================
-int FindEngineArgInt( const char *pName, int defaultVal )
-{
-	const char *pVal = FindEngineArg( pName );
-
-	if ( pVal )
-		return atoi( pVal );
-	else
-		return defaultVal;
 }
 
 #endif // GAME_DLL

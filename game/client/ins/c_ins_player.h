@@ -13,6 +13,7 @@
 #include "c_ins_playerlocaldata.h"
 #include "ins_playeranimstate.h"
 #include "ins_player_shared.h"
+#include "playerstats.h"
 #include "squad_data.h"
 #include "beamdraw.h"
 #include "weapon_defines.h"

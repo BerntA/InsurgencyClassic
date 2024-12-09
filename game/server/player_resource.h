@@ -44,4 +44,6 @@ protected:
 	int	m_nUpdateCounter;
 };
 
+extern CPlayerResource* g_pPlayerResource;
+
 #endif // PLAYER_RESOURCE_H

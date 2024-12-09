@@ -13,6 +13,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+CPlayerResource* g_pPlayerResource = NULL;
+
 // Datatable
 IMPLEMENT_SERVERCLASS_ST_NOBASE(CPlayerResource, DT_PlayerResource)
 SendPropArray3(SENDINFO_ARRAY3(m_bConnected), SendPropInt(SENDINFO_ARRAY(m_bConnected), 1, SPROP_UNSIGNED)),
@@ -33,7 +35,7 @@ LINK_ENTITY_TO_CLASS(player_manager, CPlayerResource);
 
 void CPlayerResource::Create(void)
 {
-	CBaseEntity::Create("player_manager", vec3_origin, vec3_angle);
+	g_pPlayerResource = (CPlayerResource*)CBaseEntity::Create("player_manager", vec3_origin, vec3_angle);
 }
 
 //-----------------------------------------------------------------------------

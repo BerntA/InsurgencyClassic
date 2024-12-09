@@ -5946,7 +5946,7 @@ bool CPropDoorBreakable::CanEntityUseDoor(CBaseEntity *pActivator, CBaseEntity *
 bool CPropDoorBreakable::ParseDoorData(const char *script)
 {
 	char pszPath[80];
-	Q_snprintf(pszPath, 80, "data/doors/%s", script);
+	Q_snprintf(pszPath, 80, "scripts/doors/%s", script);
 
 	KeyValues *pkvData = GameBaseShared()->ReadEncryptedKeyValueFile(filesystem, pszPath);
 	if (pkvData)

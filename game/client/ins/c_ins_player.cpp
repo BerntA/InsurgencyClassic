@@ -219,26 +219,6 @@ END_PREDICTION_DATA()
 
 //=========================================================
 //=========================================================
-CON_COMMAND(clanleader_register, "Register the Clan Leader")
-{
-	C_INSPlayer *pPlayer = C_INSPlayer::GetLocalPlayer();
-
-	if(!pPlayer || engine->Cmd_Argc() != 2)
-		return;
-
-	const char *pszPassword = engine->Cmd_Argv(1);
-
-	if(!pszPassword || pszPassword[0] == '\0')
-		return;
-
-	char szRegString[256];
-	Q_snprintf(szRegString, sizeof(szRegString), "regclanleader %s", pszPassword);
-
-	engine->ServerCmd(szRegString);
-}
-
-//=========================================================
-//=========================================================
 C_INSPlayer::C_INSPlayer()
 {
 	m_pPlayerAnimState = CreatePlayerAnimState(this, this, LEGANIM_9WAY, true);

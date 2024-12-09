@@ -187,16 +187,4 @@ void CHintHelper::ShowHint( int iHintID )
 		g_HintListeners[ i ]->OnHint( iHintID );
 }
 
-//=========================================================
-//=========================================================
-#ifdef _DEBUG
-
-CON_COMMAND( showhint, "Show a Hint" )
-{
-	if( engine->Cmd_Argc( ) == 2 )
-		g_HintHelper.ShowHint( atoi( engine->Cmd_Argv( 1 ) ) );
-}
-
-#endif
-
 #endif

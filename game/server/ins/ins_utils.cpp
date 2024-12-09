@@ -18,16 +18,10 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-//=========================================================
-//=========================================================
 bool UTIL_IsValidSayType( int iSayType )
 {
 	return ( iSayType > 0 && iSayType <= SAYTYPE_COUNT );
 }
-
-//=========================================================
-//=========================================================
-extern ConVar allowprivatemgs;
 
 void UTIL_SayText( CINSPlayer *pPlayer, bool bSimple )
 {
@@ -786,71 +780,7 @@ void UTIL_SendKeyValues( KeyValues *pData )
 
 //=========================================================
 //=========================================================
-#ifdef _DEBUG
 
-CON_COMMAND( ins_testmenu, "" )
-{
-	if( engine->Cmd_Argc( ) != 2 )
-		return;
-
-	int iPlayerID = atoi( engine->Cmd_Argv( 1 ) );
-
-	CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerID );
-
-	if( !pPlayer )
-		return;
-
-	CSingleUserRecipientFilter filter( pPlayer );
-	filter.MakeReliable( );
-
-	UserMessageBegin( filter, "ShowMenu" );
-
-		WRITE_WORD( 1023 ); // ( 1 << 0 ) | ( 1 << 1 ) etc
-		WRITE_CHAR( 20 );
-		WRITE_BYTE( 0 );
-		WRITE_STRING( "Sample Title\n->1. Item 1\n->2. Item 2\n->3. Item 3\n" );
-
-	MessageEnd( );
-}
-
-#endif
-
-//=========================================================
-//=========================================================
-#ifdef TESTING
-
-#define SERVER_CRASH_ASK "Are you Sure\n"
-
-void CC_CrashServer( void )
-{
-	CINSPlayer *pPlayer = ToINSPlayer( UTIL_GetCommandClient( ) ); 
-
-	if( !pPlayer || !pPlayer->IsDeveloper( ) )
-		return;
-
-	static int iEnsureWants = 0;
-	iEnsureWants++;
-
-	if( iEnsureWants != 2 )
-	{
-		if( pPlayer )
-			ClientPrint( pPlayer, HUD_PRINTCONSOLE, SERVER_CRASH_ASK );
-		else
-			Msg( SERVER_CRASH_ASK );
-
-		return;
-	}
-
-	CBasePlayer *pCrashPlayer = NULL;
-	pCrashPlayer->entindex( );
-}
-
-static ConCommand crashserver( "ins_crashserver", CC_CrashServer, "Crash the Server" );
-
-#endif
-
-//=========================================================
-//=========================================================
 #ifdef _DEBUG
 
 struct LineElement_t
@@ -904,16 +834,3 @@ Vector UTIL_SpawnPositionOffset( CBaseEntity *pEntity )
 {
 	return ( pEntity->GetAbsOrigin( ) + Vector( 0, 0, 1 ) );
 }
-
-//=========================================================
-//=========================================================
-#ifdef TESTING
-
-ConVar disallowgrenades( "ins_disallowgrenades", "0", 0, "Disallow Grenades" );
-
-bool UTIL_DisallowGrenades( void )
-{
-	return disallowgrenades.GetBool( );
-}
-
-#endif

@@ -100,32 +100,31 @@ ConVar ragdollmax( "ins_ragdoll_max", "60.0", FCVAR_NOTIFY, "The Maximum Time a 
 
 //=========================================================
 //=========================================================
-void UTIL_ExecuteRestart( int iType )
+void UTIL_ExecuteRestart(int iType, const CCommand& args)
 {
 	if( !UTIL_IsCommandIssuedByServerAdmin( ) )
 		return;
 
-	if( engine->Cmd_Argc( ) < 2 )
+	if (args.ArgC() < 2)
 		return;
 
 	CINSRules *pRules = INSRules( );
-
 	if( pRules && pRules->IsModeRunning( ) )
-		pRules->RunningMode( )->RequestReset( iType, atoi( engine->Cmd_Argv( 1 ) ), true );
+		pRules->RunningMode()->RequestReset(iType, atoi(args[1]), true);
 }
 
 //=========================================================
 //=========================================================
 CON_COMMAND( ins_restart_game, "Restart the Game" )
 {
-	UTIL_ExecuteRestart( RESET_GAME );
+	UTIL_ExecuteRestart( RESET_GAME, args );
 }
 
 //=========================================================
 //=========================================================
 CON_COMMAND( ins_restart_round, "Restart the Round" )
 {
-	UTIL_ExecuteRestart( RESET_ROUND );
+	UTIL_ExecuteRestart( RESET_ROUND, args );
 }
 
 //=========================================================

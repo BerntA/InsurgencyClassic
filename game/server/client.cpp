@@ -37,6 +37,11 @@
 #include "hl2_shared_misc.h"
 #endif
 
+#include "weapon_ballistic_base.h"
+#include "weapon_defines.h"
+#include "ins_player.h"
+#include "ins_utils.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -390,39 +395,37 @@ void Host_Say(edict_t *pEdict, const char *message, bool teamonly, int chatCmd)
 	}
 }
 
-void ClientPrecache( void )
+void ClientPrecache(void)
 {
 	// Precache cable textures.
-	CBaseEntity::PrecacheModel( "cable/cable.vmt" );	
-	CBaseEntity::PrecacheModel( "cable/cable_lit.vmt" );	
-	CBaseEntity::PrecacheModel( "cable/chain.vmt" );	
-	CBaseEntity::PrecacheModel( "cable/rope.vmt" );	
-	CBaseEntity::PrecacheModel( "sprites/blueglow1.vmt" );	
-	CBaseEntity::PrecacheModel( "sprites/purpleglow1.vmt" );	
-	CBaseEntity::PrecacheModel( "sprites/purplelaser1.vmt" );	
-	
-#ifndef HL2MP
-	CBaseEntity::PrecacheScriptSound( "Hud.Hint" );
-#endif // HL2MP
-	CBaseEntity::PrecacheScriptSound( "Player.Swim" );
-	CBaseEntity::PrecacheScriptSound("Player.Slide");
+	CBaseEntity::PrecacheModel("cable/cable.vmt");
+	CBaseEntity::PrecacheModel("cable/cable_lit.vmt");
+	CBaseEntity::PrecacheModel("cable/chain.vmt");
+	CBaseEntity::PrecacheModel("cable/rope.vmt");
+	CBaseEntity::PrecacheModel("sprites/blueglow1.vmt");
+	CBaseEntity::PrecacheModel("sprites/purpleglow1.vmt");
+	CBaseEntity::PrecacheModel("sprites/purplelaser1.vmt");
+	CBaseEntity::PrecacheModel("sprites/glow01.vmt");
+
+	CBaseEntity::PrecacheScriptSound("Player.FallDamage");
+	CBaseEntity::PrecacheScriptSound("Player.Swim");
 
 	// General HUD sounds
-	CBaseEntity::PrecacheScriptSound( "Player.PickupWeapon" );
-	CBaseEntity::PrecacheScriptSound( "Player.DenyWeaponSelection" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelected" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionClose" );
-	CBaseEntity::PrecacheScriptSound( "Player.WeaponSelectionMoveSlot" );
+	CBaseEntity::PrecacheScriptSound("Player.PickupWeapon");
+	CBaseEntity::PrecacheScriptSound("Player.DenyWeaponSelection");
+	CBaseEntity::PrecacheScriptSound("Player.WeaponSelected");
+	CBaseEntity::PrecacheScriptSound("Player.WeaponSelectionClose");
+	CBaseEntity::PrecacheScriptSound("Player.WeaponSelectionMoveSlot");
 
 	// General legacy temp ents sounds
-	CBaseEntity::PrecacheScriptSound( "Bounce.Glass" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Metal" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Flesh" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Wood" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Shrapnel" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.ShotgunShell" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Shell" );
-	CBaseEntity::PrecacheScriptSound( "Bounce.Concrete" );
+	CBaseEntity::PrecacheScriptSound("Bounce.Glass");
+	CBaseEntity::PrecacheScriptSound("Bounce.Metal");
+	CBaseEntity::PrecacheScriptSound("Bounce.Flesh");
+	CBaseEntity::PrecacheScriptSound("Bounce.Wood");
+	CBaseEntity::PrecacheScriptSound("Bounce.Shrapnel");
+	CBaseEntity::PrecacheScriptSound("Bounce.ShotgunShell");
+	CBaseEntity::PrecacheScriptSound("Bounce.Shell");
+	CBaseEntity::PrecacheScriptSound("Bounce.Concrete");
 
 	ClientGamePrecache();
 }
@@ -548,7 +551,6 @@ void SetDebugBits( CBasePlayer* pPlayer, const char *name, int bit )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : pKillTargetName - 
@@ -567,7 +569,6 @@ void KillTargets( const char *pKillTargetName )
 		pentKillTarget = gEntList.FindEntityByName( pentKillTarget, pKillTargetName );
 	}
 }
-
 
 //------------------------------------------------------------------------------
 // Purpose:
@@ -716,7 +717,6 @@ void CC_DrawCross( const CCommand &args )
 }
 static ConCommand drawcross("drawcross", CC_DrawCross, "Draws a cross at the given location\n\tArguments: x y z", FCVAR_CHEAT);
 
-
 //------------------------------------------------------------------------------
 // helper function for kill and explode
 //------------------------------------------------------------------------------
@@ -804,8 +804,8 @@ CON_COMMAND_F( explodevector, "Kills a player applying an explosive force. Usage
 	killvector_helper( args, false );
 }
 
-
 #define TALK_INTERVAL 0.66 // min time between say commands from a client
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 CON_COMMAND( say, "Display player message" )
@@ -829,7 +829,6 @@ CON_COMMAND( say, "Display player message" )
 	}
 }
 
-
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 CON_COMMAND( say_team, "Display player message to team" )
@@ -845,6 +844,67 @@ CON_COMMAND( say_team, "Display player message to team" )
 	}
 }
 
+CON_COMMAND_F(give_weapon, "Give a weapon to the player.\n", FCVAR_CHEAT)
+{
+	if (args.ArgC() < 2)
+		return;
+
+	CINSPlayer* pPlayer = ToINSPlayer(UTIL_GetCommandClient());
+	if (!pPlayer)
+		return;
+
+	const char* pszWeaponName = args[1];
+	if (!pszWeaponName || *pszWeaponName == '\0')
+		return;
+
+	char szWeaponName[64];
+	Q_snprintf(szWeaponName, sizeof(szWeaponName), "weapon_%s", pszWeaponName);
+
+	int iWeaponID = WeaponNameToID(szWeaponName);
+	if (iWeaponID == WEAPON_INVALID)
+	{
+		ClientPrint(pPlayer, HUD_PRINTCONSOLE, "Unknown weapon entity!");
+		return;
+	}
+
+	pPlayer->AddWeapon(iWeaponID, 2, 0);
+}
+
+CON_COMMAND_F(give_clip, "Give ammo clips to the player.\n", FCVAR_CHEAT)
+{
+	if (args.ArgC() < 2)
+		return;
+
+	CINSPlayer* pPlayer = ToINSPlayer(UTIL_GetCommandClient());
+	if (!pPlayer)
+		return;
+
+	int iCount = atoi(args[1]);
+	if (iCount <= 0)
+		return;
+
+	CWeaponBallisticBase* pWeapon = dynamic_cast<CWeaponBallisticBase*>(pPlayer->GetActiveINSWeapon());
+	if (pWeapon)
+		pWeapon->GiveClip(iCount);
+}
+
+CON_COMMAND_F(give_ammo, "Give ammo to the player.\n", FCVAR_CHEAT)
+{
+	if (args.ArgC() < 2)
+		return;
+
+	CINSPlayer* pPlayer = ToINSPlayer(UTIL_GetCommandClient());
+	if (!pPlayer)
+		return;
+
+	int iCount = atoi(args[1]);
+	if (iCount <= 0)
+		return;
+
+	CWeaponBallisticBase* pWeapon = dynamic_cast<CWeaponBallisticBase*>(pPlayer->GetActiveINSWeapon());
+	if (pWeapon)
+		pWeapon->GiveAmmo(iCount);
+}
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -881,7 +941,6 @@ CON_COMMAND( give, "Give item to player.\n\tArguments: <item_name>" )
 		pPlayer->GiveNamedItem( STRING(iszItem) );
 	}
 }
-
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -987,11 +1046,10 @@ void CC_Player_Use( const CCommand &args )
 	CBasePlayer *pPlayer = ToBasePlayer( UTIL_GetCommandClient() ); 
 	if ( pPlayer)
 	{
-		pPlayer->SelectItem((char *)args[1]);
+		pPlayer->SelectItem(atoi(args[1]));
 	}
 }
 static ConCommand use("use", CC_Player_Use, "Use a particular weapon\t\nArguments: <weapon_name>");
-
 
 //------------------------------------------------------------------------------
 // A small wrapper around SV_Move that never clips against the supplied entity.
@@ -1002,7 +1060,6 @@ static bool TestEntityPosition ( CBasePlayer *pPlayer )
 	UTIL_TraceEntity( pPlayer, pPlayer->GetAbsOrigin(), pPlayer->GetAbsOrigin(), MASK_PLAYERSOLID, &trace );
 	return (trace.startsolid == 0);
 }
-
 
 //------------------------------------------------------------------------------
 // Searches along the direction ray in steps of "step" to see if 
@@ -1025,7 +1082,6 @@ static int FindPassableSpace( CBasePlayer *pPlayer, const Vector& direction, flo
 	}
 	return 0;
 }
-
 
 //------------------------------------------------------------------------------
 // Noclip
@@ -1226,7 +1282,6 @@ CON_COMMAND_F( setang_exact, "Snap player eyes and orientation to specified pitc
 	pPlayer->SnapEyeAngles( newang );
 }
 
-
 //------------------------------------------------------------------------------
 // Sets client to notarget mode.
 //------------------------------------------------------------------------------
@@ -1385,6 +1440,7 @@ void ClientCommand(CBasePlayer *pPlayer, const CCommand &args)
 	MDLCACHE_CRITICAL_SECTION();
 
 	bool bIssuedCommand = false;
+
 	if (sv_cheats && sv_cheats->GetBool())
 	{
 		if (FStrEq(pCmd, "killtarget"))
@@ -1393,7 +1449,6 @@ void ClientCommand(CBasePlayer *pPlayer, const CCommand &args)
 			{
 				ConsoleKillTarget(pPlayer, args[1]);
 			}
-
 			bIssuedCommand = true;
 		}
 		else if (FStrEq(pCmd, "demorestart"))
@@ -1403,7 +1458,7 @@ void ClientCommand(CBasePlayer *pPlayer, const CCommand &args)
 		}
 	}
 
-	if ((bIssuedCommand == false) && !g_pGameRules->ClientCommand(pPlayer, args))
+	if ((bIssuedCommand == false) && g_pGameRules && !g_pGameRules->ClientCommand(pPlayer, args))
 	{
 		if (Q_strlen(pCmd) > 128)
 		{

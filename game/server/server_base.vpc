@@ -492,6 +492,8 @@ $Project
 				$File "ins/achievement_manager.h"				
 				$File "ins/player_achiev_stats.cpp"
 				$File "ins/player_achiev_stats.h"
+				$File "$SRCDIR\game\shared\ins\playerstats.cpp"
+				$File "$SRCDIR\game\shared\ins\playerstats.h"
 			}		
 			
 			$Folder "Entities"

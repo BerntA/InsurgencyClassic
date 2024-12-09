@@ -171,6 +171,7 @@ enum TeamList_t
 #define MAX_PLAYERS				65  // Absolute max players supported
 
 #define MAX_FOV						90
+#define MAX_PLACE_NAME_LENGTH	18
 
 //===================================================================================================================
 // Team Defines

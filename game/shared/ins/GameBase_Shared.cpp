@@ -274,9 +274,6 @@ void CGameBaseShared::EntityKilledByPlayer(CBaseEntity *pKiller, CBaseEntity *pV
 	if (!pClient || pClient->IsBot())
 		return;
 
-	if (GameBaseServer()->CanStoreSkills() != PROFILE_GLOBAL)
-		return;
-
 	int uniqueWepID = forcedWeaponID;
 
 	if (uniqueWepID > INVALID_WEAPON) // TODO
@@ -301,7 +298,6 @@ CON_COMMAND(reload_gamebase_server, "Reload the game base content.(full reparse)
 
 	GameBaseShared()->LoadBase();
 	GameBaseShared()->GetSharedGameDetails()->Precache();
-	GameBaseServer()->LoadSharedInfo();
 
 	IGameEvent *event = gameeventmanager->CreateEvent("reload_game_data");
 	if (event)

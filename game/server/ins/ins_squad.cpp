@@ -592,11 +592,11 @@ void CINSSquad::ForcePlayerOrders( int iOrderType )
 //=========================================================
 CON_COMMAND( ins_kick_commander, "Kicks the current commander from that position. ins_kick_commander [team#] [squad#]" )
 {
-	if( engine->Cmd_Argc( ) == 3 )
-	{
-		
-		int teamid = atoi( engine->Cmd_Argv( 1 ) );
-		int squadid = atoi( engine->Cmd_Argv( 2 ) );
+	if (args.ArgC() == 3)
+	{		
+		int teamid = atoi(args[1]);
+		int squadid = atoi(args[2]);
+
 #ifdef _DEBUG
 		Msg("Teamid: %i, squadid: %i\n", teamid, squadid);
 #endif // _DEBUG
@@ -614,11 +614,11 @@ CON_COMMAND( ins_kick_commander, "Kicks the current commander from that position
 //=========================================================
 CON_COMMAND( ins_force_commander, "Forces a commaner select [team#] [squad#]" )
 {
-	if( engine->Cmd_Argc( ) == 3 )
+	if (args.ArgC() == 3)
 	{
+		int teamid = atoi(args[1]);
+		int squadid = atoi(args[2]);
 
-		int teamid = atoi( engine->Cmd_Argv( 1 ) );
-		int squadid = atoi( engine->Cmd_Argv( 2 ) );
 #ifdef _DEBUG
 		Msg("Teamid: %i, squadid: %i\n", teamid, squadid);
 #endif // _DEBUG
@@ -628,10 +628,6 @@ CON_COMMAND( ins_force_commander, "Forces a commaner select [team#] [squad#]" )
 	}
 }
 #endif // _DEBUG
-
-
-
-
 
 //=========================================================
 //=========================================================

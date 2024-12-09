@@ -406,6 +406,8 @@ $Project
 				$File "ins/c_leaderboard_handler.cpp"
 				$File "ins/c_leaderboard_handler.h"
 				$File "ins/c_leaderboards.cpp"
+				$File "$SRCDIR\game\shared\ins\playerstats.cpp"
+				$File "$SRCDIR\game\shared\ins\playerstats.h"
 			}
 			
 			$Folder "Gamerules"

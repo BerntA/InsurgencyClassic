@@ -1341,23 +1341,13 @@ int CBaseCombatCharacter::OnTakeDamage(const CTakeDamageInfo &info)
 		}
 	}
 
-	// Bernt: Scale the damage depending on which entity we hit.
-	// We handle players in hl2mp_player, if we check it here the armor code will expect the non scaled damage...
-	CTakeDamageInfo damageCopy = info;
-	CBaseEntity *pAttacker = damageCopy.GetAttacker();
-	if (pAttacker && this->IsNPC())
-	{
-		float flDamageScale = GameBaseServer()->GetDamageScaleForEntity(pAttacker, this, damageCopy.GetDamageType(), damageCopy.GetDamageCustom());
-		damageCopy.ScaleDamage(flDamageScale);
-	}
-
 	switch (m_lifeState)
 	{
 	case LIFE_ALIVE:
-		retVal = OnTakeDamage_Alive(damageCopy);
+		retVal = OnTakeDamage_Alive(info);
 		if (retVal)
 		{
-			CanGibEntity(damageCopy);
+			CanGibEntity(info);
 		}
 
 		if (m_iHealth <= 0)
@@ -1368,18 +1358,18 @@ int CBaseCombatCharacter::OnTakeDamage(const CTakeDamageInfo &info)
 				pPhysics->EnableCollisions(false);
 			}
 
-			Event_Killed(damageCopy);
-			Event_Dying(damageCopy);
+			Event_Killed(info);
+			Event_Dying(info);
 		}
 		return retVal;
 		break;
 
 	case LIFE_DYING:
-		return OnTakeDamage_Dying(damageCopy);
+		return OnTakeDamage_Dying(info);
 
 	default:
 	case LIFE_DEAD:
-		retVal = OnTakeDamage_Dead(damageCopy);
+		retVal = OnTakeDamage_Dead(info);
 		return retVal;
 	}
 }
