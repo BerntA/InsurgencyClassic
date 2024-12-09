@@ -51,8 +51,6 @@ public:
 	virtual void Precache();
 	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
 
-	virtual void EnableRotationEffect(void);
-
 	CStudioHdr *GetModelPtr( void );
 	void InvalidateMdlCache();
 
@@ -161,8 +159,6 @@ protected:
 	// in general code -- it causes many many string comparisons, which is slower than you think. Better is to 
 	// save off your pose parameters in member variables in your derivation of this function:
 	virtual void	PopulatePoseParameters( void );
-
-	virtual void OnRotationEffect(void);
 
 public:
 

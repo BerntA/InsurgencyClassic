@@ -149,9 +149,7 @@ BEGIN_DATADESC( CBaseAnimating )
 	DEFINE_KEYFIELD( m_flFadeScale, FIELD_FLOAT, "fadescale" ),
 	
 	DEFINE_KEYFIELD( m_flModelScale, FIELD_FLOAT, "modelscale" ),
-	DEFINE_INPUTFUNC( FIELD_VECTOR, "SetModelScale", InputSetModelScale ),	
-
-	DEFINE_THINKFUNC(OnRotationEffect),
+	DEFINE_INPUTFUNC( FIELD_VECTOR, "SetModelScale", InputSetModelScale ),
 
 	END_DATADESC()
 
@@ -3466,24 +3464,4 @@ CStudioHdr *CBaseAnimating::OnNewModel()
 	}
 
 	return hdr;
-}
-
-void CBaseAnimating::EnableRotationEffect(void)
-{
-	SetThink(&CBaseAnimating::OnRotationEffect);
-	SetNextThink(gpGlobals->curtime + 0.1f);
-}
-
-void CBaseAnimating::OnRotationEffect(void)
-{
-	QAngle currAngles = GetLocalAngles();
-
-	if (currAngles.y < 360)
-		currAngles.y += 2;
-	else
-		currAngles.y = 0;
-
-	SetLocalAngles(currAngles);
-
-	SetNextThink(gpGlobals->curtime + 0.1f);
 }

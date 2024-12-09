@@ -680,15 +680,11 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	float flHealthPrev = m_iHealth;
 
 	CTakeDamageInfo info = inputInfo;
-
-	CHL2MP_Player *pClient = ToHL2MPPlayer(this);
 	CBaseEntity *pAttacker = info.GetAttacker();
 
 	if ( GetFlags() & FL_GODMODE )
 		return 0;
 
-	if (pClient && pAttacker && (pClient->IsPlayerInfected() && (pAttacker->Classify() == CLASS_ZOMBIE)))
-		return 0;
 
 	if ( m_debugOverlays & OVERLAY_BUDDHA_MODE ) 
 	{
@@ -809,24 +805,7 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			info.SetDamage(flNewDamage);
 		}
 
-		// Only humans can get infected!
-		// No infection in arena mode!
-		if (pAttacker && pClient->IsHuman() && !pClient->IsPlayerInfected() && (pAttacker->Classify() == CLASS_ZOMBIE) && !HL2MPRules()->IsGameoverOrScoresVisible() && (HL2MPRules()->GetCurrentGamemode() == MODE_OBJECTIVE) && !GameBaseServer()->IsTutorialModeEnabled() && !GameBaseServer()->IsStoryMode())
-		{
-			float flHealthLeft = ((float)m_iHealth) - info.GetDamage();
-			float m_flHP = (((float)GetMaxHealth()) / 100.0f) * (float)GameBaseShared()->GetSharedGameDetails()->GetPlayerSharedData()->iInfectionStartPercent; // % of the health.
-			if (m_flHP > flHealthLeft)
-			{
-				pClient->m_BB2Local.m_flInfectionTimer = gpGlobals->curtime + GameBaseShared()->GetSharedGameDetails()->GetPlayerSharedData()->flInfectionDuration;
-				pClient->SetPlayerInfected(true);
-				SetCollisionGroup(COLLISION_GROUP_PLAYER_ZOMBIE);
-				SetHealth(1);
-				HL2MPRules()->EmitSoundToClient(this, "Infected", BB2_SoundTypes::TYPE_PLAYER, GetSoundsetGender());
-				CheckIsPlayerStuck();
-				AchievementManager::WriteToAchievement(pClient, "ACH_SURVIVOR_INFECTED");
-				return 0;
-			}
-		}
+
 	}
 
 	// this cast to INT is critical!!! If a player ends up with 0.5 health, the engine will get that
@@ -1129,19 +1108,16 @@ int CBasePlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 		VectorNormalize( vecDir );
 	}
 
-	bool bNoForceLimit = info.IsMiscFlagActive(TAKEDMGINFO_DISABLE_FORCELIMIT);
 	if (info.GetInflictor() && ((GetMoveType() == MOVETYPE_WALK) || (GetMoveType() == MOVETYPE_STEP)) &&
-		(!attacker->IsSolidFlagSet(FSOLID_TRIGGER) || bNoForceLimit))
+		!attacker->IsSolidFlagSet(FSOLID_TRIGGER))
 	{
-		Vector force = vecDir * -DamageForce(WorldAlignSize(), info.GetBaseDamage());
-		if (bNoForceLimit)
-			force = info.GetDamageForce();
+		Vector force = vecDir * -DamageForce(WorldAlignSize(), info.GetDamage());		
 
-		float maxZ = (bNoForceLimit ? 600.0f : 250.0f);
+		float maxZ = 250.0f;
 		if (force.z > maxZ)
 			force.z = maxZ;
 
-		ApplyAbsVelocityImpulse(force, bNoForceLimit);
+		ApplyAbsVelocityImpulse(force, false);
 	}
 
 	// fire global game event
@@ -2157,35 +2133,6 @@ void CBasePlayer::IncrementDeathCount( int nCount )
 {
 	m_iDeaths += nCount;
 	pl.deaths = m_iDeaths;
-}
-
-void CBasePlayer::AddPoints( int score, bool bAllowNegativeScore )
-{
-	// Positive score always adds
-	if ( score < 0 )
-	{
-		if ( !bAllowNegativeScore )
-		{
-			if ( m_iFrags < 0 )		// Can't go more negative
-				return;
-			
-			if ( -score > m_iFrags )	// Will this go negative?
-			{
-				score = -m_iFrags;		// Sum will be 0
-			}
-		}
-	}
-
-	m_iFrags += score;
-	pl.frags = m_iFrags;
-}
-
-void CBasePlayer::AddPointsToTeam( int score, bool bAllowNegativeScore )
-{
-	if ( GetTeam() )
-	{
-		GetTeam()->AddScore( score );
-	}
 }
 
 //-----------------------------------------------------------------------------

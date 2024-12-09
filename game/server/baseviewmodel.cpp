@@ -23,12 +23,12 @@ void SendProxy_SequenceChanged( const void *pStruct, const void *pVarData, DVari
 
 int CBaseViewModel::UpdateTransmitState()
 {
-	if ( IsEffectActive( EF_NODRAW ) )
-	{
-		return SetTransmitState( FL_EDICT_DONTSEND );
-	}
+	CBaseCombatWeapon* pWeapon = GetOwningWeapon();
 
-	return SetTransmitState( FL_EDICT_FULLCHECK );
+	if (!pWeapon || IsEffectActive(EF_NODRAW))
+		return SetTransmitState(FL_EDICT_DONTSEND);
+
+	return SetTransmitState(FL_EDICT_FULLCHECK);
 }
 
 int CBaseViewModel::ShouldTransmit( const CCheckTransmitInfo *pInfo )

@@ -425,8 +425,6 @@ public:
 
 	virtual CBaseEntity		*EntSelectSpawnPoint( void );
 	
-	void					AddPoints( int score, bool bAllowNegativeScore );
-	void					AddPointsToTeam( int score, bool bAllowNegativeScore );
 	virtual bool			BumpWeapon(CBaseCombatWeapon *pWeapon) { return false; }
 	bool					RemovePlayerItem( CBaseCombatWeapon *pItem );
 	CBaseEntity				*HasNamedPlayerItem( const char *pszItemName );

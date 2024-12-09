@@ -82,8 +82,6 @@ enum Class_T
 	CLASS_BULLSEYE,
 	CLASS_COMBINE,
 	CLASS_MILITARY,
-	CLASS_ZOMBIE,
-	CLASS_ZOMBIE_BOSS,
 	CLASS_MISSILE,
 	CLASS_FLARE,
 	CLASS_EARTH_FAUNA,
@@ -544,8 +542,6 @@ public:
 	void InputFireUser2( inputdata_t &inputdata );
 	void InputFireUser3( inputdata_t &inputdata );
 	void InputFireUser4( inputdata_t &inputdata );
-	void InputFireInventoryObjectiveSuccess(inputdata_t &inputdata);
-	void InputFireInventoryObjectiveFail(inputdata_t &inputdata);
 
 	// Gives mappers many joys! BB2
 #ifdef GLOWS_ENABLE
@@ -778,40 +774,7 @@ public:
 	virtual void			DecalTrace( trace_t *pTrace, char const *decalName );
 	virtual void			ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName = NULL );
 
-	void			AddPoints(int score, bool bAllowNegativeScore);
-	void			AddPointsToTeam(int score, bool bAllowNegativeScore);
 	void			RemoveAllDecals(void);
-
-	virtual bool IsHuman(bool includeNPCs = false)
-	{
-		if (includeNPCs && ((Classify() == CLASS_COMBINE) || (Classify() == CLASS_MILITARY)))
-			return true;
-
-		return ((Classify() == CLASS_PLAYER) || (Classify() == CLASS_PLAYER_INFECTED));
-	}
-
-	virtual bool IsMercenary(void)
-	{
-		return (Classify() == CLASS_MILITARY);
-	}
-
-	virtual bool IsHumanBoss(void)
-	{
-		return false;
-	}
-
-	virtual bool IsZombie(bool includeNPCs = false)
-	{
-		if (includeNPCs && ((Classify() == CLASS_ZOMBIE) || (Classify() == CLASS_ZOMBIE_BOSS)))
-			return true;
-
-		return (Classify() == CLASS_PLAYER_ZOMB);
-	}
-
-	virtual bool IsZombieBoss(void)
-	{
-		return (Classify() == CLASS_ZOMBIE_BOSS);
-	}
 
 	virtual bool	OnControls( CBaseEntity *pControls ) { return false; }
 	virtual bool	HasTarget( string_t targetname );
@@ -835,10 +798,11 @@ public:
 	CTeam			*GetTeam( void ) const;				// Get the Team this entity is on
 	int				GetTeamNumber( void ) const;		// Get the Team number of the team this entity is on
 	virtual void	ChangeTeam( int iTeamNum );			// Assign this entity to a team.
-	bool			IsInTeam( CTeam *pTeam ) const;		// Returns true if this entity's in the specified team
-	bool			InSameTeam( CBaseEntity *pEntity ) const;	// Returns true if the specified entity is on the same team as this one
-	bool			IsInAnyTeam( void ) const;			// Returns true if this entity is in any team
-	const char		*TeamID( void ) const;				// Returns the name of the team this entity is on.
+
+	virtual CBasePlayer* GetScorer(void) const { return NULL; }
+	virtual int GetInflictorType(void) const { return -1; }
+	virtual int GetInflictorID(void) const { return -1; }
+	virtual bool IsInflictorDistance(void) const { return false; }
 
 	// Entity events... these are events targetted to a particular entity
 	// Each event defines its own well-defined event data structure
@@ -865,7 +829,6 @@ public:
 	void (CBaseEntity ::*m_pfnBlocked)( CBaseEntity *pOther );
 
 	virtual void			Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	virtual void            DelayedUse(CBaseEntity *pActivator) {}
 	virtual void			StartTouch( CBaseEntity *pOther );
 	virtual void			Touch( CBaseEntity *pOther ); 
 	virtual void			EndTouch( CBaseEntity *pOther );
@@ -954,10 +917,10 @@ public:
 
 	// Health accessors.
 	virtual int		GetMaxHealth()  const	{ return m_iMaxHealth; }
-	void	SetMaxHealth( int amt )	{ m_iMaxHealth = amt; }
+	virtual void	SetMaxHealth( int amt )	{ m_iMaxHealth = amt; }
 
-	int		GetHealth() const		{ return m_iHealth; }
-	void	SetHealth( int amt )	{ m_iHealth = amt; }
+	virtual int		GetHealth() const		{ return m_iHealth; }
+	virtual void	SetHealth( int amt )	{ m_iHealth = amt; }
 	
 	float HealthFraction() const;
 
@@ -1496,7 +1459,6 @@ private:
 	float		m_flDesiredShadowCastDistance;
 
 	// Team handling
-	int			m_iInitialTeamNum;		// Team number of this entity's team read from file
 	CNetworkVar( int, m_iTeamNum );				// Team number of this entity's team. 
 
 	// Sets water type + level for physics objects
@@ -1561,8 +1523,6 @@ private:
 	COutputEvent m_OnUser2;
 	COutputEvent m_OnUser3;
 	COutputEvent m_OnUser4;
-	COutputEvent m_OnInventoryObjectiveItemUsed;
-	COutputEvent m_OnInventoryObjectiveItemFail;
 
 	QAngle			m_angAbsRotation;
 

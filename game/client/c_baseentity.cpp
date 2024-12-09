@@ -3901,34 +3901,6 @@ int C_BaseEntity::GetTeamNumber(void) const
 	return m_iTeamNum;
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int	C_BaseEntity::GetRenderTeamNumber(void)
-{
-	return GetTeamNumber();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true if these entities are both in at least one team together
-//-----------------------------------------------------------------------------
-bool C_BaseEntity::InSameTeam(C_BaseEntity *pEntity)
-{
-	if (!pEntity)
-		return false;
-
-	return (pEntity->GetTeam() == GetTeam());
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true if the entity's on the same team as the local player
-//-----------------------------------------------------------------------------
-bool C_BaseEntity::InLocalTeam(void)
-{
-	return (GetTeam() == GetLocalTeam());
-}
-
-
 void C_BaseEntity::SetNextClientThink(float nextThinkTime)
 {
 	Assert(GetClientHandle() != INVALID_CLIENTENTITY_HANDLE);

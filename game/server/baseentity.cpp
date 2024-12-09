@@ -364,7 +364,7 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 	m_flElasticity   = 1.0f;
 	m_flShadowCastDistance = m_flDesiredShadowCastDistance = 0;
 	SetRenderColor( 255, 255, 255, 255 );
-	m_iTeamNum = m_iInitialTeamNum = TEAM_UNASSIGNED;
+	m_iTeamNum = TEAM_UNASSIGNED;
 	m_nLastThinkTick = gpGlobals->tickcount;
 	m_nSimulationTick = -1;
 	SetIdentityMatrix( m_rgflCoordinateFrame );
@@ -1236,13 +1236,6 @@ void CBaseEntity::Activate( void )
 	g_bReceivedChainedActivate = true;
 #endif
 
-	// NOTE: This forces a team change so that stuff in the level
-	// that starts out on a team correctly changes team
-	if (m_iInitialTeamNum)
-	{
-		ChangeTeam( m_iInitialTeamNum );
-	}	
-
 	// Get a handle to my damage filter entity if there is one.
 	if ( m_iszDamageFilterName != NULL_STRING )
 	{
@@ -1311,9 +1304,8 @@ int CBaseEntity::OnTakeDamage( const CTakeDamageInfo &info )
 		}
 		else
 		{
-			bool bNoForceLimit = info.IsMiscFlagActive(TAKEDMGINFO_DISABLE_FORCELIMIT);
 			if ( info.GetInflictor() && (GetMoveType() == MOVETYPE_WALK || GetMoveType() == MOVETYPE_STEP) && 
-				(!info.GetAttacker()->IsSolidFlagSet(FSOLID_TRIGGER) || bNoForceLimit))
+				!info.GetAttacker()->IsSolidFlagSet(FSOLID_TRIGGER))
 			{
 				Vector vecDir, vecInflictorCentroid;
 				vecDir = WorldSpaceCenter( );
@@ -1325,7 +1317,8 @@ int CBaseEntity::OnTakeDamage( const CTakeDamageInfo &info )
 				
 				if (flForce > 1000.0) 
 					flForce = 1000.0;
-				ApplyAbsVelocityImpulse(vecDir * flForce, bNoForceLimit);
+
+				ApplyAbsVelocityImpulse(vecDir * flForce, false);
 			}
 		}
 	}
@@ -1352,8 +1345,7 @@ int CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 	if ( !g_pGameRules )
 		return 0;
 
-	bool bHasPhysicsForceDamage = !g_pGameRules->Damage_NoPhysicsForce( inputInfo.GetDamageType() );
-	if ( bHasPhysicsForceDamage && inputInfo.GetDamageType() != DMG_GENERIC )
+	if (!(inputInfo.GetDamageType() & DMG_NO_PHYSICS_FORCE) && (inputInfo.GetDamageType() != DMG_GENERIC))
 	{
 		// If you hit this assert, you've called TakeDamage with a damage type that requires a physics damage
 		// force & position without specifying one or both of them. Decide whether your damage that's causing 
@@ -1381,11 +1373,6 @@ int CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 
 	// Make sure our damage filter allows the damage.
 	if ( !PassesDamageFilter( inputInfo ))
-	{
-		return 0;
-	}
-
-	if( !g_pGameRules->AllowDamage(this, inputInfo) )
 	{
 		return 0;
 	}
@@ -1454,8 +1441,7 @@ float CBaseEntity::GetReceivedDamageScale( CBaseEntity *pAttacker )
 int CBaseEntity::VPhysicsTakeDamage( const CTakeDamageInfo &info )
 {
 	// don't let physics impacts or fire cause objects to move (again)
-	bool bNoPhysicsForceDamage = g_pGameRules->Damage_NoPhysicsForce( info.GetDamageType() );
-	if ( bNoPhysicsForceDamage || info.GetDamageType() == DMG_GENERIC )
+	if (info.GetDamageType() & DMG_NO_PHYSICS_FORCE || info.GetDamageType() == DMG_GENERIC)
 		return 1;
 
 	Assert(VPhysicsGetObject() != NULL);
@@ -1601,8 +1587,6 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 
 	DEFINE_KEYFIELD( m_flShadowCastDistance, FIELD_FLOAT, "shadowcastdist" ),
 
-	DEFINE_INPUT( m_iInitialTeamNum, FIELD_INTEGER, "TeamNum" ),
-
 	DEFINE_GLOBAL_KEYFIELD( m_ModelName, FIELD_MODELNAME, "model" ),
 	
 	DEFINE_KEYFIELD( m_vecBaseVelocity, FIELD_VECTOR, "basevelocity" ),
@@ -1663,8 +1647,6 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 	DEFINE_OUTPUT( m_OnUser2, "OnUser2" ),
 	DEFINE_OUTPUT( m_OnUser3, "OnUser3" ),
 	DEFINE_OUTPUT( m_OnUser4, "OnUser4" ),
-	DEFINE_OUTPUT(m_OnInventoryObjectiveItemUsed, "OnInventoryObjectiveSuccess"),
-	DEFINE_OUTPUT(m_OnInventoryObjectiveItemFail, "OnInventoryObjectiveFail"),
 
 	// Function Pointers
 	DEFINE_FUNCTION( SUB_Remove ),
@@ -3004,26 +2986,6 @@ int CBaseEntity::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 		return FL_EDICT_DONTSEND;
 	}
 
-//	if ( IsToolRecording() )
-//	{
-//		return FL_EDICT_ALWAYS;
-//	}
-
-	CBaseEntity *pRecipientEntity = CBaseEntity::Instance( pInfo->m_pClientEnt );
-
-	Assert( pRecipientEntity->IsPlayer() );
-	
-	CBasePlayer *pRecipientPlayer = static_cast<CBasePlayer*>( pRecipientEntity );
-
-
-	// FIXME: Refactor once notion of "team" is moved into HL2 code
-	// Team rules may tell us that we should
-	if ( pRecipientPlayer->GetTeam() ) 
-	{
-		if ( pRecipientPlayer->GetTeam()->ShouldTransmitToPlayer( pRecipientPlayer, this ))
-			return FL_EDICT_ALWAYS;
-	}
-
 	// by default do a PVS check
 
 	return FL_EDICT_PVSCHECK;
@@ -3803,7 +3765,6 @@ void CBaseEntity::InputSetTeam( inputdata_t &inputdata )
 void CBaseEntity::ChangeTeam( int iTeamNum )
 {
 	RemoveGlowEffect();
-
 	m_iTeamNum = iTeamNum;
 }
 
@@ -3815,51 +3776,12 @@ CTeam *CBaseEntity::GetTeam( void ) const
 	return GetGlobalTeam( m_iTeamNum );
 }
 
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true if these players are both in at least one team together
-//-----------------------------------------------------------------------------
-bool CBaseEntity::InSameTeam( CBaseEntity *pEntity ) const
-{
-	if ( !pEntity )
-		return false;
-
-	return ( pEntity->GetTeam() == GetTeam() );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns the string name of the players team
-//-----------------------------------------------------------------------------
-const char *CBaseEntity::TeamID( void ) const
-{
-	if ( GetTeam() == NULL )
-		return "";
-
-	return GetTeam()->GetName();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true if the player is on the same team
-//-----------------------------------------------------------------------------
-bool CBaseEntity::IsInTeam( CTeam *pTeam ) const
-{
-	return ( GetTeam() == pTeam );
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 int CBaseEntity::GetTeamNumber( void ) const
 {
 	return m_iTeamNum;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CBaseEntity::IsInAnyTeam( void ) const
-{
-	return ( GetTeam() != NULL );
 }
 
 //-----------------------------------------------------------------------------
@@ -5716,28 +5638,6 @@ void CBaseEntity::SetPredictionEligible( bool canpredict )
 // Nothing in game code	m_bPredictionEligible = canpredict;
 }
 
-//-----------------------------------------------------------------------------
-// These could be virtual, but only the player is overriding them
-// NOTE: If you make any of these virtual, remove this implementation!!!
-//-----------------------------------------------------------------------------
-void CBaseEntity::AddPoints( int score, bool bAllowNegativeScore )
-{
-	CBasePlayer *pPlayer = ToBasePlayer(this);
-	if ( pPlayer )
-	{
-		pPlayer->CBasePlayer::AddPoints( score, bAllowNegativeScore );
-	}
-}
-
-void CBaseEntity::AddPointsToTeam( int score, bool bAllowNegativeScore )
-{
-	CBasePlayer *pPlayer = ToBasePlayer(this);
-	if ( pPlayer )
-	{
-		pPlayer->CBasePlayer::AddPointsToTeam( score, bAllowNegativeScore );
-	}
-}
-
 void CBaseEntity::ViewPunch( const QAngle &angleOffset )
 {
 	CBasePlayer *pPlayer = ToBasePlayer(this);
@@ -5755,8 +5655,6 @@ void CBaseEntity::VelocityPunch( const Vector &vecForce )
 		pPlayer->CBasePlayer::VelocityPunch( vecForce );
 	}
 }
-//-----------------------------------------------------------------------------
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Tell clients to remove all decals from this entity
@@ -5838,16 +5736,6 @@ void CBaseEntity::InputFireUser3( inputdata_t& inputdata )
 void CBaseEntity::InputFireUser4( inputdata_t& inputdata )
 {
 	m_OnUser4.FireOutput( inputdata.pActivator, this );
-}
-
-void CBaseEntity::InputFireInventoryObjectiveSuccess(inputdata_t& inputdata)
-{
-	m_OnInventoryObjectiveItemUsed.FireOutput(inputdata.pActivator, this);
-}
-
-void CBaseEntity::InputFireInventoryObjectiveFail(inputdata_t& inputdata)
-{
-	m_OnInventoryObjectiveItemFail.FireOutput(inputdata.pActivator, this);
 }
 
 //-----------------------------------------------------------------------------

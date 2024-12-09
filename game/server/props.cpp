@@ -4394,8 +4394,6 @@ public:
 
 	void	InputSetSpeed(inputdata_t &inputdata);
 
-	void    DelayedUse(CBaseEntity *pActivator);
-
 	DECLARE_DATADESC();
 
 private:
@@ -5078,19 +5076,7 @@ void CPropDoorRotating::InputSetSpeed(inputdata_t &inputdata)
 	DoorResume();
 }
 
-void CPropDoorRotating::DelayedUse(CBaseEntity *pActivator)
-{
-	if (!pActivator)
-		return;
-
-	if (!pActivator->IsPlayer() || pActivator->IsZombie() || m_bStartLocked)
-		return;
-
-	ChangeLockedState(pActivator);
-}
-
 LINK_ENTITY_TO_CLASS( prop_sphere, CPhysSphere );
-
 
 // ------------------------------------------------------------------------------------------ //
 // Special version of func_physbox.

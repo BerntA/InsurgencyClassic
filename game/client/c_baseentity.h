@@ -566,9 +566,6 @@ public:
 	virtual C_Team					*GetTeam(void);
 	virtual int						GetTeamNumber(void) const;
 	virtual void					ChangeTeam(int iTeamNum);			// Assign this entity to a team.
-	virtual int						GetRenderTeamNumber(void);
-	virtual bool					InSameTeam(C_BaseEntity *pEntity);	// Returns true if the specified entity is on the same team as this one
-	virtual bool					InLocalTeam(void);
 
 	// ID Target handling
 	virtual bool					IsValidIDTarget(void) { return false; }
