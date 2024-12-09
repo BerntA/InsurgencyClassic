@@ -11,6 +11,5 @@
 #endif
 
 extern Vector g_vecAttackDir;
-extern bool g_fGameOver;
 
 #endif // GLOBALS_H

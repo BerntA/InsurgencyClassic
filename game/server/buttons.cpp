@@ -12,7 +12,6 @@
 #include "engine/IEngineSound.h"
 #include "tier1/strtools.h"
 #include "buttons.h"
-#include "hl2mp_player.h"
 #include "eventqueue.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -478,17 +477,17 @@ void CBaseButton::ButtonUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_
 		return;
 	}
 
-	CHL2MP_Player *pClient = dynamic_cast<CHL2MP_Player *> (pActivator);
+	CBasePlayer* pClient = ToBasePlayer(pActivator);
 	if (pClient)
 	{
 		if (TeamNum == 1)
 		{
-			if (pClient->GetTeamNumber() == TEAM_HUMANS)
+			if (pClient->GetTeamNumber() != TEAM_ONE)
 				return;
 		}
 		else if (TeamNum == 2)
 		{
-			if (pClient->GetTeamNumber() == TEAM_DECEASED)
+			if (pClient->GetTeamNumber() != TEAM_TWO)
 				return;
 		}
 	}

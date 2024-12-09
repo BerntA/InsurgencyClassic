@@ -69,8 +69,6 @@ public:
 	// {
 	virtual bool DoorCanClose( bool bAutoClose ) { return true; }
 	virtual bool DoorCanOpen( void ) { return true; }
-
-	virtual float GetOpenInterval(void) = 0;
 	// }
 
 	void ChangeLockedState(CBaseEntity *pActivator);

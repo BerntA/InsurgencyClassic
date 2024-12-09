@@ -152,7 +152,7 @@ void CHLTVDirector::SetHLTVServer( IHLTVServer *hltv )
 
 		// register for events the director needs to know
 		ListenForGameEvent( "player_hurt" );
-		ListenForGameEvent( "death_notice" );
+		ListenForGameEvent( "player_death" );
 		ListenForGameEvent( "round_end" );
 		ListenForGameEvent( "round_start" );
 		ListenForGameEvent( "hltv_cameraman" );
@@ -240,7 +240,7 @@ const char** CHLTVDirector::GetModEvents()
 		"player_team",
 		"player_info",
 		"server_cvar",
-		"death_notice",
+		"player_death",
 		"player_chat",
 		"round_start",
 		"round_end",
@@ -534,21 +534,7 @@ void CHLTVDirector::CreateShotFromEvent( CHLTVGameEvent *event )
 	int attackID = event->m_Event->GetInt("attacker");
 	
 	bool bPlayerHurt = Q_strcmp( "player_hurt", name ) == 0;
-
-	bool bPlayerKilled = false;
-	if (Q_strcmp("death_notice", name) == 0)
-	{
-		CBasePlayer *pVictim = UTIL_PlayerByIndex(event->m_Event->GetInt("victimID"));
-		CBasePlayer *pKiller = UTIL_PlayerByIndex(event->m_Event->GetInt("killerID"));
-		if (pVictim)
-		{
-			bPlayerKilled = true;
-			victimID = pVictim->GetUserID();
-
-			if (pKiller)
-				attackID = pKiller->GetUserID();
-		}
-	}
+	bool bPlayerKilled = Q_strcmp("player_death", name) == 0;
 
 	bool bRoundStart = Q_strcmp( "round_start", name ) == 0;
 	bool bRoundEnd = Q_strcmp( "round_end", name ) == 0;

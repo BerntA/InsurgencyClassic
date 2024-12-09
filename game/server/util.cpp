@@ -1117,7 +1117,7 @@ void UTIL_HudMessageAll( const hudtextparms_t &textparms, const char *pMessage )
 
 void UTIL_ClientPrintFilter( IRecipientFilter& filter, int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
 {
-	UserMessageBegin( filter, "TextMsg" );
+	UserMessageBegin( filter, "TextMsg" ); // use TextMsgFast ??? INS WARN
 		WRITE_BYTE( msg_dest );
 		WRITE_STRING( msg_name );
 
@@ -1147,7 +1147,6 @@ void UTIL_ClientPrintFilter( IRecipientFilter& filter, int msg_dest, const char 
 void UTIL_ClientPrintAll( int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
 {
 	CReliableBroadcastRecipientFilter filter;
-
 	UTIL_ClientPrintFilter( filter, msg_dest, msg_name, param1, param2, param3, param4 );
 }
 
@@ -1158,7 +1157,6 @@ void ClientPrint( CBasePlayer *player, int msg_dest, const char *msg_name, const
 
 	CSingleUserRecipientFilter user( player );
 	user.MakeReliable();
-
 	UTIL_ClientPrintFilter( user, msg_dest, msg_name, param1, param2, param3, param4 );
 }
 
@@ -1253,7 +1251,6 @@ void UTIL_ShowMessage( const char *pString, CBasePlayer *pPlayer )
 		WRITE_STRING( pString );
 	MessageEnd();
 }
-
 
 void UTIL_ShowMessageAll( const char *pString )
 {
@@ -2181,7 +2178,6 @@ bool UTIL_TransferPoseParameters( CBaseEntity *pSourceEntity, CBaseEntity *pDest
 void UTIL_MuzzleFlash( const Vector &origin, const QAngle &angles, int scale, int type )
 {
 	CPASFilter filter( origin );
-
 	te->MuzzleFlash( filter, 0.0f, origin, angles, scale, type );
 }
 

@@ -425,7 +425,6 @@ public:
 
 	void StatsLogin( int iMemberID );
 	void StatsLogout( void );
-	void SendPlayerLogin( int iType );
 
 	void ResetStats( void );
 	void UnmaskStats( void );
@@ -623,9 +622,6 @@ private:
 	void SetCameraMode(int iMode);
 	bool CanCameraMode(void);
 
-	// Stats Management
-	void SendPlayerLogin(void);
-
 	// Misc
 	void ImpulseCommands( int iImpulse );
 
@@ -753,12 +749,6 @@ private:
 	CPlayerStats m_AggregateStats;	// full stats since the player joined the server
 
 	CNetworkVar( int, m_iStatsMemberID );
-
-	struct {
-		bool m_bWaiting;
-		float m_flWaitTime;
-		int m_iType;
-	} m_LoginWait;
 
 	// Viewpoint Control
 	CNetworkVar( bool, m_bSpawnedViewpoint );

@@ -61,7 +61,7 @@ static void Physics_TraceEntity( CBaseEntity* pBaseEntity, const Vector &vecAbsS
 	// send messages to the shields that they've been hit.
 	if (pBaseEntity->GetDamageType() != DMG_GENERIC)
 	{
-		GameRules()->WeaponTraceEntity( pBaseEntity, vecAbsStart, vecAbsEnd, mask, ptr );
+		UTIL_TraceEntity(pBaseEntity, vecAbsStart, vecAbsEnd, mask, ptr);
 	}
 	else
 	{

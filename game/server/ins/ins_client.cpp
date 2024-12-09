@@ -20,7 +20,6 @@
 #include "tier0/memdbgon.h"
 
 extern CBaseEntity* FindPickerEntityClass(CBasePlayer* pPlayer, char* classname);
-extern bool			g_fGameOver;
 
 void FinishClientPutInServer(CINSPlayer* pPlayer)
 {

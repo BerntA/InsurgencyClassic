@@ -8,7 +8,6 @@
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterialproxy.h"
 #include "baseviewmodel_shared.h"
-#include "c_hl2mp_player.h"
 #include "toolframework_client.h"
 #include "GameEventListener.h"
 #include "GameBase_Shared.h"
@@ -41,7 +40,7 @@ C_BloodyTextureProxy::C_BloodyTextureProxy()
 {
 	blendFactor = NULL;
 	ListenForGameEvent("round_start");
-	ListenForGameEvent("death_notice");
+	ListenForGameEvent("player_death");
 }
 
 C_BloodyTextureProxy::~C_BloodyTextureProxy()
@@ -53,15 +52,17 @@ void C_BloodyTextureProxy::FireGameEvent(IGameEvent *event)
 	if (blendFactor == NULL)
 		return;
 
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
 	const char *type = event->GetName();
+
 	if (!strcmp(type, "round_start"))
 	{
 		blendFactor->SetFloatValue(0.0f);
 	}
-	else if (!strcmp(type, "death_notice"))
+	else if (!strcmp(type, "player_death"))
 	{
-		int victimID = event->GetInt("victimID");
-		if (victimID == GetLocalPlayerIndex())
+		int victimID = event->GetInt("userid");
+		if (pPlayer && (pPlayer->GetUserID() == victimID))
 			blendFactor->SetFloatValue(0.0f);
 	}
 }

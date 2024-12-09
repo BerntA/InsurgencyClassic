@@ -57,7 +57,6 @@ void RegisterUserMessages(void)
 	usermessages->Register("ObjMsg", 3);
 
 	usermessages->Register("PlayerInfo", -1);
-	usermessages->Register("PlayerLogin", 1);
 
 	usermessages->Register("ShowHint", 1);
 

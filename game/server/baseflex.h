@@ -30,8 +30,6 @@ public:
 
 	CBaseFlex(void);
 	~CBaseFlex(void);
-
-	void SentenceStop(void) { EmitSound("AI_BaseNPC.SentenceStop"); }
 };
 
 EXTERN_SEND_TABLE(DT_BaseFlex);

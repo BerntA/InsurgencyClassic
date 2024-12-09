@@ -369,17 +369,6 @@ void CINSPlayer::PreThink(void)
 
 	BaseClass::PreThink( );
 
-#ifdef STATS_PROTECTION
-
-	/*#define STATS_LOGIN_WAIT 5.0f
-
-	CINSStats *pStats = GetINSStats( );
-
-	if( !IsDeveloper( ) && m_flTimeJoined + STATS_LOGIN_WAIT < gpGlobals->curtime && ( !pStats || !pStats->IsValid( ) ) )
-		INSRules()->KickPlayer(this);*/
-
-#endif
-
 	if( m_lifeState < LIFE_DYING )
 	{
 		// handle various systems
@@ -392,13 +381,6 @@ void CINSPlayer::PreThink(void)
 		// handle obj capturing
 		if( IsOutsideCapturing( ) && gpGlobals->curtime > m_flObjExitTime )
 			ExitObjective( );
-
-		// handle login
-		/*if(m_LoginWait.m_bWaiting && m_LoginWait.m_flWaitTime != 0.0f && gpGlobals->curtime >= m_LoginWait.m_flWaitTime)
-		{
-			SendPlayerLogin();
-			m_LoginWait.m_bWaiting = false;
-		}*/
 
 		// handle leaning
 		HandleLeaning( );
@@ -1271,18 +1253,6 @@ bool CINSPlayer::ClientCommand( const char *pszCommand )
 		}
 
 		m_iVoiceType++;
-
-		return true;
-	}
-	else if( FStrEq( pszCommand, PCMD_PSTATSLOGIN ) )
-	{
-		if( engine->Cmd_Argc( ) < 3 )
-			return false;
-
-		CINSStats *pStats = GetINSStats( );
-
-		if( pStats )
-			pStats->LoginPlayer( this, engine->Cmd_Argv( 1 ), engine->Cmd_Argv( 2 ) );
 
 		return true;
 	}
@@ -2733,35 +2703,6 @@ void CINSPlayer::StatsLogout( void )
 {
 	int iTimePlayed = RoundFloatToInt( ( gpGlobals->curtime - m_flTimeJoined ) / 60.0f );
 	IncrementStat( PLAYERSTATS_MINUTES, iTimePlayed );
-}
-
-//=========================================================
-//=========================================================
-void CINSPlayer::SendPlayerLogin( int iType )
-{
-	if( IsAlive( ) && IsObserver( ) )
-	{
-		SendPlayerLogin( );
-		return;
-	}
-
-	m_LoginWait.m_bWaiting = true;
-	m_LoginWait.m_flWaitTime = 0.0f;
-	m_LoginWait.m_iType = iType;
-}
-
-//=========================================================
-//=========================================================
-void CINSPlayer::SendPlayerLogin( void )
-{
-	CSingleUserRecipientFilter filter( this );
-	filter.MakeReliable( );
-
-	UserMessageBegin( filter, "PlayerLogin" );
-
-		WRITE_BYTE( m_LoginWait.m_iType );
-
-	MessageEnd( );
 }
 
 //=========================================================

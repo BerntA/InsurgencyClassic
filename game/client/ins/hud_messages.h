@@ -49,7 +49,6 @@ public:
 	static bool IsValidSayType( int iType );
 
 	void MsgFunc_FFMsg( bf_read &msg );
-	void MsgFunc_PlayerLogin( bf_read &msg );
 
 private:
 	void ApplySettings( KeyValues *pResourceData );

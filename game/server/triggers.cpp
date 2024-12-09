@@ -78,7 +78,6 @@ BEGIN_DATADESC( CBaseTrigger )
 	// Keyfields
 	DEFINE_KEYFIELD( m_iFilterName,	FIELD_STRING,	"filtername" ),
 	DEFINE_KEYFIELD( m_bDisabled,		FIELD_BOOLEAN,	"StartDisabled" ),
-	DEFINE_KEYFIELD(m_flPercentRequired, FIELD_FLOAT, "PercentRequired"),
 
 	// Inputs	
 	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
@@ -135,14 +134,11 @@ void CBaseTrigger::InputTouchTest( inputdata_t &inputdata )
 //------------------------------------------------------------------------------
 void CBaseTrigger::Spawn()
 {
-	m_flPercentRequired = MAX(m_flPercentRequired, 1.0f);
-
 	if (HasSpawnFlags(SF_TRIGGER_ONLY_PLAYER_ALLY_NPCS))
 	{
 		// Automatically set this trigger to work with NPC's.
 		AddSpawnFlags(SF_TRIGGER_ALLOW_NPCS);
 	}
-
 	BaseClass::Spawn();
 }
 
@@ -508,25 +504,6 @@ void CBaseTrigger::InputToggle( inputdata_t &inputdata )
 	PhysicsTouchTriggers();
 }
 
-bool CBaseTrigger::IsEnoughPlayersInVolume(int iTeam)
-{
-	int players = 0;
-	for (int i = 0; i < m_hTouchingEntities.Count(); i++)
-	{
-		CBaseEntity *pToucher = m_hTouchingEntities[i].Get();
-		if (!pToucher || !pToucher->IsPlayer() || !pToucher->IsAlive() || (pToucher->GetTeamNumber() != iTeam) || !IsFilterPassing(pToucher))
-			continue;
-		players++;
-	}
-
-	CTeam *pTeam = GetGlobalTeam(iTeam);
-	float teamSize = (pTeam ? ((float)pTeam->GetNumPlayers()) : 0.0f),
-		teamSizeInVolume = ((float)players);
-	float flPercentInVolume = floor((teamSizeInVolume / teamSize) * 100.0f);
-
-	return (flPercentInVolume >= m_flPercentRequired);
-}
-
 bool CBaseTrigger::IsFilterPassing(CBaseEntity *pOther)
 {
 	CBaseFilter *pFilter = m_hFilter.Get();
@@ -589,7 +566,6 @@ void CTriggerRemove::Touch( CBaseEntity *pOther )
 BEGIN_DATADESC( CTriggerHurt )
 
 	// Function Pointers
-	DEFINE_THINKFUNC(RadiationThink),
 	DEFINE_THINKFUNC(HurtThink),
 
 	// Fields
@@ -626,35 +602,7 @@ void CTriggerHurt::Spawn( void )
 
 	SetNextThink( TICK_NEVER_THINK );
 	SetThink( NULL );
-	if (m_bitsDamageInflict & DMG_RADIATION)
-	{
-		SetThink ( &CTriggerHurt::RadiationThink );
-		SetNextThink( gpGlobals->curtime + random->RandomFloat(0.0, 0.5) );
-	}
 }
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Trigger hurt that causes radiation will do a radius check and set
-//			the player's geiger counter level according to distance from center
-//			of trigger.
-//-----------------------------------------------------------------------------
-void CTriggerHurt::RadiationThink( void )
-{
-	// check to see if a player is in pvs
-	// if not, continue	
-	Vector vecSurroundMins, vecSurroundMaxs;
-	CollisionProp()->WorldSpaceSurroundingBounds( &vecSurroundMins, &vecSurroundMaxs );
-
-	float dt = gpGlobals->curtime - m_flLastDmgTime;
-	if ( dt >= 0.5 )
-	{
-		HurtAllTouchers( dt );
-	}
-
-	SetNextThink( gpGlobals->curtime + 0.25 );
-}
-
 
 //-----------------------------------------------------------------------------
 // Purpose: When touched, a hurt trigger does m_flDamage points of damage each half-second.
@@ -662,7 +610,7 @@ void CTriggerHurt::RadiationThink( void )
 //-----------------------------------------------------------------------------
 bool CTriggerHurt::HurtEntity( CBaseEntity *pOther, float damage )
 {
-	if ( !pOther->m_takedamage || !PassesTriggerFilters(pOther) )
+	if (!pOther->m_takedamage || !PassesTriggerFilters(pOther) || (pOther->GetMoveType() == MOVETYPE_NOCLIP))
 		return false;
 	
 	// If player is disconnected, we're probably in this routine via the

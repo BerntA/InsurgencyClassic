@@ -23,7 +23,6 @@
 
 #include "clientmode_shared.h"
 #include "basic_colors.h"
-#include "stats_protocal.h"
 #include "vguicenterprint.h"
 #include "text_message.h"
 #include "ins_utils.h"
@@ -262,7 +261,6 @@ CHudMessages::CHudMessages( const char *pszElementName ) :
 //=========================================================
 DECLARE_HUDELEMENT( CHudMessages );
 DECLARE_HUD_MESSAGE( CHudMessages, FFMsg );
-DECLARE_HUD_MESSAGE( CHudMessages, PlayerLogin );
 
 //=========================================================
 //=========================================================
@@ -280,7 +278,6 @@ void CHudMessages::Init( void )
 	m_pInputLine = new CHudChatInputLine( this, "ChatInput" );
 
 	HOOK_HUD_MESSAGE( CHudMessages, FFMsg );
-	HOOK_HUD_MESSAGE( CHudMessages, PlayerLogin );
 }
 
 //=========================================================
@@ -585,28 +582,6 @@ void CHudMessages::MsgFunc_FFMsg( bf_read &msg )
 	FFMessage.Add( " Attacked a Teammate" );
 
 	Print( FFMessage );
-}
-
-//=========================================================
-//=========================================================
-void CHudMessages::MsgFunc_PlayerLogin( bf_read &msg )
-{
-	CColoredString StatsMessage;
-
-	// get type
-	int iType = msg.ReadByte( );
-
-	// find message
-	const char *pszMessage;
-
-	if( iType == SAC_PLAYERTYPE_VALID || iType == SAC_PLAYERTYPE_DEVELOPER )
-		pszMessage = "You are Logged into the Stats Server";
-	else
-		pszMessage = "You are not Logged into the Stats Server";
-
-	// print message
-	StatsMessage.Add( pszMessage );
-	Print( StatsMessage );
 }
 
 //=========================================================

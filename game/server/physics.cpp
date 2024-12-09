@@ -2083,8 +2083,7 @@ void CCollisionEvent::AddDamageEvent( CBaseEntity *pEntity, const CTakeDamageInf
 	if ( pEntity->IsMarkedForDeletion() )
 		return;
 
-	int iTimeBasedDamage = g_pGameRules->Damage_GetTimeBased();
-	if ( !( info.GetDamageType() & (DMG_BURN | DMG_DROWN | iTimeBasedDamage | DMG_PREVENT_PHYSICS_FORCE) ) )
+	if (!(info.GetDamageType() & (DMG_BURN | DMG_DROWN | DMG_PREVENT_PHYSICS_FORCE)))
 	{
 		Assert( info.GetDamageForce() != vec3_origin && info.GetDamagePosition() != vec3_origin );
 	}

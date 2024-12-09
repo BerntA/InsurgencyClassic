@@ -13,6 +13,7 @@
 #include "movehelper_server.h"
 #include "shake.h"				// For screen fade constants
 #include "engine/IEngineSound.h"
+#include "ins_player_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -38,6 +39,7 @@ public:
  	virtual void	ProcessImpacts( void );
 
 	virtual bool	PlayerFallingDamage( void );
+	virtual void    PlayerDoAnimEvent(PlayerAnimEvent_e evt);
 
 	// Numbered line printf
 	virtual void	Con_NPrintf( int idx, char const* fmt, ... );
@@ -343,27 +345,24 @@ void CMoveHelperServer::Con_NPrintf( int idx, char const* pFormat, ...)
 //-----------------------------------------------------------------------------
 bool CMoveHelperServer::PlayerFallingDamage( void )
 {
-	float flFallDamage = g_pGameRules->FlPlayerFallDamage( m_pHostPlayer );	
+	m_pHostPlayer->m_Local.m_flFallVelocity -= PLAYER_MAX_SAFE_FALL_SPEED;
+	float flFallDamage = m_pHostPlayer->m_Local.m_flFallVelocity * DAMAGE_FOR_FALL_SPEED;
+
 	if ( flFallDamage > 0 )
 	{
 		m_pHostPlayer->TakeDamage( CTakeDamageInfo( GetContainingEntity(INDEXENT(0)), GetContainingEntity(INDEXENT(0)), flFallDamage, DMG_FALL ) ); 
-		HL2MPRules()->EmitSoundToClient(m_pHostPlayer, "FallPain", m_pHostPlayer->GetSoundType(), m_pHostPlayer->GetSoundsetGender());
+		StartSound(m_pHostPlayer->GetAbsOrigin(), "Player.FallDamage");
     }
 
-	if ( m_pHostPlayer->m_iHealth <= 0 )
-	{
-		if ( g_pGameRules->FlPlayerFallDeathDoesScreenFade( m_pHostPlayer ) )
-		{
-			color32 black = {0, 0, 0, 255};
-			UTIL_ScreenFade( m_pHostPlayer, black, 0, 9999, FFADE_OUT | FFADE_STAYOUT );
-		}
-		return(false);
-	}
-
-	return(true);
+	return true;
 }
 
 bool CMoveHelperServer::IsWorldEntity( const CBaseHandle &handle )
 {
 	return handle == CBaseEntity::Instance( 0 );
+}
+
+void CMoveHelperServer::PlayerDoAnimEvent(PlayerAnimEvent_e evt)
+{
+	ToINSPlayer(m_pHostPlayer)->DoAnimationEvent(evt);
 }

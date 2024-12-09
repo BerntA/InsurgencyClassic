@@ -358,8 +358,8 @@ public:
 	bool GetPropDataAngles( const char *pKeyName, QAngle &vecAngles );
 	float GetCarryDistanceOffset( void );
 
-	int ObjectCaps();
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	//int ObjectCaps();
+	//void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	void GetMassCenter( Vector *pMassCenter );
 	float GetMass() const;

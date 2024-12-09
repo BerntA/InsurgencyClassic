@@ -403,7 +403,6 @@ bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
 	return true;
 }
 
-extern bool		g_fGameOver;
 static CWorld *g_WorldEntity = NULL;
 
 CWorld* GetWorldEntity()
@@ -528,7 +527,6 @@ const char *GetDefaultLightstyleString( int styleIndex )
 void CWorld::Precache( void )
 {
 	g_WorldEntity = this;
-	g_fGameOver = false;	
 
 	ConVarRef stepsize( "sv_stepsize" );
 	stepsize.SetValue( 18 );

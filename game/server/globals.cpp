@@ -23,4 +23,3 @@
 #include "tier0/memdbgon.h"
 
 Vector			g_vecAttackDir;
-bool			g_fGameOver;

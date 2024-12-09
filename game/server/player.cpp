@@ -3065,7 +3065,7 @@ void CBasePlayer::HandleFuncTrain(void)
 
 void CBasePlayer::PreThink(void)
 {						
-	if ( g_fGameOver || m_iPlayerLocked )
+	if ( m_iPlayerLocked )
 		return;         // intermission or finale
 
 	ItemPreFrame( );
@@ -3463,7 +3463,7 @@ void CBasePlayer::PostThink()
 {
 	m_vecSmoothedVelocity = m_vecSmoothedVelocity * SMOOTHING_FACTOR + GetAbsVelocity() * ( 1 - SMOOTHING_FACTOR );
 
-	if ( !g_fGameOver && !m_iPlayerLocked )
+	if (!m_iPlayerLocked)
 	{
 		if ( IsAlive() )
 		{
