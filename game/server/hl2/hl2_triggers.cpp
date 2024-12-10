@@ -257,89 +257,6 @@ void CTriggerWeaponDissolve::InputStopSound( inputdata_t &inputdata )
 }
 
 //-----------------------------------------------------------------------------
-// Weapon-strip trigger; can't pick up weapons while in the field
-//-----------------------------------------------------------------------------
-class CTriggerWeaponStrip : public CTriggerMultiple
-{
-	DECLARE_CLASS( CTriggerWeaponStrip, CTriggerMultiple );
-	DECLARE_DATADESC();
-
-public:
-	void StartTouch(CBaseEntity *pOther);
-	void EndTouch(CBaseEntity *pOther);
-
-private:
-	bool m_bKillWeapons;
-};
-
-
-//-----------------------------------------------------------------------------
-// Save/load
-//-----------------------------------------------------------------------------
-LINK_ENTITY_TO_CLASS( trigger_weapon_strip, CTriggerWeaponStrip );
-
-BEGIN_DATADESC( CTriggerWeaponStrip )
-	DEFINE_KEYFIELD( m_bKillWeapons,	FIELD_BOOLEAN, "KillWeapons" ),
-END_DATADESC()
-
-
-//-----------------------------------------------------------------------------
-// Drops all weapons, marks the character as not being able to pick up weapons
-//-----------------------------------------------------------------------------
-void CTriggerWeaponStrip::StartTouch(CBaseEntity *pOther)
-{
-	BaseClass::StartTouch( pOther );
-
-	if ( PassesTriggerFilters(pOther) == false )
-		return;
-
-	CBaseCombatCharacter *pCharacter = pOther->MyCombatCharacterPointer();
-	if (pCharacter == NULL)
-		return;
-	
-	if ( m_bKillWeapons )
-	{
-		for ( int i = 0 ; i < pCharacter->WeaponCount(); ++i )
-		{
-			CBaseCombatWeapon *pWeapon = pCharacter->GetWeapon( i );
-			if ( !pWeapon )
-				continue;
-
-			pCharacter->Weapon_Drop( pWeapon );
-			UTIL_Remove( pWeapon );
-		}
-		return;
-	}
-
-	// Strip the player of his weapons
-	if ( pCharacter && pCharacter->IsAllowedToPickupWeapons() )
-	{
-		pCharacter->Weapon_DropAll( true );
-		pCharacter->SetPreventWeaponPickup( true );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Called when an entity stops touching us.
-// Input  : pOther - The entity that was touching us.
-//-----------------------------------------------------------------------------
-void CTriggerWeaponStrip::EndTouch(CBaseEntity *pOther)
-{
-	if ( IsTouching( pOther ) )
-	{
-		CBaseCombatCharacter *pCharacter = pOther->MyCombatCharacterPointer();
-		if ( pCharacter )
-		{
-			pCharacter->SetPreventWeaponPickup( false );
-		}
-	}
-
-	BaseClass::EndTouch( pOther );
-}
-
-
-
-//-----------------------------------------------------------------------------
 // Teleport trigger
 //-----------------------------------------------------------------------------
 class CTriggerPhysicsTrap : public CTriggerMultiple
@@ -357,7 +274,6 @@ private:
 
 	int m_nDissolveType;
 };
-
 
 //-----------------------------------------------------------------------------
 // Save/load

@@ -123,7 +123,6 @@ void CPlayerMove::SetupMove( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper *p
 	}
 
 	// Prepare the usercmd fields
-	move->m_nImpulseCommand		= ucmd->impulse;	
 	move->m_vecViewAngles		= ucmd->viewangles;
 
 	CBaseEntity *pMoveParent = player->GetMoveParent();
@@ -363,12 +362,6 @@ void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 			VPROF( "player->SelectItem()" );
 			player->SelectItem(weapon->GetWeaponID());
 		}
-	}
-
-	// Latch in impulse.
-	if ( ucmd->impulse )
-	{
-		player->m_nImpulse = ucmd->impulse;
 	}
 
 	// Update player input button states

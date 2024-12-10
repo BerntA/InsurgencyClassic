@@ -658,73 +658,72 @@ CBaseEntity *CBaseCombatCharacter::CheckTraceHullAttack( const Vector &vStart, c
 
 Vector CBaseCombatCharacter::CalcDamageForceVector( const CTakeDamageInfo &info )
 {
-	// Already have a damage force in the data, use that.
-	bool bNoPhysicsForceDamage = g_pGameRules->Damage_NoPhysicsForce( info.GetDamageType() );
-	if ( info.GetDamageForce() != vec3_origin || bNoPhysicsForceDamage )
+	// if already have a damage force in the data, use that (unless there is no force)
+	if (info.GetDamageForce() != vec3_origin || (info.GetDamageType() & DMG_NO_PHYSICS_FORCE))
 	{
-		if( info.GetDamageType() & DMG_BLAST )
+		if (info.GetDamageType() & DMG_BLAST)
 		{
-			// Fudge blast forces a little bit, so that each
+			// fudge blast forces a little bit, so that each
 			// victim gets a slightly different trajectory. 
-			// This simulates features that usually vary from
+			// this simulates features that usually vary from
 			// person-to-person variables such as bodyweight,
 			// which are all indentical for characters using the same model.
-			float scale = random->RandomFloat( 0.85, 1.15 );
+			float scale = random->RandomFloat(0.85f, 1.15f);
 			Vector force = info.GetDamageForce();
 			force.x *= scale;
 			force.y *= scale;
-			// Try to always exaggerate the upward force because we've got pretty harsh gravity
-			force.z *= (force.z > 0) ? 1.15 : scale;
+
+			// try to always exaggerate the upward force because we've got pretty harsh gravity
+			force.z *= (force.z > 0) ? 1.15f : scale;
+
 			return force;
 		}
 
 		return info.GetDamageForce();
 	}
 
-	CBaseEntity *pForce = info.GetInflictor();
-	if ( !pForce )
-	{
-		pForce = info.GetAttacker();
-	}
+	CBaseEntity* pForce = info.GetInflictor();
 
-	if ( pForce )
+	if (!pForce)
+		pForce = info.GetAttacker();
+
+	if (pForce)
 	{
-		// Calculate an impulse large enough to push a 75kg man 4 in/sec per point of damage
+		// calculate an impulse large enough to push a 75kg man 4 in/sec per point of damage
 		float forceScale = info.GetDamage() * 75 * 4;
 
 		Vector forceVector;
-		// If the damage is a blast, point the force vector higher than usual, this gives 
-		// the ragdolls a bodacious "really got blowed up" look.
-		if( info.GetDamageType() & DMG_BLAST )
+
+		// if the damage is a blast, point the force vector higher than usual, this gives 
+		// the ragdolls a bodacious "really got blowed up" look
+		if (info.GetDamageType() & DMG_BLAST)
 		{
-			// exaggerate the force from explosions a little (37.5%)
-			forceVector = (GetLocalOrigin() + Vector(0, 0, WorldAlignSize().z) ) - pForce->GetLocalOrigin();
+			forceVector = (GetLocalOrigin() + Vector(0, 0, WorldAlignSize().z)) - pForce->GetLocalOrigin();
 			VectorNormalize(forceVector);
-			forceVector *= 1.375f;
 		}
 		else
 		{
-			// taking damage from self?  Take a little random force, but still try to collapse on the spot.
-			if ( this == pForce )
+			// taking damage from self? take a little random force, but still try to collapse on the spot
+			if (this == pForce)
 			{
-				forceVector.x = random->RandomFloat( -1.0f, 1.0f );
-				forceVector.y = random->RandomFloat( -1.0f, 1.0f );
+				forceVector.x = random->RandomFloat(-1.0f, 1.0f);
+				forceVector.y = random->RandomFloat(-1.0f, 1.0f);
 				forceVector.z = 0.0;
-				forceScale = random->RandomFloat( 1000.0f, 2000.0f );
+				forceScale = random->RandomFloat(1000.0f, 2000.0f);
 			}
 			else
 			{
-				// UNDONE: Collision forces are baked in to CTakeDamageInfo now
-				// UNDONE: Is this MOVETYPE_VPHYSICS code still necessary?
-				if ( pForce->GetMoveType() == MOVETYPE_VPHYSICS )
+				// UNDONE: collision forces are baked in to CTakeDamageInfo now
+				// UNDONE: is this MOVETYPE_VPHYSICS code still necessary?
+				if (pForce->GetMoveType() == MOVETYPE_VPHYSICS)
 				{
 					// killed by a physics object
-					IPhysicsObject *pPhysics = VPhysicsGetObject();
-					if ( !pPhysics )
-					{
+					IPhysicsObject* pPhysics = VPhysicsGetObject();
+
+					if (!pPhysics)
 						pPhysics = pForce->VPhysicsGetObject();
-					}
-					pPhysics->GetVelocity( &forceVector, NULL );
+
+					pPhysics->GetVelocity(&forceVector, NULL);
 					forceScale = pPhysics->GetMass();
 				}
 				else
@@ -734,8 +733,10 @@ Vector CBaseCombatCharacter::CalcDamageForceVector( const CTakeDamageInfo &info 
 				}
 			}
 		}
+
 		return forceVector * forceScale;
 	}
+
 	return vec3_origin;
 }
 
@@ -798,10 +799,10 @@ Killed
 */
 void CBaseCombatCharacter::Event_Killed( const CTakeDamageInfo &info )
 {
-	extern ConVar npc_vphysics;
-
 	// Advance life state to dying
-	m_lifeState = LIFE_DYING;
+	m_lifeState = LIFE_DEAD;
+
+	RemoveEffects(EF_NODRAW);
 
 	// Calculate death force
 	Vector forceVector = CalcDamageForceVector( info );
@@ -819,11 +820,11 @@ void CBaseCombatCharacter::Event_Killed( const CTakeDamageInfo &info )
 	if ( VPhysicsGetObject() )
 	{
 		Vector weaponForce = forceVector * VPhysicsGetObject()->GetInvMass();
-		Weapon_Drop( m_hActiveWeapon, NULL, &weaponForce );
+		Weapon_Drop(pDroppedWeapon, true, true, &weaponForce);
 	}
 	else
 	{
-		Weapon_Drop( m_hActiveWeapon );
+		Weapon_Drop(pDroppedWeapon, true, true, NULL);
 	}
 	
 	// clear the deceased's sound channels.(may have been firing or reloading when killed)
@@ -855,7 +856,7 @@ void CBaseCombatCharacter::Event_Killed( const CTakeDamageInfo &info )
 		}
 	}
 
-	if (!bRagdollCreated && (info.GetDamageType() & DMG_REMOVENORAGDOLL) == 0)
+	if (!bRagdollCreated && IsNPC() && (info.GetDamageType() & DMG_REMOVENORAGDOLL) == 0)
 	{
 		BecomeRagdoll(info, forceVector);
 	}
@@ -865,32 +866,23 @@ void CBaseCombatCharacter::Event_Dying( const CTakeDamageInfo &info )
 {
 }
 
-void CBaseCombatCharacter::Event_Dying()
-{
-	CTakeDamageInfo info;
-	Event_Dying( info );
-}
-
-
 // ===========================================================================
 //  > Weapons
 // ===========================================================================
 bool CBaseCombatCharacter::Weapon_Detach( CBaseCombatWeapon *pWeapon )
 {
-	for ( int i = 0; i < MAX_PWEAPONS; i++ )
+	for (int i = 0; i < MAX_PWEAPONS; i++)
 	{
-		if ( pWeapon == m_hMyWeapons[i] )
+		if (pWeapon == m_hMyWeapons[i])
 		{
-			pWeapon->Detach();
-			if ( pWeapon->HolsterOnDetach() )
-			{
-				pWeapon->FullHolster();
-			}
-			m_hMyWeapons.Set( i, NULL );
-			pWeapon->SetOwner( NULL );
+			RemovedWeapon(pWeapon);
 
-			if ( pWeapon == m_hActiveWeapon )
+			m_hMyWeapons.Set(i, NULL);
+			pWeapon->SetOwner(NULL);
+
+			if (pWeapon == m_hActiveWeapon)
 				ClearActiveWeapon();
+
 			return true;
 		}
 	}
@@ -898,268 +890,28 @@ bool CBaseCombatCharacter::Weapon_Detach( CBaseCombatWeapon *pWeapon )
 	return false;
 }
 
-
 //-----------------------------------------------------------------------------
-// For weapon strip
+// Drop weapon
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::ThrowDirForWeaponStrip( CBaseCombatWeapon *pWeapon, const Vector &vecForward, Vector *pVecThrowDir )
+bool CBaseCombatCharacter::Weapon_CanDrop(CBaseCombatWeapon* pWeapon) const
 {
-	// Nowhere in particular; just drop it.
-	VMatrix zRot;
-	MatrixBuildRotateZ(zRot, random->RandomFloat(-60.0f, 60.0f));
-
-	Vector vecThrow;
-	Vector3DMultiply(zRot, vecForward, *pVecThrowDir);
-
-	pVecThrowDir->z = random->RandomFloat(-0.5f, 0.5f);
-	VectorNormalize(*pVecThrowDir);
+	return (pWeapon && pWeapon->CanDrop());
 }
 
-
-//-----------------------------------------------------------------------------
-// For weapon strip
-//-----------------------------------------------------------------------------
-void CBaseCombatCharacter::DropWeaponForWeaponStrip( CBaseCombatWeapon *pWeapon, 
-	const Vector &vecForward, const QAngle &vecAngles, float flDiameter )
-{
-	Vector vecOrigin;
-	CollisionProp()->RandomPointInBounds( Vector( 0.5f, 0.5f, 0.5f ), Vector( 0.5f, 0.5f, 1.0f ), &vecOrigin );
-
-	// Nowhere in particular; just drop it.
-	Vector vecThrow;
-	ThrowDirForWeaponStrip( pWeapon, vecForward, &vecThrow );
-
-	Vector vecOffsetOrigin;
-	VectorMA( vecOrigin, flDiameter, vecThrow, vecOffsetOrigin );
-
-	trace_t	tr;
-	UTIL_TraceLine( vecOrigin, vecOffsetOrigin, MASK_SOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &tr );
-		
-	if ( tr.startsolid || tr.allsolid || ( tr.fraction < 1.0f && tr.m_pEnt != pWeapon ) )
-	{
-		//FIXME: Throw towards a known safe spot?
-		vecThrow.Negate();
-		VectorMA( vecOrigin, flDiameter, vecThrow, vecOffsetOrigin );
-	}
-
-	vecThrow *= random->RandomFloat( 400.0f, 600.0f );
-
-	pWeapon->SetAbsOrigin( vecOrigin );
-	pWeapon->SetAbsAngles( vecAngles );
-	pWeapon->Drop( vecThrow );
-	Weapon_Detach( pWeapon );
-}
-
-
-
-//-----------------------------------------------------------------------------
-// For weapon strip
-//-----------------------------------------------------------------------------
-void CBaseCombatCharacter::Weapon_DropAll( bool bDisallowWeaponPickup )
-{
-	if ( GetFlags() & FL_NPC )
-	{
-		for (int i=0; i< MAX_PWEAPONS; ++i)
-		{
-			CBaseCombatWeapon *pWeapon = m_hMyWeapons[i];
-			if (!pWeapon)
-				continue;
-
- 			Weapon_Drop( pWeapon );
-		}
-		return;
-	}
-
-	QAngle gunAngles;
-	VectorAngles( BodyDirection2D(), gunAngles );
-
-	Vector vecForward;
-	AngleVectors( gunAngles, &vecForward, NULL, NULL );
-
-	float flDiameter = sqrt( CollisionProp()->OBBSize().x * CollisionProp()->OBBSize().x +
-		CollisionProp()->OBBSize().y * CollisionProp()->OBBSize().y );
-
-	CBaseCombatWeapon *pActiveWeapon = GetActiveWeapon();
-	for (int i=0; i< MAX_PWEAPONS; ++i)
-	{
-		CBaseCombatWeapon *pWeapon = m_hMyWeapons[i];
-		if (!pWeapon)
-			continue;
-
-		// Have to drop this after we've dropped everything else, so autoswitch doesn't happen
-		if ( pWeapon == pActiveWeapon )
-			continue;
-
-		DropWeaponForWeaponStrip( pWeapon, vecForward, gunAngles, flDiameter );
-
-		// HACK: This hack is required to allow weapons to be disintegrated
-		// in the citadel weapon-strip scene
-		// Make them not pick-uppable again. This also has the effect of allowing weapons
-		// to collide with triggers. 
-		if ( bDisallowWeaponPickup )
-		{
-			pWeapon->RemoveSolidFlags( FSOLID_TRIGGER );
-			
-			IPhysicsObject *pObj = pWeapon->VPhysicsGetObject();
-			
-			if ( pObj != NULL )
-			{	
-				pObj->SetGameFlags( FVPHYSICS_NO_PLAYER_PICKUP );
-			}
-		}
-	}
-
-	// Drop the active weapon normally...
-	if ( pActiveWeapon )
-	{
-		// Nowhere in particular; just drop it.
-		Vector vecThrow;
-		ThrowDirForWeaponStrip( pActiveWeapon, vecForward, &vecThrow );
-
-		// Throw a little more vigorously; it starts closer to the player
-		vecThrow *= random->RandomFloat( 800.0f, 1000.0f );
-
-		Weapon_Drop( pActiveWeapon, NULL, &vecThrow );
-
-		// HACK: This hack is required to allow weapons to be disintegrated
-		// in the citadel weapon-strip scene
-		// Make them not pick-uppable again. This also has the effect of allowing weapons
-		// to collide with triggers. 
-		if ( bDisallowWeaponPickup )
-		{
-			pActiveWeapon->RemoveSolidFlags( FSOLID_TRIGGER );
-		}
-	}
-}
-
-	
 //-----------------------------------------------------------------------------
 // Purpose: Drop the active weapon, optionally throwing it at the given target position.
 // Input  : pWeapon - Weapon to drop/throw.
 //			pvecTarget - Position to throw it at, NULL for none.
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector *pvecTarget /* = NULL */, const Vector *pVelocity /* = NULL */ )
+bool CBaseCombatCharacter::Weapon_Drop(CBaseCombatWeapon* pWeapon, bool bForce, bool bNoSwitch, const Vector* pVelocity)
 {
-	if ( !pWeapon )
-		return;
+	if (!pWeapon)
+		return false;
 
-	// If I'm an NPC, fill the weapon with ammo before I drop it.
-	if (GetFlags() & FL_NPC)
-	{
-		if (pWeapon->UsesClipsForAmmo())
-			pWeapon->m_iClip = pWeapon->GetDefaultClip();
-	}
+	if (!bForce && !Weapon_CanDrop(pWeapon))
+		return false;
 
-	if ( IsPlayer() )
-	{
-		Vector vThrowPos = Weapon_ShootPosition() - Vector(0,0,12);
-
-		if( UTIL_PointContents(vThrowPos) & CONTENTS_SOLID )
-		{
-			Msg("Weapon spawning in solid!\n");
-		}
-
-		pWeapon->SetAbsOrigin( vThrowPos );
-
-		QAngle gunAngles;
-		VectorAngles( BodyDirection2D(), gunAngles );
-		pWeapon->SetAbsAngles( gunAngles );
-	}
-	else
-	{
-		int iBIndex = -1;
-		int iWeaponBoneIndex = -1;
-
-		CStudioHdr *hdr = pWeapon->GetModelPtr();
-		// If I have a hand, set the weapon position to my hand bone position.
-		if ( hdr && hdr->numbones() > 0 )
-		{
-			// Assume bone zero is the root
-			for ( iWeaponBoneIndex = 0; iWeaponBoneIndex < hdr->numbones(); ++iWeaponBoneIndex )
-			{
-				iBIndex = LookupBone( hdr->pBone( iWeaponBoneIndex )->pszName() );
-				// Found one!
-				if ( iBIndex != -1 )
-				{
-					break;
-				}
-			}
-
-			if ( iBIndex == -1 )
-			{
-				iBIndex = LookupBone( "ValveBiped.Weapon_bone" );
-			}
-		}
-		else
-		{
-			iBIndex = LookupBone( "ValveBiped.Weapon_bone" );
-		}
-
-		if ( iBIndex != -1)  
-		{
-			Vector origin;
-			QAngle angles;
-			matrix3x4_t transform;
-
-			// Get the transform for the weapon bonetoworldspace in the NPC
-			GetBoneTransform( iBIndex, transform );
-
-			// find offset of root bone from origin in local space
-			// Make sure we're detached from hierarchy before doing this!!!
-			pWeapon->StopFollowingEntity();
-			pWeapon->SetAbsOrigin( Vector( 0, 0, 0 ) );
-			pWeapon->SetAbsAngles( QAngle( 0, 0, 0 ) );
-			pWeapon->InvalidateBoneCache();
-			matrix3x4_t rootLocal;
-			pWeapon->GetBoneTransform( iWeaponBoneIndex, rootLocal );
-
-			// invert it
-			matrix3x4_t rootInvLocal;
-			MatrixInvert( rootLocal, rootInvLocal );
-
-			matrix3x4_t weaponMatrix;
-			ConcatTransforms( transform, rootInvLocal, weaponMatrix );
-			MatrixAngles( weaponMatrix, angles, origin );
-			
-			pWeapon->Teleport( &origin, &angles, NULL );
-		}
-		// Otherwise just set in front of me.
-		else 
-		{
-			Vector vFacingDir = BodyDirection2D();
-			vFacingDir = vFacingDir * 10.0; 
-			pWeapon->SetAbsOrigin( Weapon_ShootPosition() + vFacingDir );
-		}
-	}
-
-	Vector vecThrow;
-	if (pvecTarget)
-	{
-		// I've been told to throw it somewhere specific.
-		vecThrow = VecCheckToss( this, pWeapon->GetAbsOrigin(), *pvecTarget, 0.2, 1.0, false );
-	}
-	else
-	{
-		if ( pVelocity )
-		{
-			vecThrow = *pVelocity;
-			float flLen = vecThrow.Length();
-			if (flLen > 400)
-			{
-				VectorNormalize(vecThrow);
-				vecThrow *= 400;
-			}
-		}
-		else
-		{
-			// Nowhere in particular; just drop it.
-			float throwForce = ( IsPlayer() ) ? 400.0f : random->RandomInt( 64, 128 );
-			vecThrow = BodyDirection3D() * throwForce;
-		}
-	}
-
-	pWeapon->Drop( vecThrow );
-	Weapon_Detach( pWeapon );
+	return pWeapon->Drop(bNoSwitch, pVelocity);
 }
 
 //-----------------------------------------------------------------------------
@@ -1259,6 +1011,27 @@ CBaseCombatWeapon *CBaseCombatCharacter::Weapon_Create( const char *pWeaponName 
 {
 	CBaseCombatWeapon *pWeapon = static_cast<CBaseCombatWeapon *>( Create( pWeaponName, GetLocalOrigin(), GetLocalAngles(), this ) );
 	return pWeapon;
+}
+
+bool CBaseCombatCharacter::RemoveWeapon(CBaseCombatWeapon* pWeapon)
+{
+	for (int i = 0; i < MAX_PWEAPONS; i++)
+	{
+		if (m_hMyWeapons[i] != pWeapon)
+			continue;
+
+		// rempve current weapon
+		m_hMyWeapons[i]->Delete();
+		m_hMyWeapons.Set(i, NULL);
+
+		// if it's the active weapon, remove it
+		if (pWeapon == m_hActiveWeapon)
+			m_hActiveWeapon = NULL;
+
+		return true;
+	}
+
+	return false;
 }
 
 void CBaseCombatCharacter::RemoveAllWeapons()
@@ -1406,27 +1179,6 @@ int CBaseCombatCharacter::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 
 		m_iHealth -= flIntegerDamage;
 	}
-
-	CHL2MP_Player *pClient = ToHL2MPPlayer(info.GetAttacker());
-	CBaseCombatWeapon *pWeapon = NULL;
-
-	if (pClient)
-	{
-		// Blood Splats on player.
-		pWeapon = pClient->GetActiveWeapon();
-		if (pWeapon && pClient->GetAbsOrigin().DistTo(this->GetAbsOrigin()) < 150.0f)
-			pWeapon->SetBloodState(true);
-
-		pClient->DispatchDamageText(this, -info.GetDamage());
-
-		if (pClient != this)
-			pClient->GetAchievementStats()->OnDidDamage(info);
-	}
-
-	// Blood Splats on player.
-	pWeapon = GetActiveWeapon();
-	if (IsPlayer() && pWeapon)
-		pWeapon->SetBloodState(true);
 
 	return 1;
 }

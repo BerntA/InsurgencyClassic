@@ -621,102 +621,13 @@ void CC_DrawCross( const CCommand &args )
 static ConCommand drawcross("drawcross", CC_DrawCross, "Draws a cross at the given location\n\tArguments: x y z", FCVAR_CHEAT);
 
 //------------------------------------------------------------------------------
-// helper function for kill and explode
-//------------------------------------------------------------------------------
-void kill_helper( const CCommand &args, bool bExplode )
-{
-	if ( args.ArgC() > 1 && sv_cheats->GetBool() )
-	{
-		// Find the matching netname
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CBasePlayer *pPlayer = ToBasePlayer( UTIL_PlayerByIndex(i) );
-			if ( pPlayer )
-			{
-				if ( Q_strstr( pPlayer->GetPlayerName(), args[1] ) )
-				{
-					pPlayer->CommitSuicide( bExplode );
-				}
-			}
-		}
-	}
-	else
-	{
-		CBasePlayer *pPlayer = UTIL_GetCommandClient();
-		if ( pPlayer )
-		{
-			pPlayer->CommitSuicide( bExplode );
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-CON_COMMAND( kill, "Kills the player with generic damage" )
-{
-	kill_helper( args, false );
-}
-
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-CON_COMMAND( explode, "Kills the player with explosive damage" )
-{
-	kill_helper( args, true );
-}
-
-//------------------------------------------------------------------------------
-// helper function for killvector and explodevector
-//------------------------------------------------------------------------------
-void killvector_helper( const CCommand &args, bool bExplode )
-{
-	CBasePlayer *pPlayer = UTIL_GetCommandClient();
-	if ( pPlayer && args.ArgC() == 5 )
-	{
-		// Find the matching netname.
-		for ( int iClient = 1; iClient <= gpGlobals->maxClients; iClient++ )
-		{
-			CBasePlayer *pPlayer = ToBasePlayer( UTIL_PlayerByIndex( iClient ) );
-			if ( pPlayer )
-			{
-				if ( Q_strstr( pPlayer->GetPlayerName(), args[1] ) )
-				{
-					// Build world-space force vector.
-					Vector vecForce;
-					vecForce.x = atof( args[2] );
-					vecForce.y = atof( args[3] );
-					vecForce.z = atof( args[4] );
-
-					ClientKill( pPlayer->edict(), vecForce, bExplode );
-				}
-			}
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-CON_COMMAND_F( killvector, "Kills a player applying force. Usage: killvector <player> <x value> <y value> <z value>", FCVAR_CHEAT )
-{
-	killvector_helper( args, false );
-}
-
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-CON_COMMAND_F( explodevector, "Kills a player applying an explosive force. Usage: explodevector <player> <x value> <y value> <z value>", FCVAR_CHEAT )
-{
-	killvector_helper( args, false );
-}
-
-#define TALK_INTERVAL 0.5 // min time between say commands from a client
-
-//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 CON_COMMAND(say, "Display global player message")
 {
 	CBasePlayer* pPlayer = ToBasePlayer(UTIL_GetCommandClient());
 	if (pPlayer)
 	{
-		if ((pPlayer->LastTimePlayerTalked() + TALK_INTERVAL) < gpGlobals->curtime)
+		if ((pPlayer->LastTimePlayerTalked() + PLAYER_TALK_INTERVAL) < gpGlobals->curtime)
 		{
 			Host_Say(pPlayer->edict(), args, SAYTYPE_GLOBAL);
 			pPlayer->NotePlayerTalked();
@@ -733,7 +644,7 @@ CON_COMMAND(say_team, "Display player message to team")
 	CBasePlayer* pPlayer = ToBasePlayer(UTIL_GetCommandClient());
 	if (pPlayer)
 	{
-		if ((pPlayer->LastTimePlayerTalked() + TALK_INTERVAL) < gpGlobals->curtime)
+		if ((pPlayer->LastTimePlayerTalked() + PLAYER_TALK_INTERVAL) < gpGlobals->curtime)
 		{
 			Host_Say(pPlayer->edict(), args, SAYTYPE_TEAM);
 			pPlayer->NotePlayerTalked();
@@ -748,7 +659,7 @@ CON_COMMAND(say_squad, "Display player message to team squad")
 	CBasePlayer* pPlayer = ToBasePlayer(UTIL_GetCommandClient());
 	if (pPlayer)
 	{
-		if ((pPlayer->LastTimePlayerTalked() + TALK_INTERVAL) < gpGlobals->curtime)
+		if ((pPlayer->LastTimePlayerTalked() + PLAYER_TALK_INTERVAL) < gpGlobals->curtime)
 		{
 			Host_Say(pPlayer->edict(), args, SAYTYPE_SQUAD);
 			pPlayer->NotePlayerTalked();

@@ -182,9 +182,6 @@ END_RECV_TABLE()
 
 		RecvPropDataTable	( RECVINFO_DT(m_Local),0, &REFERENCE_RECV_TABLE(DT_Local) ),
 
-		RecvPropFloat		( RECVINFO(m_vecViewOffset[0]) ),
-		RecvPropFloat		( RECVINFO(m_vecViewOffset[1]) ),
-		RecvPropFloat		( RECVINFO(m_vecViewOffset[2]) ),
 		RecvPropFloat		( RECVINFO(m_flFriction) ),
 
 		RecvPropInt			( RECVINFO( m_nTickBase ) ),
@@ -218,8 +215,6 @@ END_RECV_TABLE()
 		RecvPropFloat		( RECVINFO( m_flLaggedMovementValue )),
 
 		RecvPropFloat(RECVINFO(m_flDeathTime)),
-
-		RecvPropInt			(RECVINFO(m_ArmorValue)),
 
 	END_RECV_TABLE()
 
@@ -289,7 +284,6 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 	DEFINE_PRED_FIELD(m_iViewmodelFOV, FIELD_INTEGER, FTYPEDESC_INSENDTABLE),
 
 	DEFINE_PRED_FIELD_TOL( m_flMaxspeed, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.5f ),
-	DEFINE_PRED_FIELD_TOL(m_flMaxAirSpeed, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.5f),
 	DEFINE_PRED_FIELD( m_iHealth, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD(m_iMaxHealth, FIELD_INTEGER, FTYPEDESC_INSENDTABLE),
 	DEFINE_PRED_FIELD( m_nNextThinkTick, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
@@ -300,7 +294,6 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 
 	DEFINE_FIELD( m_nButtons, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flWaterJumpTime, FIELD_FLOAT ),
-	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flStepSoundTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flSwimSoundTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_vecLadderNormal, FIELD_VECTOR ),
@@ -356,7 +349,6 @@ C_BasePlayer::C_BasePlayer() :
 	m_bWasFrozen = false;
 
 	m_bResampleWaterSurface = true;
-	m_ArmorValue = 0;
 	ResetObserverMode();
 
 	m_vecPredictionError.Init();
@@ -1941,7 +1933,6 @@ void C_BasePlayer::PhysicsSimulate( void )
 		ctx->cmd.sidemove = 0;
 		ctx->cmd.upmove = 0;
 		ctx->cmd.buttons = 0;
-		ctx->cmd.impulse = 0;
 		//VectorCopy ( pl.v_angle, ctx->cmd.viewangles );
 	}
 
@@ -1951,26 +1942,6 @@ void C_BasePlayer::PhysicsSimulate( void )
 		&ctx->cmd, 
 		MoveHelper() );
 #endif
-}
-
-const QAngle& C_BasePlayer::GetPunchAngle()
-{
-	return m_Local.m_vecPunchAngle.Get();
-}
-
-void C_BasePlayer::SetPunchAngle( const QAngle &angle )
-{
-	m_Local.m_vecPunchAngle = angle;
-}
-
-const QAngle& C_BasePlayer::GetRecoilPunchAngle(void)
-{
-	return m_Local.m_vecRecoilPunchAngle.Get();
-}
-
-void C_BasePlayer::SetRecoilPunchAngle(const QAngle& angle)
-{
-	m_Local.m_vecRecoilPunchAngle = angle;
 }
 
 float C_BasePlayer::GetWaterJumpTime() const

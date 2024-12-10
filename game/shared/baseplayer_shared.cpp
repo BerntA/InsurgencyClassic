@@ -110,16 +110,6 @@ float CBasePlayer::GetTimeBase( void ) const
 	return m_nTickBase * TICK_INTERVAL;
 }
 
-float CBasePlayer::GetPlayerMaxSpeed()
-{
-	// player max speed is the lower limit of m_flMaxSpeed and sv_maxspeed
-	float fMaxSpeed = sv_maxspeed.GetFloat();
-	if ( MaxSpeed() > 0.0f && MaxSpeed() < fMaxSpeed )
-		fMaxSpeed = MaxSpeed();
-
-	return fMaxSpeed;
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Called every usercmd by the player PreThink
 //-----------------------------------------------------------------------------
@@ -1118,6 +1108,11 @@ void CBasePlayer::ViewPunchReset( float tolerance )
 	m_Local.m_vecPunchAngleVel = vec3_angle;
 }
 
+const QAngle& CBasePlayer::GetPunchAngle()
+{
+	return m_Local.m_vecPunchAngle.Get();
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -1140,6 +1135,11 @@ void CBasePlayer::RecoilViewPunchReset(float tolerance)
 	}
 	m_Local.m_vecRecoilPunchAngle = vec3_angle;
 	m_Local.m_vecRecoilPunchAngleVel = vec3_angle;
+}
+
+const QAngle& CBasePlayer::GetRecoilPunchAngle(void)
+{
+	return m_Local.m_vecRecoilPunchAngle.Get();
 }
 
 #if defined( CLIENT_DLL )
@@ -1251,7 +1251,6 @@ void CBasePlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, 
 		CalcPlayerView(eyeOrigin, eyeAngles, fov);
 	}
 }
-
 
 void CBasePlayer::CalcViewModelView( const Vector& eyeOrigin, const QAngle& eyeAngles)
 {
@@ -1430,7 +1429,6 @@ void CBasePlayer::SharedSpawn()
 	m_nRenderFX = kRenderFxNone;
 	m_flNextAttack	= gpGlobals->curtime;
 	m_flMaxspeed		= 0.0f;
-	m_flMaxAirSpeed = 0.0f;
 
 	// dont let uninitialized value here hurt the player
 	m_Local.m_flFallVelocity = 0;
@@ -1515,12 +1513,9 @@ const char *CBasePlayer::GetTracerType( void )
 // Input  : FOV - New FOV
 //			zoomRate - Amount of time (in seconds) to move between old and new FOV
 //-----------------------------------------------------------------------------
-bool CBasePlayer::SetFOV(int FOV, float zoomRate, int iZoomStart /* = 0 */)
+bool CBasePlayer::SetFOV(int iFOV, float zoomRate)
 {
-	// Setup our FOV and our scaling time
-	m_iFOVStart = (iZoomStart > 0) ? iZoomStart : GetFOV();
-	m_flFOVTime = gpGlobals->curtime;
-	m_iFOV = FOV;
+	m_iFOV = iFOV;
 	m_Local.m_flFOVRate = zoomRate;
 	return true;
 }

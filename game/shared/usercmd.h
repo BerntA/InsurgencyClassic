@@ -130,9 +130,7 @@ public:
 	//  upward velocity.
 	float	upmove;         
 	// Attack button states
-	int		buttons;		
-	// Impulse command issued.
-	byte    impulse;        
+	int		buttons;
 	// Current weapon id
 	int		weaponselect;
 

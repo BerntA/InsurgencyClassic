@@ -676,7 +676,6 @@ enum
 
 // BB2
 #define GLOWS_ENABLE
-#define BB2_LAGCOMP_HIT_MAX 5 // When figuring out which entities to hit, this is the max amount for now! During 1 comp. tick.
 
 enum
 {

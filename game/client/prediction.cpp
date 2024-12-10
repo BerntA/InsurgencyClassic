@@ -610,7 +610,6 @@ void CPrediction::SetupMove( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper *
 
 	move->m_vecAngles		= ucmd->viewangles;
 	move->m_vecViewAngles	= ucmd->viewangles;
-	move->m_nImpulseCommand = ucmd->impulse;	
 	move->m_nButtons		= ucmd->buttons;
 
 	CBaseEntity *pMoveParent = player->GetMoveParent();
@@ -812,9 +811,6 @@ void CPrediction::RunCommand( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 
 	g_pGameMovement->StartTrackPredictionErrors( player );
 
-// TODO
-// TODO:  Check for impulse predicted?
-
 	// Do weapon selection
 	if ( ucmd->weaponselect != 0 )
 	{
@@ -823,12 +819,6 @@ void CPrediction::RunCommand( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 		{
 			player->SelectItem(weapon->GetWeaponID());
 		}
-	}
-
-	// Latch in impulse.
-	if ( ucmd->impulse )
-	{
-		player->m_nImpulse = ucmd->impulse;
 	}
 
 	// Get button states

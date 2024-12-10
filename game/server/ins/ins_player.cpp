@@ -273,8 +273,6 @@ CINSPlayer::CINSPlayer()
 	m_iRank = INVALID_RANK;
 	m_bCommander = false;
 
-	m_flNextTalkTime = 0.0f;
-
 	m_bChangedTeam = false;
 
 	m_bDeadFade = false;
@@ -746,9 +744,9 @@ void CINSPlayer::Event_Killed( const CTakeDamageInfo &info )
 
 //=========================================================
 //=========================================================
-void CINSPlayer::Event_Dying( void )
+void CINSPlayer::Event_Dying(const CTakeDamageInfo& info)
 {
-	BaseClass::Event_Dying( );
+	BaseClass::Event_Dying(info);
 
 	// stop stamina sound
 	if( m_pStaminaSound )
@@ -1823,7 +1821,7 @@ void CINSPlayer::CommitSuicide( int iType, bool bForce )
 
 	// don't need to set forced since ontakedamage isn't called
 	Event_Killed( KilledDamage );
-	Event_Dying( );
+	Event_Dying(KilledDamage);
 }
 
 //=========================================================
@@ -2990,20 +2988,6 @@ void CINSPlayer::RemoveMantalingEntity( void )
 
 //=========================================================
 //=========================================================
-bool CINSPlayer::CanSpeak( void )
-{
-	return ( m_flNextTalkTime < gpGlobals->curtime );
-}
-
-//=========================================================
-//=========================================================
-void CINSPlayer::NotePlayerTalked( void )
-{
-	m_flNextTalkTime = gpGlobals->curtime + PLAYER_TALK_INTERVAL;
-}
-
-//=========================================================
-//=========================================================
 void CINSPlayer::ClearPain(void)
 {
 	SendPain( PAINTYPE_RESET );
@@ -3267,92 +3251,6 @@ int CINSPlayer::GetDeathMenuType( void ) const
 
 //=========================================================
 //=========================================================
-Vector CINSPlayer::CalcDamageForceVector( const CTakeDamageInfo &info )
-{
-	// if already have a damage force in the data, use that (unless there is no force)
-	if( info.GetDamageForce( ) != vec3_origin || ( info.GetDamageType( ) & DMG_NO_PHYSICS_FORCE ) )
-	{
-		if( info.GetDamageType( ) & DMG_BLAST )
-		{
-			// fudge blast forces a little bit, so that each
-			// victim gets a slightly different trajectory. 
-			// this simulates features that usually vary from
-			// person-to-person variables such as bodyweight,
-			// which are all indentical for characters using the same model.
-			float scale = random->RandomFloat( 0.85f, 1.15f );
-			Vector force = info.GetDamageForce( );
-			force.x *= scale;
-			force.y *= scale;
-
-			// try to always exaggerate the upward force because we've got pretty harsh gravity
-			force.z *= ( force.z > 0 ) ? 1.15f : scale;
-
-			return force;
-		}
-
-		return info.GetDamageForce( );
-	}
-
-	CBaseEntity *pForce = info.GetInflictor( );
-
-	if( !pForce )
-		pForce = info.GetAttacker( );
-
-	if( pForce )
-	{
-		// calculate an impulse large enough to push a 75kg man 4 in/sec per point of damage
-		float forceScale = info.GetDamage( ) * 75 * 4;
-
-		Vector forceVector;
-
-		// if the damage is a blast, point the force vector higher than usual, this gives 
-		// the ragdolls a bodacious "really got blowed up" look
-		if( info.GetDamageType( ) & DMG_BLAST )
-		{
-			forceVector = ( GetLocalOrigin( ) + Vector( 0, 0, WorldAlignSize( ).z ) ) - pForce->GetLocalOrigin( );
-			VectorNormalize( forceVector );
-		}
-		else
-		{
-			// taking damage from self? take a little random force, but still try to collapse on the spot
-			if( this == pForce )
-			{
-				forceVector.x = random->RandomFloat( -1.0f, 1.0f );
-				forceVector.y = random->RandomFloat( -1.0f, 1.0f );
-				forceVector.z = 0.0;
-				forceScale = random->RandomFloat( 1000.0f, 2000.0f );
-			}
-			else
-			{
-				// UNDONE: collision forces are baked in to CTakeDamageInfo now
-				// UNDONE: is this MOVETYPE_VPHYSICS code still necessary?
-				if( pForce->GetMoveType( ) == MOVETYPE_VPHYSICS )
-				{
-					// killed by a physics object
-					IPhysicsObject *pPhysics = VPhysicsGetObject( );
-
-					if( !pPhysics )
-						pPhysics = pForce->VPhysicsGetObject( );
-
-					pPhysics->GetVelocity( &forceVector, NULL );
-					forceScale = pPhysics->GetMass( );
-				}
-				else
-				{
-					forceVector = GetLocalOrigin( ) - pForce->GetLocalOrigin( );
-					VectorNormalize( forceVector );
-				}
-			}
-		}
-
-		return forceVector * forceScale;
-	}
-
-	return vec3_origin;
-}
-
-//=========================================================
-//=========================================================
 void CINSPlayer::NoteWeaponFired( void )
 {
 	BaseClass::NoteWeaponFired( );
@@ -3384,30 +3282,6 @@ bool CINSPlayer::SendHints( void ) const
 //=========================================================
 void CINSPlayer::SendStatNotice( int iAmount, const char* pszType )
 {
-}
-
-//=========================================================
-//=========================================================
-void CINSPlayer::ImpulseCommands(int iImpulse)
-{
-	BaseClass::ImpulseCommands(iImpulse);
-
-	if (!IsRunningAround())
-		return;
-
-	switch (iImpulse)
-	{
-
-	case 100:
-	{
-		if (FlashlightIsOn())
-			FlashlightTurnOff();
-		else
-			FlashlightTurnOn();
-		break;
-	}
-
-	}
 }
 
 //=========================================================

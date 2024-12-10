@@ -122,7 +122,7 @@ public:
 	int OnTakeDamage(const CTakeDamageInfo &info);
 	int	OnTakeDamage_Alive(const CTakeDamageInfo &info);
 	void Event_Killed(const CTakeDamageInfo &info);
-	void Event_Dying(void);
+	void Event_Dying(const CTakeDamageInfo& info);
 
 	void PlayerRunCommand(CUserCmd *ucmd, IMoveHelper *moveHelper);
 
@@ -188,8 +188,6 @@ public:
 	void CommitSuicide( int iType, bool bForce );
 
 	void DamageEffect( float flDamage, int iDamageType );
-
-	Vector CalcDamageForceVector( const CTakeDamageInfo &info );
 
 	void NoteWeaponFired( void );
 
@@ -466,10 +464,6 @@ public:
 	void RemoveMantalingEntity(void);
 	CMantleZone *GetMantleEntity(void) const;
 
-	// Talk Control
-	bool CanSpeak(void);
-	void NotePlayerTalked(void);
-
 	// Camera Management
 	bool InCameraMode(void) const { return m_bInCameraMode; }
 
@@ -612,9 +606,6 @@ private:
 	// Camera Management
 	void SetCameraMode(int iMode);
 	bool CanCameraMode(void);
-
-	// Misc
-	void ImpulseCommands( int iImpulse );
 
 public:
 
@@ -772,7 +763,6 @@ private:
 	int m_iVoiceType;
 	bool m_bCanShowDeathMenu;
 	float m_flTimeJoined;
-	float m_flNextTalkTime;
 	Vector m_vecTotalForce, m_vecTotalBulletForce;
 	bool m_bDeadFade;
 	bool m_bDeathIgnored;

@@ -1037,8 +1037,7 @@ void CInput::CreateMove ( int sequence_number, float input_sample_frametime, boo
 	engine->GetViewAngles( viewangles );
 
 	// Latch and clear impulse
-	cmd->impulse = in_impulse;
-	in_impulse = 0;
+	in_impulse = 0; // remove me!
 
 	// Latch and clear weapon selection
 	if ( m_hSelectedWeapon != NULL )

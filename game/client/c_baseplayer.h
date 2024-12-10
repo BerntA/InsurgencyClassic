@@ -95,8 +95,6 @@ public:
 
 	virtual void	GetToolRecordingState( KeyValues *msg );
 
-	virtual float GetPlayerMaxSpeed();
-
 	C_BaseViewModel		*GetViewModel(bool bObserverOK = true);
 	C_BaseCombatWeapon	*GetActiveWeapon( void ) const;
 	const char			*GetTracerType( void );
@@ -133,7 +131,6 @@ public:
 	virtual bool	IsPlayer( void ) const { return true; }
 	virtual int		GetHealth() const { return m_iHealth; }
 	virtual int     GetMaxHealth() const { return m_iMaxHealth; }
-	int GetArmorValue() { return m_ArmorValue; }
 
 	// observer mode
 	virtual int			GetObserverMode() const;
@@ -189,9 +186,6 @@ public:
 
 	void						SetMaxSpeed( float flMaxSpeed ) { m_flMaxspeed = flMaxSpeed; }
 	float						MaxSpeed() const		{ return m_flMaxspeed; }
-
-	void SetMaxAirSpeed(float flMaxAirSpeed) { m_flMaxAirSpeed = flMaxAirSpeed; }
-	float MaxAirSpeed() const { return m_flMaxAirSpeed; }
 
 	// Should this object cast shadows?
 	virtual ShadowType_t		ShadowCastType() 
@@ -250,14 +244,6 @@ public:
 	virtual void				ItemPreFrame( void );
 	virtual void				ItemPostFrame( void );
 
-	// Movement:
-	virtual float GetPlayerSpeed() { return 240.0f; }
-	virtual float GetLeapLength() { return 0.0f; }
-	virtual float GetJumpHeight() { return 20.0f; }
-
-	// Armor
-	int m_ArmorValue;
-
 	virtual void				AbortReload( void );
 
 	virtual void				SelectLastItem(void);
@@ -275,7 +261,7 @@ public:
 	virtual float				GetFOV( void );	
 	int							GetDefaultFOV( void ) const;
 	virtual bool				IsZoomed( void )	{ return false; }
-	bool						SetFOV(int FOV, float zoomRate = 0.0f, int iZoomStart = 0);
+	bool						SetFOV(int FOV, float zoomRate = 0.0f);
 	float						GetFOVDistanceAdjustFactor();
 
 	virtual float				GetViewmodelFOV(void);
@@ -292,7 +278,6 @@ public:
 	void						RecoilViewPunchReset(float tolerance = 0);
 
 	void						UpdateButtonState( int nUserCmdButtonMask );
-	int							GetImpulse( void ) const;
 
 	virtual void				Simulate();
 
@@ -327,10 +312,7 @@ public:
 	const CUserCmd *GetCurrentUserCommand() const;
 
 	const QAngle& GetPunchAngle();
-	void SetPunchAngle( const QAngle &angle );
-
 	const QAngle& GetRecoilPunchAngle();
-	void SetRecoilPunchAngle(const QAngle& angle);
 
 	float					GetWaterJumpTime() const;
 	void					SetWaterJumpTime( float flWaterJumpTime );
@@ -362,7 +344,6 @@ public:
 	// Called by the renderer to apply the prediction error smoothing.
 	void GetPredictionErrorSmoothingVector( Vector &vOffset ); 
 
-	virtual void ExitLadder() {}
 	surfacedata_t *GetLadderSurface( const Vector &origin );
 
 	surfacedata_t *GetSurfaceData( void ) { return m_pSurfaceData; }
@@ -394,7 +375,6 @@ public:
 	void					FogControllerChanged( bool bSnap );
 	void					UpdateFogController( void );
 	void					UpdateFogBlend( void );
-	float					GetFOVTime( void ){ return m_flFOVTime; }
 
 	virtual bool			CanUseFirstPersonCommand( void ){ return true; }
 	
@@ -495,14 +475,12 @@ private:
 	EHANDLE			m_hUseEntity;
 	
 	float			m_flMaxspeed;
-	float m_flMaxAirSpeed;
 
 	CInterpolatedVar< Vector >	m_iv_vecViewOffset;
 
 	// Not replicated
 	Vector			m_vecWaterJumpVel;
 	float			m_flWaterJumpTime;  // used to be called teleport_time
-	int				m_nImpulse;
 
 	float			m_flSwimSoundTime;
 	Vector			m_vecLadderNormal;
@@ -625,12 +603,6 @@ inline bool C_BasePlayer::IsObserver() const
 { 
 	return (GetObserverMode() != OBS_MODE_NONE); 
 }
-
-inline int C_BasePlayer::GetImpulse( void ) const 
-{ 
-	return m_nImpulse; 
-}
-
 
 inline C_CommandContext* C_BasePlayer::GetCommandContext()
 {

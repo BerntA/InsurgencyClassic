@@ -775,7 +775,6 @@ $Project
 				$File "$SRCDIR\game\shared\ins\weapon_rpg_base.cpp"
 				$File "$SRCDIR\game\shared\ins\weapon_rpg_base.h"
 				$File "$SRCDIR\game\shared\ins\weapon_rpk.cpp"
-				$File "$SRCDIR\game\shared\ins\weapon_shotgun.cpp"
 				$File "$SRCDIR\game\shared\ins\weapon_shotgun_base.cpp"
 				$File "$SRCDIR\game\shared\ins\weapon_shotgun_base.h"
 				$File "$SRCDIR\game\shared\ins\weapon_sks.cpp"

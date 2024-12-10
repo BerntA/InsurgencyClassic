@@ -23,9 +23,6 @@
 #include "GameDefinitions_Workshop.h"
 #endif
 
-#define DELAYED_USE_TIME 1.5f
-#define MAX_MELEE_LAGCOMP_DIST 300.0f
-
 // Time Definitions in hours.
 #define TIME_STRING_YEAR 8760
 #define TIME_STRING_MONTH 730
@@ -35,16 +32,6 @@
 #ifdef CLIENT_DLL
 #define CGameBaseShared C_GameBaseShared
 #endif
-
-enum
-{
-	GROUPID_IS_DEVELOPER = 0x001,
-
-	GROUPID_IS_TESTER = 0x002,
-	GROUPID_IS_DONATOR = 0x004,
-
-	MAX_GROUPID_BITS = 3
-};
 
 enum
 {

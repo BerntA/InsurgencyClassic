@@ -1412,8 +1412,6 @@ void CINSRules::PlayerKilled( CBasePlayer *pVictim, const CTakeDamageInfo &info 
 	// allow the scorer to immediately paint a decal
 	if( pScorer )
 	{
-		pScorer->AllowImmediateDecalPainting( );
-
 		// ... and possibly award a kill
 		if( pScorer != pVictim )
 		{

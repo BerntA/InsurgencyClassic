@@ -154,7 +154,7 @@ public:
 	// -----------------------
 	// Weapons
 	// -----------------------
-	CBaseCombatWeapon*	Weapon_Create( const char *pWeaponName );
+	virtual CBaseCombatWeapon*	Weapon_Create( const char *pWeaponName );
 	virtual Activity	Weapon_TranslateActivity(Activity baseAct);
 	virtual void		Weapon_SetActivity( Activity newActivity, float duration );
 	virtual void		Weapon_FrameUpdate( void );
@@ -163,18 +163,15 @@ public:
 	virtual CBaseCombatWeapon* GetNextBestWeapon(CBaseCombatWeapon* pCurrentWeapon);
 	virtual void		Weapon_Equip( CBaseCombatWeapon *pWeapon );			// Adds weapon to player
 	virtual bool		Weapon_Detach( CBaseCombatWeapon *pWeapon );		// Clear any pointers to the weapon.
-	virtual void		Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector *pvecTarget = NULL, const Vector *pVelocity = NULL );
+	virtual bool		Weapon_CanUse(CBaseCombatWeapon* pWeapon) { return true; }
+	virtual bool		Weapon_CanDrop(CBaseCombatWeapon* pWeapon) const;
+	virtual bool		Weapon_Drop(CBaseCombatWeapon* pWeapon, bool bForce, bool bNoSwitch, const Vector* pVelocity);
 	virtual	bool		Weapon_Switch(CBaseCombatWeapon *pWeapon, bool bForce = false);		// Switch to given weapon if has ammo (false if failed)
 	virtual	Vector		Weapon_ShootPosition( );		// gun position at current position/orientation
 	virtual	bool		Weapon_CanSwitchTo(CBaseCombatWeapon *pWeapon);
 	virtual bool		Weapon_SlotOccupied( CBaseCombatWeapon *pWeapon );
 	virtual CBaseCombatWeapon *Weapon_GetSlot( int slot ) const;
 
-	// For weapon strip
-	virtual void			Weapon_DropAll( bool bDisallowWeaponPickup = false );
-
-	virtual bool			AddPlayerItem( CBaseCombatWeapon *pItem ) { return false; }
-	virtual bool			RemovePlayerItem( CBaseCombatWeapon *pItem ) { return false; }
 	virtual bool			CanBecomeServerRagdoll( void ) { return true; }
 
 	// -----------------------
@@ -195,7 +192,7 @@ public:
 	virtual float			GetTimeSinceLastInjury( int team = TEAM_ANY ) const;		// return time since we were hurt by a member of the given team
 
 		// utility function to calc damage force
-	Vector					CalcDamageForceVector( const CTakeDamageInfo &info );
+	virtual Vector			CalcDamageForceVector( const CTakeDamageInfo &info );
 
 	virtual int				BloodColor();
 
@@ -211,7 +208,7 @@ public:
 
 	// Character entered the dying state without being gibbed (only fired once)
 	virtual void			Event_Dying( const CTakeDamageInfo &info );
-	virtual void			Event_Dying();
+
 	// character died and should become a ragdoll now
 	// return true if converted to a ragdoll, false to use AI death
 	virtual bool			BecomeRagdoll( const CTakeDamageInfo &info, const Vector &forceVector );
@@ -296,7 +293,8 @@ public:
 	virtual CBaseCombatWeapon*	GetActiveWeapon() const;
 	virtual int					WeaponCount() const;
 	virtual CBaseCombatWeapon*	GetWeapon( int i ) const;
-	virtual bool				RemoveWeapon( CBaseCombatWeapon *pWeapon );
+	virtual bool				RemoveWeapon(CBaseCombatWeapon* pWeapon);
+	virtual void				RemovedWeapon(CBaseCombatWeapon* pWeapon) {}
 	virtual void				RemoveAllWeapons();
 	virtual	Vector				GetAttackSpread( CBaseCombatWeapon *pWeapon, CBaseEntity *pTarget = NULL );
 	virtual	float				GetSpreadBias(  CBaseCombatWeapon *pWeapon, CBaseEntity *pTarget );
@@ -337,7 +335,6 @@ public:
 public:
 	// returns the last body region that took damage
 	int	LastHitGroup() const				{ return m_LastHitGroup; }
-protected:
 	void SetLastHitGroup( int nHitGroup )	{ m_LastHitGroup = nHitGroup; }
 
 public:
@@ -355,9 +352,6 @@ protected:
 	float		m_impactEnergyScale;// scale the amount of energy used to calculate damage this ent takes due to physics
 
 private:
-	// For weapon strip
-	void ThrowDirForWeaponStrip( CBaseCombatWeapon *pWeapon, const Vector &vecForward, Vector *pVecThrowDir );
-	void DropWeaponForWeaponStrip( CBaseCombatWeapon *pWeapon, const Vector &vecForward, const QAngle &vecAngles, float flDiameter );
 	
 	static Relationship_t**		m_DefaultRelationship;
 
