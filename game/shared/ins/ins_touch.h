@@ -6,6 +6,7 @@
 
 #ifndef INS_TOUCH_H
 #define INS_TOUCH_H
+
 #ifdef _WIN32
 #pragma once
 #endif

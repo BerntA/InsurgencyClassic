@@ -12,7 +12,7 @@
 #include "materialsystem/itexture.h"
 #include "view_shared.h"
 #include "viewpostprocess.h"
-#include "c_hl2mp_player.h"
+#include "c_ins_player.h"
 
 #define FULL_FRAME_TEXTURE "_rt_FullFrameFB"
 #define DEFAULT_RENDER_FLAGS_FOR_GLOW_ENTS (STUDIO_RENDER | STUDIO_SKIP_MATERIAL_OVERRIDES)
@@ -83,7 +83,7 @@ void CGlowObjectManager::RenderGlowEffects(const CViewSetup *pSetup)
 {
 	if (g_pMaterialSystemHardwareConfig->SupportsPixelShaders_2_0())
 	{
-		C_HL2MP_Player *pLocalPlayer = C_HL2MP_Player::GetLocalHL2MPPlayer();
+		C_INSPlayer* pLocalPlayer = C_INSPlayer::GetLocalPlayer();
 		if (!pLocalPlayer)
 			return;
 

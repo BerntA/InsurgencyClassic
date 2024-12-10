@@ -17,14 +17,12 @@
 #include <vgui_controls/buildgroup.h>
 #include <vgui_controls/richtext.h>
 #include "gameuipanel.h"
-
 #include "filesystem.h"
 #include "imc_config.h"
 #include "ins_gamerules.h"
 #include "mapname_utils.h"
 #include "hud_stringfont.h"
 #include "basic_colors.h"
-#include "motd.h"
 #include "keyvalues.h"
 #include "inetchannelinfo.h"
 #include "hud.h"
@@ -37,6 +35,7 @@
 #include "tier0/memdbgon.h"
 
 using namespace vgui;
+using namespace std;
 
 CONTROL_SIZE(PROGRESS_BAR,595,127,361,26);
 
@@ -53,6 +52,8 @@ CONTROL_SIZE(GAME_TYPE,603,487,359,196);
 CONTROL_SIZE(TIP_TEXT,42,770,943,40);
 
 CONTROL_SIZE(GAME_TYPE_NAME,628,432,147,60);
+
+const char* g_pszHostname = "";
 
 //=========================================================
 //=========================================================
@@ -241,13 +242,6 @@ void INSLoadingDialog::PerformLayout()
 	SCALE_CONTROL(m_pTipText,TIP_TEXT);
 }
 
-//=========================================================
-//=========================================================
-void INSLoadingDialog::MOTDInit( void )
-{
-
-}
-
 void INSLoadingDialog::SetupContents()
 {
 	int w,h;
@@ -260,10 +254,6 @@ void INSLoadingDialog::SetupContents()
 	Q_snprintf(m_szMapImage,MAX_PATH,"maps/overviews/%s",szMapName);
 	m_pMapDesc->SetText(IMCConfig()->GetMapOverview());
 }
-
-#include <string>
-
-const char *g_pszHostname = NULL;
 
 //=========================================================
 //=========================================================
@@ -364,10 +354,8 @@ void INSLoadingDialog::Setup( void )
 
 	m_pTipText->SetText( finalTip.c_str( ) );
 
-	g_pszHostname = cvar->FindVar( "hostname" )->GetString( );
-	if(!g_pszHostname)
-		g_pszHostname = "no server";
-
+	auto* cHostName = cvar->FindVar("hostname");
+	g_pszHostname = (cHostName ? cHostName->GetString() : "no server");
 	m_bInit = false;
 
 	// apply our changes

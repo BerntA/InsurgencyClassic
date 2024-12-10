@@ -3,7 +3,9 @@
 #ifndef INS_IMAGEBUTTON_H
 #define INS_IMAGEBUTTON_H
 
+#ifdef _WIN32
 #pragma once
+#endif
 
 inline bool ValidTexture(int iTex);
 int UseTexture(int &iTex, const char* pszFile, bool bForceReload=false);

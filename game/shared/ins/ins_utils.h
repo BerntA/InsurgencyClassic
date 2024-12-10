@@ -5,7 +5,10 @@
 
 #ifndef INS_UTIL_H
 #define INS_UTIL_H
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include "imc_format.h"
 #include "ins_player_shared.h"

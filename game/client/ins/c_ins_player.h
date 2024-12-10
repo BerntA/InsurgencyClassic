@@ -68,7 +68,7 @@ public:
 
 	virtual CStudioHdr *OnNewModel( void );
 
-	void CreateMove(float flInputSampleTime, CUserCmd* pCmd, bool bFakeInput);
+	bool CreateMove(float flInputSampleTime, CUserCmd* pCmd, bool bFakeInput);
 
 	void CalcView(Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, float &zFar, float &fov);
 	float CalcProneRoll(const QAngle& angAngles, const Vector& vecVelocity);
@@ -119,6 +119,8 @@ public:
 	int GetPlayerFlags( void ) const;
 
 	float GetViewmodelFOV( void );
+
+	bool CanDrawGlowEffects() { return !(IsObserver() || IsInVGuiInputMode()); }
 
 	// Ragdoll Related
 	C_BaseAnimating *BecomeRagdollOnClient(bool bCopyEntity);
@@ -472,10 +474,6 @@ private:
 	// Custom Data Management
 	static LoadPlayerData_t m_CustomData;
 
-	// Other
-	Vector m_vecMuzzle;
-	QAngle m_angMuzzle;	
-
 	int m_iPerferredFireMode;
 	bool m_bIsCustomized;
 
@@ -526,7 +524,6 @@ public:
 
 	void ImpactTrace(trace_t *pTrace, int iDamageType, char *pCustomImpactName);
 	void UpdateOnRemove(void);
-	void SetupWeights(void);
 
 	int BloodColor(void) { return BLOOD_COLOR_RED; }
 

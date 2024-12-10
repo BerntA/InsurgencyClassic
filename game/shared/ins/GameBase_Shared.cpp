@@ -11,7 +11,6 @@
 #include "weapon_defines_shared.h"
 
 #ifndef CLIENT_DLL
-#include "items.h"
 #include "GameBase_Server.h"
 #else
 #include "fmod_manager.h"

@@ -5,6 +5,13 @@
 // $NoKeywords: $
 //=============================================================================//
 
+#ifndef WEAPON_SNIPER_BASE_H
+#define WEAPON_SNIPER_BASE_H
+
+#ifdef _WIN32
+#pragma once
+#endif
+
 #include "cbase.h"
 #include "weapon_bipod_base.h"
 
@@ -21,33 +28,33 @@
 class CWeaponSniperBase : public CWeaponBipodBase
 {
 public:
-	DECLARE_CLASS( CWeaponSniperBase, CWeaponBipodBase );
-	DECLARE_NETWORKCLASS( ); 
-	DECLARE_PREDICTABLE( );
+	DECLARE_CLASS(CWeaponSniperBase, CWeaponBipodBase);
+	DECLARE_NETWORKCLASS();
+	DECLARE_PREDICTABLE();
 
 public:
-	CWeaponSniperBase( );
+	CWeaponSniperBase();
 
-	int GetWeaponClass( void ) const { return WEAPONCLASS_SNIPER; }
+	int GetWeaponClass(void) const { return WEAPONCLASS_SNIPER; }
 
-	void HandleDeploy( void );
+	void HandleDeploy(void);
 
-	bool ShouldDrawViewModel( void ) const;
+	bool ShouldDrawViewModel(void) const;
 
-	void ItemPostFrame( void );
+	void ItemPostFrame(void);
 
-    void SetIronsightsState( bool bState );
-	void FinishedIronsights( void );
+	void SetIronsightsState(bool bState);
+	void FinishedIronsights(void);
 
-	bool IgnoreRange( void ) const { return false; }
+	bool IgnoreRange(void) const { return false; }
 
-	void PrimaryAttack( void );
+	void PrimaryAttack(void);
 
 #ifdef CLIENT_DLL
 
-	bool HasScope( void ) const { return true; }
+	bool HasScope(void) const { return true; }
 
-	bool UseFreeaim( void ) const;
+	bool UseFreeaim(void) const;
 
 #endif
 
@@ -55,16 +62,16 @@ public:
 
 #ifdef GAME_DLL
 
-	bool SendIronsightsHint( void ) const { return false; }
+	bool SendIronsightsHint(void) const { return false; }
 
 #endif
 
 private:
-	bool Using3DScopes( void ) const;
+	bool Using3DScopes(void) const;
 
 private:
-	CNetworkVar( float, m_flFinishIronsight );
-	CNetworkVar( bool, m_bHideViewModel );
+	CNetworkVar(float, m_flFinishIronsight);
+	CNetworkVar(bool, m_bHideViewModel);
 
 #ifdef GAME_DLL
 
@@ -72,3 +79,5 @@ private:
 
 #endif
 };
+
+#endif // WEAPON_SNIPER_BASE_H

@@ -6,6 +6,7 @@
 
 #ifndef INS_SPAWNPROTECTION_SHARED_H
 #define INS_SPAWNPROTECTION_SHARED_H
+
 #ifdef _WIN32
 #pragma once
 #endif

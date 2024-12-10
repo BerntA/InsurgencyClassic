@@ -408,9 +408,9 @@ void C_INSPlayer::Initialize( void )
 
 //=========================================================
 //=========================================================
-void C_INSPlayer::CreateMove(float flInputSampleTime, CUserCmd* pCmd, bool bFakeInput)
+bool C_INSPlayer::CreateMove(float flInputSampleTime, CUserCmd* pCmd, bool bFakeInput)
 {
-	BaseClass::CreateMove(flInputSampleTime, pCmd, bFakeInput);
+	return BaseClass::CreateMove(flInputSampleTime, pCmd, bFakeInput);
 }
 
 //=========================================================
@@ -948,19 +948,7 @@ C_Team *C_INSPlayer::GetTeam( void ) const
 
 void C_INSPlayer::HandleMuzzle( void )
 {
-	if( !IsLocalPlayer( ) )
-		return;
-
-	QAngle angMuzzle;
-	Vector vecMuzzle;
-
-	C_BaseAnimating *pRenderedWeaponMode = GetRenderedWeaponModel( );
-
-	if( pRenderedWeaponMode != NULL )
-		pRenderedWeaponMode->GetAttachment( 1, vecMuzzle, angMuzzle );
-
-	m_angMuzzle = angMuzzle;
-	m_vecMuzzle = vecMuzzle;
+	// moved to CINSPlayer::GetMuzzle
 }
 
 //=========================================================
@@ -1641,45 +1629,4 @@ void C_INSRagdoll::UpdateOnRemove(void)
 	VPhysicsSetObject( NULL );
 
 	BaseClass::UpdateOnRemove();
-}
-
-//=========================================================
-//=========================================================
-void C_INSRagdoll::SetupWeights(void)
-{
-	BaseClass::SetupWeights( );
-
-	static float destweight[128];
-	static bool bIsInited = false;
-
-	CStudioHdr *hdr = GetModelPtr();
-
-	if ( !hdr )
-		return;
-
-	if (hdr->numflexdesc() > 0)
-	{
-		if (!bIsInited)
-		{
-			int i;
-			for (i = 0; i < 128; i++)
-			{
-				destweight[i] = 0.0f;
-			}
-			bIsInited = true;
-		}
-		modelrender->SetFlexWeights( hdr->numflexdesc(), destweight );
-	}
-
-	if (m_iEyeAttachment > 0)
-	{
-		matrix3x4_t attToWorld;
-		if (GetAttachment( m_iEyeAttachment, attToWorld ))
-		{
-			Vector local, tmp;
-			local.Init( 1000.0f, 0.0f, 0.0f );
-			VectorTransform( local, attToWorld, tmp );
-			modelrender->SetViewTarget( tmp );
-		}
-	}
 }

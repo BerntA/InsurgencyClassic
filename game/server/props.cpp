@@ -5923,9 +5923,6 @@ void CPropDoorBreakable::SetUnBreakable(inputdata_t &inputdata)
 
 bool CPropDoorBreakable::CanEntityUseDoor(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
 {
-	// Zombie Players can no longer open breakable doors, they gotta break'em!
-	if (CanBreak() && pActivator && pActivator->IsZombie(true))
-		return false;
 	return true;
 }
 

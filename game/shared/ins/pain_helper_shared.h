@@ -9,6 +9,7 @@
 
 #ifndef PAINHELPERSHARED_H
 #define PAINHELPERSHARED_H
+
 #ifdef _WIN32
 #pragma once
 #endif

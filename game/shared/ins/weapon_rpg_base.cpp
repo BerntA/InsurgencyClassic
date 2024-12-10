@@ -93,9 +93,6 @@ void CWeaponRPGBase::HandleAnimEvent( animevent_t *pEvent )
 		VectorMA( vecOrigin, MISSILE_ROCKET_LENGTH, vecDirection, vecOrigin );
 
 		CBaseRocketMissile::CreateRocketMissile( pOwner, GetMissileID( ), vecOrigin, angMuzzle, vecDirection );
-
-		pOwner->SetMuzzleFlashTime( gpGlobals->curtime + 0.5f );
-
 	}
 	else
 	{

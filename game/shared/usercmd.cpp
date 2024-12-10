@@ -113,16 +113,6 @@ void WriteUsercmd( bf_write *buf, const CUserCmd *to, const CUserCmd *from )
 		buf->WriteOneBit( 0 );
 	}
 
-	if ( to->impulse != from->impulse )
-	{
-		buf->WriteOneBit( 1 );
-	    buf->WriteUBitLong( to->impulse, 8 );
-	}
-	else
-	{
-		buf->WriteOneBit( 0 );
-	}
-
 
 	if ( to->weaponselect != from->weaponselect )
 	{
@@ -228,12 +218,6 @@ void ReadUsercmd( bf_read *buf, CUserCmd *move, CUserCmd *from )
 	{
 		move->buttons = buf->ReadUBitLong( 32 );
 	}
-
-	if ( buf->ReadOneBit() )
-	{
-		move->impulse = buf->ReadUBitLong( 8 );
-	}
-
 
 	if ( buf->ReadOneBit() )
 	{

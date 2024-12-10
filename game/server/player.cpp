@@ -1601,7 +1601,6 @@ int CBasePlayer::DetermineSimulationTicks( void )
 
 // 2 ticks ahead or behind current clock means we need to fix clock on client
 static ConVar sv_clockcorrection_msecs( "sv_clockcorrection_msecs", "60", 0, "The server tries to keep each player's m_nTickBase withing this many msecs of the server absolute tickcount" );
-static ConVar sv_playerperfhistorycount( "sv_playerperfhistorycount", "60", 0, "Number of samples to maintain in player perf history", true, 1.0f, true, 128.0 );
 
 //-----------------------------------------------------------------------------
 // Purpose: Based upon amount of time in simulation time, adjust m_nTickBase so that
@@ -1614,17 +1613,6 @@ void CBasePlayer::AdjustPlayerTimeBase( int simulation_ticks )
 	Assert( simulation_ticks >= 0 );
 	if ( simulation_ticks < 0 )
 		return;
-
-	CPlayerSimInfo *pi = NULL;
-	if ( sv_playerperfhistorycount.GetInt() > 0 )
-	{
-		while ( m_vecPlayerSimInfo.Count() > sv_playerperfhistorycount.GetInt() )
-		{
-			m_vecPlayerSimInfo.Remove( m_vecPlayerSimInfo.Head() );
-		}
-
-		pi = &m_vecPlayerSimInfo[ m_vecPlayerSimInfo.AddToTail() ];
-	}
 
 	// Start in the past so that we get to the sv.time that we'll hit at the end of the
 	//  frame, just as we process the final command
@@ -1659,19 +1647,8 @@ void CBasePlayer::AdjustPlayerTimeBase( int simulation_ticks )
 			 nEstimatedFinalTick < too_slow_limit )
 		{
 			int nCorrectedTick = nIdealFinalTick - simulation_ticks + gpGlobals->simTicksThisFrame;
-
-			if ( pi )
-			{
-				pi->m_nTicksCorrected = nCorrectionTicks;
-			}
-
 			m_nTickBase = nCorrectedTick;
 		}
-	}
-
-	if ( pi )
-	{
-		pi->m_flFinalSimulationTime = TICKS_TO_TIME( m_nTickBase + simulation_ticks + gpGlobals->simTicksThisFrame );
 	}
 }
 
@@ -1891,17 +1868,6 @@ void CBasePlayer::PhysicsSimulate( void )
 		IPredictionSystem::SuppressHostEvents( NULL );
 
 		MoveHelperServer()->SetHost( NULL );
-
-		// Copy in final origin from simulation
-		CPlayerSimInfo *pi = NULL;
-		if ( m_vecPlayerSimInfo.Count() > 0 )
-		{
-			pi = &m_vecPlayerSimInfo[ m_vecPlayerSimInfo.Tail() ];
-			pi->m_flTime = Plat_FloatTime();
-			pi->m_vecAbsOrigin = GetAbsOrigin();
-			pi->m_flGameSimulationTime = gpGlobals->curtime;
-			pi->m_nNumCmds = commandsToRun;
-		}
 	}
 
 	// Restore the true server clock
@@ -2006,21 +1972,6 @@ void CBasePlayer::ProcessUsercmds( CUserCmd *cmds, int numcmds, int totalcmds,
 		// Just run the commands right away if paused
 		PhysicsSimulate();
 	}
-
-	if ( sv_playerperfhistorycount.GetInt() > 0 )
-	{
-		CPlayerCmdInfo pi;
-		pi.m_flTime = Plat_FloatTime();
-		pi.m_nDroppedPackets = dropped_packets;
-		pi.m_nNumCmds = numcmds;
-	
-		while ( m_vecPlayerCmdInfo.Count() >= sv_playerperfhistorycount.GetInt() )
-		{
-			m_vecPlayerCmdInfo.Remove( m_vecPlayerCmdInfo.Head() );
-		}
-
-		m_vecPlayerCmdInfo.AddToTail( pi );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -2063,98 +2014,6 @@ bool CBasePlayer::IsUserCmdDataValid( CUserCmd *pCmd )
 	}
 
 	return bValid;
-}
-
-void CBasePlayer::DumpPerfToRecipient( CBasePlayer *pRecipient, int nMaxRecords )
-{
-	if ( !pRecipient )
-		return;
-
-	char buf[ 256 ] = { 0 };
-	int curpos = 0;
-
-	int nDumped = 0;
-	Vector prevo( 0, 0, 0 );
-	float prevt = 0.0f;
-
-	for ( int i = m_vecPlayerSimInfo.Tail(); i != m_vecPlayerSimInfo.InvalidIndex() ; i = m_vecPlayerSimInfo.Previous( i ) )
-	{
-		const CPlayerSimInfo *pi = &m_vecPlayerSimInfo[ i ];
-
-		float vel = 0.0f;
-
-		// Note we're walking from newest backward
-		float dt = prevt - pi->m_flFinalSimulationTime;
-		if ( nDumped > 0 && dt > 0.0f )
-		{
-			Vector d = pi->m_vecAbsOrigin - prevo;
-			vel = d.Length() / dt;
-		}
-
-		char line[ 128 ];
-		int len = Q_snprintf( line, sizeof( line ), "%.3f %d %d %.3f %.3f vel %.2f\n",
-			pi->m_flTime,
-			pi->m_nNumCmds,
-			pi->m_nTicksCorrected,
-			pi->m_flFinalSimulationTime,
-			pi->m_flGameSimulationTime,
-			vel );
-
-		if ( curpos + len > 200 )
-		{
-			ClientPrint( pRecipient, HUD_PRINTCONSOLE, (char const *)buf );
-			buf[ 0 ] = 0;
-			curpos = 0;
-		}
-
-		Q_strncpy( &buf[ curpos ], line, sizeof( buf ) - curpos );
-		curpos += len;
-
-		++nDumped;
-		if ( nMaxRecords != -1 && nDumped >= nMaxRecords )
-			break;
-
-		prevo = pi->m_vecAbsOrigin;
-		prevt = pi->m_flFinalSimulationTime;
-	}
-
-	if ( curpos > 0 )
-	{
-		ClientPrint( pRecipient, HUD_PRINTCONSOLE, buf );
-	}
-
-	nDumped = 0;
-	curpos = 0;
-
-	for ( int i = m_vecPlayerCmdInfo.Tail(); i != m_vecPlayerCmdInfo.InvalidIndex() ; i = m_vecPlayerCmdInfo.Previous( i ) )
-	{
-		const CPlayerCmdInfo *pi = &m_vecPlayerCmdInfo[ i ];
-
-		char line[ 128 ];
-		int len = Q_snprintf( line, sizeof( line ), "%.3f %d %d\n",
-			pi->m_flTime,
-			pi->m_nNumCmds,
-			pi->m_nDroppedPackets );
-
-		if ( curpos + len > 200 )
-		{
-			ClientPrint( pRecipient, HUD_PRINTCONSOLE, (char const *)buf );
-			buf[ 0 ] = 0;
-			curpos = 0;
-		}
-
-		Q_strncpy( &buf[ curpos ], line, sizeof( buf ) - curpos );
-		curpos += len;
-
-		++nDumped;
-		if ( nMaxRecords != -1 && nDumped >= nMaxRecords )
-			break;
-	}
-
-	if ( curpos > 0 )
-	{
-		ClientPrint( pRecipient, HUD_PRINTCONSOLE, buf );
-	}
 }
 
 //-----------------------------------------------------------------------------

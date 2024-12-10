@@ -38,7 +38,6 @@ public:
 		sidemove = 0.0f;
 		upmove = 0.0f;
 		buttons = 0;
-		impulse = 0;
 		weaponselect = 0;
 		random_seed = 0;
 #ifdef GAME_DLL
@@ -62,7 +61,6 @@ public:
 		sidemove			= src.sidemove;
 		upmove				= src.upmove;
 		buttons				= src.buttons;
-		impulse				= src.impulse;
 		weaponselect		= src.weaponselect;
 		random_seed			= src.random_seed;
 #ifdef GAME_DLL
@@ -92,8 +90,7 @@ public:
 		CRC32_ProcessBuffer( &crc, &forwardmove, sizeof( forwardmove ) );   
 		CRC32_ProcessBuffer( &crc, &sidemove, sizeof( sidemove ) );      
 		CRC32_ProcessBuffer( &crc, &upmove, sizeof( upmove ) );         
-		CRC32_ProcessBuffer( &crc, &buttons, sizeof( buttons ) );		
-		CRC32_ProcessBuffer( &crc, &impulse, sizeof( impulse ) );        
+		CRC32_ProcessBuffer( &crc, &buttons, sizeof( buttons ) );
 		CRC32_ProcessBuffer( &crc, &weaponselect, sizeof( weaponselect ) );	
 		CRC32_ProcessBuffer( &crc, &random_seed, sizeof( random_seed ) );
 		CRC32_ProcessBuffer( &crc, &mousedx, sizeof( mousedx ) );
@@ -111,7 +108,6 @@ public:
 		sidemove = 0.f;
 		upmove = 0.f;
 		buttons = 0;
-		impulse = 0;
 	}
 
 	// For matching server and client commands for debugging

@@ -6,6 +6,7 @@
 
 #ifndef COMBATWEAPON_SHARED_H
 #define COMBATWEAPON_SHARED_H
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -135,6 +136,7 @@ public:
 
 #ifdef CLIENT_DLL
 	virtual void CreateMove(float flInputSampleTime, CUserCmd* pCmd, const QAngle& vecOldViewAngles) {}
+	virtual int	CalcOverrideModelIndex() OVERRIDE;
 #endif
 
 	virtual bool IsActiveWeapon(void);
@@ -326,7 +328,6 @@ public:
 	// Should this object cast shadows?
 	virtual ShadowType_t ShadowCastType(void);
 	virtual void SetDormant(bool bDormant);
-	virtual void OnRestore(void);
 
 	virtual void ViewModelDrawn(CBaseViewModel* pViewModel);
 
@@ -337,6 +338,7 @@ public:
 	// Weapon state checking
 	virtual bool IsCarriedByLocalPlayer(void);
 	virtual bool IsActiveByLocalPlayer(void);
+	virtual bool ShouldDrawUsingViewModel(void);
 
 	virtual bool IsBeingCarried(void) const;
 
@@ -359,6 +361,9 @@ public:
 
 	virtual int GetWorldModelIndex(void);
 	virtual void GetToolRecordingState(KeyValues* msg);
+
+	virtual bool EnsureCorrectRenderingModel();
+	virtual bool ShouldDoAnimEvents();
 
 	// Action Type
 	virtual int ActionType(void) const;
@@ -418,7 +423,6 @@ private:
 	WEAPON_FILE_INFO_HANDLE	m_hWeaponFileInfo;
 
 #ifdef CLIENT_DLL
-	bool m_bJustRestored;
 	int m_iOldState;
 #endif
 };

@@ -4,6 +4,7 @@
 
 #ifndef MAPNAME_UTILS_H
 #define MAPNAME_UTILS_H
+
 #ifdef _WIN32
 #pragma once
 #endif

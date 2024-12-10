@@ -7,7 +7,6 @@
 #undef PROTECTED_THINGS_H
 #include "MusicManager.h"
 #include "musicplayer.h"
-#include "delayload.h"
 
 #include "fmod/fmod.hpp"
 #include "fmod/fmod_errors.h"

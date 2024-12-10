@@ -50,7 +50,6 @@ public:
 	CGameRulesProxy();
 	~CGameRulesProxy();
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps( ) & ~FCAP_ACROSS_TRANSITION; }
 	virtual int UpdateTransmitState( void );
 	static void NotifyNetworkStateChanged( void );
 

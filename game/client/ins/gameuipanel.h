@@ -116,9 +116,7 @@ public:
 
 	void DeleteLoadPanel();
 
-	void WaitingJoinGame( void ) { m_bWaitingJoinGame = true; m_bWaitingShowPanel = true; };
-
-	void MOTDInit( void );
+	void WaitingJoinGame( void ) { m_bWaitingJoinGame = true; m_bWaitingShowPanel = true; }
 	void JoinServer( void );
 
 private:

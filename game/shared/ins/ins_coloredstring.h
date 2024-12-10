@@ -5,7 +5,10 @@
 
 #ifndef INS_COLOREDSTRING_H
 #define INS_COLOREDSTRING_H
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 //=========================================================
 //=========================================================

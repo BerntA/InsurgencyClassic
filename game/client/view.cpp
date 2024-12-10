@@ -468,7 +468,7 @@ void CViewRender::OnRenderStart()
 	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
 	if ( player )
 	{
-		default_fov.SetValue( player->m_iDefaultFOV );
+		default_fov.SetValue(player->m_Local.m_iDefaultFOV);
 
 		//Update our FOV, including any zooms going on
 		int iDefaultFOV = default_fov.GetInt();

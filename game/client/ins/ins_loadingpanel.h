@@ -19,7 +19,6 @@
 #include "insvgui_utils.h"
 #include <string>
 #include <map>
-using namespace std;
 
 //=========================================================
 //=========================================================
@@ -30,8 +29,6 @@ class INSLoadingDialog : public CINSPanel
 public:
 	INSLoadingDialog();
 	~INSLoadingDialog();
-
-	void MOTDInit( void );
 
 	void LoadingUpdate( void );
 	void LoadedUpdate( void );

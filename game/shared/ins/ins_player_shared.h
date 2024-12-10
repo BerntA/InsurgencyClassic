@@ -7,7 +7,10 @@
 //=============================================================================//
 #ifndef INS_PLAYER_SHARED_H
 #define INS_PLAYER_SHARED_H
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include "studio.h"
 #include "ammodef.h"

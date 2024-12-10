@@ -77,7 +77,6 @@ enum Capability_t
 #define bits_CAP_RANGE_ATTACK_GROUP	(bits_CAP_WEAPON_RANGE_ATTACK1 | bits_CAP_WEAPON_RANGE_ATTACK2)
 #define bits_CAP_MELEE_ATTACK_GROUP	(bits_CAP_WEAPON_MELEE_ATTACK1 | bits_CAP_WEAPON_MELEE_ATTACK2)
 
-
 class CBaseCombatWeapon;
 
 #define BCC_DEFAULT_LOOK_TOWARDS_TOLERANCE 0.9f
@@ -91,14 +90,11 @@ enum Disposition_t
 	D_NU		// Neutral
 };
 
-const int DEF_RELATIONSHIP_PRIORITY = INT_MIN;
-
 struct Relationship_t
 {
 	EHANDLE			entity;			// Relationship to a particular entity
 	Class_T			classType;		// Relationship to a class  CLASS_NONE = not class based (Def. in baseentity.h)
 	Disposition_t	disposition;	// D_HT (Hate), D_FR (Fear), D_LI (Like), D_NT (Neutral)
-	int				priority;		// Relative importance of this relationship (higher numbers mean more important)
 };
 
 //-----------------------------------------------------------------------------
@@ -124,7 +120,7 @@ public:
 
 	virtual const impactdamagetable_t	&GetPhysicsImpactDamageTable( void );
 
-	int					TakeHealth( float flHealth, int bitsDamageType );
+	virtual int			TakeHealth( float flHealth, int bitsDamageType );
 
 	virtual	bool		FVisible ( CBaseEntity *pEntity, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL ); // true iff the parameter can be seen by me.
 	virtual bool		FVisible( const Vector &vecTarget, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL )	{ return BaseClass::FVisible( vecTarget, traceMask, ppBlocker ); }
@@ -169,8 +165,6 @@ public:
 	virtual	bool		Weapon_Switch(CBaseCombatWeapon *pWeapon, bool bForce = false);		// Switch to given weapon if has ammo (false if failed)
 	virtual	Vector		Weapon_ShootPosition( );		// gun position at current position/orientation
 	virtual	bool		Weapon_CanSwitchTo(CBaseCombatWeapon *pWeapon);
-	virtual bool		Weapon_SlotOccupied( CBaseCombatWeapon *pWeapon );
-	virtual CBaseCombatWeapon *Weapon_GetSlot( int slot ) const;
 
 	virtual bool			CanBecomeServerRagdoll( void ) { return true; }
 
@@ -185,19 +179,10 @@ public:
 	virtual int				OnTakeDamage_Dying( const CTakeDamageInfo &info );
 	virtual int				OnTakeDamage_Dead( const CTakeDamageInfo &info );
 
-	virtual float			GetAliveDuration( void ) const;			// return time we have been alive (only valid when alive)
-
-	virtual void 			OnFriendDamaged( CBaseCombatCharacter *pSquadmate, CBaseEntity *pAttacker ) {}
-	virtual bool			HasEverBeenInjured( int team = TEAM_ANY ) const;			// return true if we have ever been injured by a member of the given team
-	virtual float			GetTimeSinceLastInjury( int team = TEAM_ANY ) const;		// return time since we were hurt by a member of the given team
-
 		// utility function to calc damage force
 	virtual Vector			CalcDamageForceVector( const CTakeDamageInfo &info );
 
 	virtual int				BloodColor();
-
-	float GetDamageAccumulator() { return m_flDamageAccumulator; }
-	int	  GetDamageCount( void ) { return m_iDamageCount; }	// # of times NPC has been damaged.  used for tracking 1-shot kills.
 
 	// Character killed (only fired once)
 	virtual void			Event_Killed( const CTakeDamageInfo &info );
@@ -224,8 +209,8 @@ public:
 	// VPHYSICS
 	virtual void			VPhysicsShadowCollision( int index, gamevcollisionevent_t *pEvent );
 	virtual void			VPhysicsUpdate( IPhysicsObject *pPhysics );
-	float					CalculatePhysicsStressDamage( vphysics_objectstress_t *pStressOut, IPhysicsObject *pPhysics );
-	void					ApplyStressDamage( IPhysicsObject *pPhysics, bool bRequireLargeObject );
+	virtual float			CalculatePhysicsStressDamage( vphysics_objectstress_t *pStressOut, IPhysicsObject *pPhysics );
+	virtual void			ApplyStressDamage( IPhysicsObject *pPhysics, bool bRequireLargeObject );
 
 	virtual void			PushawayTouch( CBaseEntity *pOther ) {}
 
@@ -234,7 +219,6 @@ public:
 	virtual void			UpdateOnRemove( void );
 
 	virtual Disposition_t	IRelationType(CBaseEntity *pTarget, int relation = CLASS_NONE);
-	virtual int				IRelationPriority(CBaseEntity *pTarget, int relation = CLASS_NONE);
 
 	virtual void			SetLightingOriginRelative( CBaseEntity *pLightingOrigin );
 
@@ -269,6 +253,8 @@ protected:
 	CNetworkVar(int, m_nGibFlags);
 	float m_flGibHealth[4];
 
+	int	 m_bitsDamageType;	// what types of damage has player taken
+
 	virtual int AllowEntityToBeGibbed(void) { return GIB_NO_GIBS; } // Override this to enable gibs.
 	virtual bool CanGibEntity(const CTakeDamageInfo &info);
 	virtual void OnGibbedGroup(int hitgroup, bool bExploded) { }
@@ -302,11 +288,12 @@ public:
 
 	// Relationships
 	static void			AllocateDefaultRelationships( );
-	static void			SetDefaultRelationship( Class_T nClass, Class_T nClassTarget,  Disposition_t nDisposition, int nPriority );
+	static void			SetDefaultRelationship( Class_T nClass, Class_T nClassTarget,  Disposition_t nDisposition );
+	static void			InitDefaultAIRelationships(void);
 	Disposition_t		GetDefaultRelationshipDisposition( Class_T nClassTarget );
-	virtual void		AddEntityRelationship( CBaseEntity *pEntity, Disposition_t nDisposition, int nPriority );
+	virtual void		AddEntityRelationship( CBaseEntity *pEntity, Disposition_t nDisposition );
 	virtual bool		RemoveEntityRelationship( CBaseEntity *pEntity );
-	virtual void		AddClassRelationship( Class_T nClass, Disposition_t nDisposition, int nPriority );
+	virtual void		AddClassRelationship( Class_T nClass, Disposition_t nDisposition );
 
 	virtual void		ChangeTeam( int iTeamNum );
 
@@ -351,14 +338,12 @@ protected:
 	string_t	m_RelationshipString;	// Used to load up relationship keyvalues
 	float		m_impactEnergyScale;// scale the amount of energy used to calculate damage this ent takes due to physics
 
+	// attack/damage
+	int					m_LastHitGroup;			// the last body region that took damage
+
 private:
 	
 	static Relationship_t**		m_DefaultRelationship;
-
-	// attack/damage
-	int					m_LastHitGroup;			// the last body region that took damage
-	float				m_flDamageAccumulator;	// so very small amounts of damage do not get lost.
-	int					m_iDamageCount;			// # of times NPC has been damaged.  used for tracking 1-shot kills.
 
 	// ---------------
 	//  Relationships
@@ -369,32 +354,12 @@ public:
 
 	// Usable character items 
 	CNetworkArray( CBaseCombatWeaponHandle, m_hMyWeapons, MAX_PWEAPONS);
-
 	CNetworkHandle( CBaseCombatWeapon, m_hActiveWeapon );
 
 protected:
 
 	friend class CCleanupDefaultRelationShips;
-	
-	IntervalTimer m_aliveTimer;
-
-	unsigned int m_hasBeenInjured;							// bitfield corresponding to team ID that did the injury	
-
-	// we do this because MAX_TEAMS is 32, which is wasteful for most games
-	enum { MAX_DAMAGE_TEAMS = 4 };
-	struct DamageHistory
-	{
-		int team;					// which team hurt us (TEAM_INVALID means slot unused)
-		IntervalTimer interval;		// how long has it been
-	};
-	DamageHistory m_damageHistory[ MAX_DAMAGE_TEAMS ];
 };
-
-
-inline float CBaseCombatCharacter::GetAliveDuration( void ) const
-{
-	return m_aliveTimer.GetElapsedTime();
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -415,8 +380,6 @@ inline CBaseCombatWeapon *CBaseCombatCharacter::GetWeapon( int i ) const
 }
 
 EXTERN_SEND_TABLE(DT_BaseCombatCharacter);
-
-void RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc, float flRadius, int iClassIgnore, CBaseEntity *pEntityIgnore );
 
 //-----------------------------------------------------------------------------
 // Purpose: 

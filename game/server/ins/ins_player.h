@@ -11,7 +11,9 @@
 #ifndef INS_PLAYER_H
 #define INS_PLAYER_H
 
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include "ins_playerlocaldata.h"
 #include "ins_playeranimstate.h"
@@ -754,9 +756,6 @@ private:
 
 	// Other
 	CNetworkVar( bool, m_bWalking );
-
-	Vector m_vecMuzzle;
-	QAngle m_angMuzzle;
 
 	CNetworkVar(bool, m_bIsCustomized);
 	float m_flLastFFAttack;

@@ -432,15 +432,6 @@ void CINSPlayer::UpdateCollisionBounds( void )
 //=========================================================
 void CINSPlayer::PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper )
 {
-	m_vecMuzzle = ucmd->vmuzzle;
-	m_angMuzzle = ucmd->amuzzle;
-
-#ifdef TESTING
-
-	UTIL_DrawDebugMuzzle( m_vecMuzzle, m_angMuzzle );
-
-#endif
-
 	BaseClass::PlayerRunCommand( ucmd, moveHelper );
 }
 
@@ -1458,9 +1449,6 @@ void CINSPlayer::Spawn( void )
 	/*}*/
 
 	ClearPain( );
-
-	m_vecMuzzle = vec3_origin;
-	m_angMuzzle = vec3_angle;
 
 	m_flHeadTurnThreshold = 0.0f;
 

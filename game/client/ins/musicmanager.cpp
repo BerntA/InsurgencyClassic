@@ -135,29 +135,33 @@ CMusicManager *g_pMusicManagerInstance = new CMusicManager( );
 
 //=========================================================
 //=========================================================
-void MusicIngameCallback( ConVar *var, char const *pszOldString )
+void MusicIngameCallback(IConVar* pConVar, char const* pOldString, float flOldValue)
 {
+	ConVar* var = (ConVar*)pConVar;
 	CMusicManager::GetSingleton( ).SetMusicIngame( (MusicIngame_t)var->GetInt( ) );
 }
 
 //=========================================================
 //=========================================================
-void MusicVolumeCallback( ConVar *var, char const *pszOldString )
+void MusicVolumeCallback(IConVar* pConVar, char const* pOldString, float flOldValue)
 {
+	ConVar* var = (ConVar*)pConVar;
 	CMusicManager::GetSingleton( ).SetVolume( var->GetFloat( ) );
 }
 
 //=========================================================
 //=========================================================
-void MusicOuputCallback( ConVar *var, char const *pszOldString )
+void MusicOuputCallback(IConVar* pConVar, char const* pOldString, float flOldValue)
 {
+	ConVar* var = (ConVar*)pConVar;
 	CMusicManager::GetSingleton( ).SetOutput( var->GetFloat( ) );
 }
 
 //=========================================================
 //=========================================================
-void MusicDeviceCallback( ConVar *var, char const *pszOldString )
+void MusicDeviceCallback(IConVar* pConVar, char const* pOldString, float flOldValue)
 {
+	ConVar* var = (ConVar*)pConVar;
 	CMusicManager::GetSingleton( ).SetDevice( var->GetInt( ) );
 }
 

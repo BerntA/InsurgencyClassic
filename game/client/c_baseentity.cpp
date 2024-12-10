@@ -447,7 +447,6 @@ RecvPropInt(RECVINFO(m_fEffects), 0, RecvProxy_EffectFlags),
 RecvPropInt(RECVINFO(m_nRenderMode)),
 RecvPropInt(RECVINFO(m_nRenderFX)),
 RecvPropInt(RECVINFO(m_clrRender)),
-RecvPropInt(RECVINFO(m_iTeamNum)),
 RecvPropInt(RECVINFO(m_CollisionGroup)),
 RecvPropFloat(RECVINFO(m_flElasticity)),
 RecvPropFloat(RECVINFO(m_flShadowCastDistance)),
@@ -498,7 +497,6 @@ DEFINE_PRED_FIELD(m_fFlags, FIELD_INTEGER, FTYPEDESC_INSENDTABLE),
 DEFINE_PRED_FIELD_TOL(m_vecViewOffset, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.25f),
 DEFINE_PRED_FIELD(m_nModelIndex, FIELD_SHORT, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX),
 DEFINE_PRED_FIELD(m_flFriction, FIELD_FLOAT, FTYPEDESC_INSENDTABLE),
-DEFINE_PRED_FIELD(m_iTeamNum, FIELD_INTEGER, FTYPEDESC_INSENDTABLE),
 DEFINE_PRED_FIELD(m_hOwnerEntity, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE),
 
 //	DEFINE_FIELD( m_nSimulationTick, FIELD_INTEGER ),
@@ -3889,7 +3887,7 @@ void C_BaseEntity::operator delete(void *pMem)
 //========================================================================================
 C_Team *C_BaseEntity::GetTeam(void)
 {
-	return GetGlobalTeam(m_iTeamNum);
+	return GetGlobalTeam(GetTeamNumber());
 }
 
 //-----------------------------------------------------------------------------
@@ -3898,7 +3896,7 @@ C_Team *C_BaseEntity::GetTeam(void)
 //-----------------------------------------------------------------------------
 int C_BaseEntity::GetTeamNumber(void) const
 {
-	return m_iTeamNum;
+	return TEAM_UNASSIGNED;
 }
 
 void C_BaseEntity::SetNextClientThink(float nextThinkTime)
@@ -5033,7 +5031,6 @@ void C_BaseEntity::SetOwnerEntity(C_BaseEntity *pOwner)
 //-----------------------------------------------------------------------------
 void C_BaseEntity::ChangeTeam(int iTeamNum)
 {
-	m_iTeamNum = iTeamNum;
 }
 
 //-----------------------------------------------------------------------------

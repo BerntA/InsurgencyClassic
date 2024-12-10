@@ -30,44 +30,6 @@ public:
 	bool			paused;
 };
 
-// Info about last 20 or so updates to the
-class CPlayerCmdInfo
-{
-public:
-	CPlayerCmdInfo() : 
-	  m_flTime( 0.0f ), m_nNumCmds( 0 ), m_nDroppedPackets( 0 )
-	{
-	}
-
-	// realtime of sample
-	float		m_flTime;
-	// # of CUserCmds in this update
-	int			m_nNumCmds;
-	// # of dropped packets on the link
-	int			m_nDroppedPackets;
-};
-
-class CPlayerSimInfo
-{
-public:
-	CPlayerSimInfo() : 
-	  m_flTime( 0.0f ), m_nNumCmds( 0 ), m_nTicksCorrected( 0 ), m_flFinalSimulationTime( 0.0f ), m_flGameSimulationTime( 0.0f ), m_flServerFrameTime( 0.0f ), m_vecAbsOrigin( 0, 0, 0 )
-	{
-	}
-
-	// realtime of sample
-	float		m_flTime;
-	// # of CUserCmds in this update
-	int			m_nNumCmds;
-	// If clock needed correction, # of ticks added/removed
-	int			m_nTicksCorrected; // +ve or -ve
-	// player's m_flSimulationTime at end of frame
-	float		m_flFinalSimulationTime;
-	float		m_flGameSimulationTime;
-	// estimate of server perf
-	float		m_flServerFrameTime;  
-	Vector		m_vecAbsOrigin;
-};
 //-----------------------------------------------------------------------------
 // Forward declarations: 
 //-----------------------------------------------------------------------------
@@ -125,13 +87,6 @@ enum
 	VPHYS_WALK = 0,
 	VPHYS_CROUCH,
 	VPHYS_NOCLIP,
-};
-
-enum PlayerConnectedState
-{
-	PlayerConnected,
-	PlayerDisconnecting,
-	PlayerDisconnected,
 };
 
 extern bool gInitHUD;
@@ -423,7 +378,6 @@ public:
 	bool					IsPlayerUnderwater( void ) { return m_bPlayerUnderwater; }
 
 	virtual void			PlayerUse( void );
-	virtual void			PlayUseDenySound() {}
 
 	virtual CBaseEntity		*FindUseEntity( void );
 	virtual bool			IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps );
@@ -468,7 +422,8 @@ public:
 	virtual bool			IsStanding(void) const { return false; }
 
 	virtual void			ChangeTeam(int iTeamID) {}
-	virtual int				GetTeamID(void) const { return GetTeamNumber(); }
+	virtual int				GetTeamID(void) const { return 0; }
+	virtual int				GetTeamNumber(void) const { return GetTeamID(); }
 
 	virtual void			CheckChatText(char* p, int bufsize);
 
@@ -499,8 +454,7 @@ public:
 
 	// Accessor methods
 	virtual int	GetStat(int iType) const { return 0; }
-	bool	IsConnected() const		{ return m_iConnected != PlayerDisconnected; }
-	bool	IsDisconnecting() const	{ return m_iConnected == PlayerDisconnecting; }
+	bool	IsConnected() const { return m_bConnected; }
 	bool	HUDNeedsRestart() const { return m_fInitHUD; }
 	float	MaxSpeed() const		{ return m_flMaxspeed; }
 	bool	IsPlayerLockedInPlace() const { return m_iPlayerLocked != 0; }
@@ -510,7 +464,7 @@ public:
 	int		GetObserverMode() const	{ return m_iObserverMode; }
 	CBaseEntity *GetObserverTarget() const	{ return m_hObserverTarget; }
 
-	void	SetConnected( PlayerConnectedState iConnected ) { m_iConnected = iConnected; }
+	void	SetConnected(bool bState) { m_bConnected = bState; }
 	void	SetMaxSpeed( float flMaxSpeed ) { m_flMaxspeed = flMaxSpeed; }
 
 	void	SetUseEntity( CBaseEntity *pUseEntity );
@@ -703,7 +657,6 @@ protected:
 
 	Vector					m_DmgOrigin;
 	float					m_DmgTake;
-	int						m_bitsDamageType;	// what types of damage has player taken
 
 	CNetworkVar( float, m_flDeathTime );		// the time at which the player died  (used in PlayerDeathThink())
 
@@ -752,7 +705,7 @@ private:
 	bool					m_fGameHUDInitialized;
 
 	// Multiplayer handling
-	PlayerConnectedState	m_iConnected;
+	bool					m_bConnected;		// True if the player's connected
 
 	float					m_AirFinished;
 	float					m_PainFinished;
@@ -868,8 +821,6 @@ public:
 	inline bool IsAutoKickDisabled(void) const;
 	inline void DisableAutoKick(bool disabled);
 
-	void	DumpPerfToRecipient(CBasePlayer* pRecipient, int nMaxRecords);
-
 	void	SetDoorTransition(int index) { m_iDoorTransitionIndex = index; }
 	int		GetDoorTransition(void) { return m_iDoorTransitionIndex; }
 
@@ -887,9 +838,6 @@ private:
 	};
 	// One for left and one for right side of step
 	StepSoundCache_t		m_StepSoundCache[ 2 ];
-
-	CUtlLinkedList< CPlayerSimInfo >  m_vecPlayerSimInfo;
-	CUtlLinkedList< CPlayerCmdInfo >  m_vecPlayerCmdInfo;
 
 	// Store the last time we successfully processed a usercommand
 	float			m_flLastUserCommandTime;

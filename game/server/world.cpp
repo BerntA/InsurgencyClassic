@@ -599,6 +599,11 @@ void CWorld::Precache( void )
 	// =================================================
 	CreateAIActivityList();
 
+	// =================================================
+	//	Initialize NPC Relationships
+	// =================================================
+	CBaseCombatCharacter::InitDefaultAIRelationships();
+
 	// Call all registered precachers.
 	CPrecacheRegister::Precache();
 }

@@ -1437,13 +1437,12 @@ void C_BasePlayer::CalcInEyeCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	// todo INS -- ADD DUCK, PRONE, ETC
 
 	C_BaseAnimating* pTargetAnimating = target->GetBaseAnimating();
-	C_HL2MP_Player* pClient = ToHL2MPPlayer(target);
 
-	if (pClient && pClient->IsSliding())
+	if (IsProned())
 	{
-		eyeOrigin += VEC_SLIDE_VIEW_SCALED(pClient);
+		eyeOrigin += pTargetAnimating ? VEC_PRONE_VIEW_SCALED(pTargetAnimating) : VEC_PRONE_VIEW;
 	}
-	else if (target->GetFlags() & FL_DUCKING)
+	else if (IsCrouched())
 	{
 		eyeOrigin += pTargetAnimating ? VEC_DUCK_VIEW_SCALED(pTargetAnimating) : VEC_DUCK_VIEW;
 	}
@@ -1843,7 +1842,7 @@ C_BaseViewModel *C_BasePlayer::GetViewModel(bool bObserverOK)
 	{
 		C_BasePlayer *target = ToBasePlayer( GetObserverTarget() );
 		// get the targets viewmodel unless the target is an observer itself
-		if ( target && (target != this) && !target->IsObserver() && target->IsAlive() && (target->GetTeamNumber() >= TEAM_HUMANS) )
+		if (target && (target != this) && !target->IsObserver() && target->IsAlive())
 		{
 			vm = target->GetViewModel();
 		}

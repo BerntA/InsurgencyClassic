@@ -21,6 +21,7 @@
 
 #include "imc_config.h"
 #include "ins_player_shared.h"
+#include "playerstats.h"
 #include "musicManager.h"
 
 #include <keyvalues.h>
@@ -508,13 +509,6 @@ void CGameUIPanel::JoinServer( void )
 {
 	// don't show loading frame
 	//m_pLoadPanel->SetVisible( false );
-
-	// BUGBUG: if the load stuff isn't shown, a player won't be logged on
-	CINSStats *pStats = GetINSStats( );
-	Assert( pStats );
-
-	if( pStats )
-		pStats->SetupPlayer( );
 
 	// tell the server to fade in etc
 	C_INSPlayer::InitalSpawn( );

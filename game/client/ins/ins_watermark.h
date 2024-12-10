@@ -1,5 +1,9 @@
-#ifndef _INS_WATERMARK_H_
-#define _INS_WATERMARK_H_
+#ifndef INS_WATERMARK_H
+#define INS_WATERMARK_H
+
+#ifdef _WIN32
+#pragma once
+#endif
 
 class CINSWatermarkPanel : public vgui::Panel {
     DECLARE_CLASS_SIMPLE( CINSWatermarkPanel, vgui::Panel );
@@ -24,4 +28,4 @@ private:
     wchar_t            *m_szSteamID;
 };
 
-#endif
+#endif // INS_WATERMARK_H

@@ -11,8 +11,6 @@
 #pragma once
 #endif
 
-#define TEAMNUM_NUM_BITS	6
-
 #include "entitylist.h"
 #include "entityoutput.h"
 #include "networkvar.h"
@@ -80,14 +78,9 @@ enum Class_T
 	CLASS_NONE = 0,				
 	CLASS_PLAYER,
 	CLASS_BULLSEYE,
-	CLASS_COMBINE,
 	CLASS_MILITARY,
 	CLASS_MISSILE,
 	CLASS_FLARE,
-	CLASS_EARTH_FAUNA,
-	CLASS_PLAYER_ZOMB,
-	CLASS_PLAYER_INFECTED,
-	CLASS_MILITARY_VEHICLE,
 
 	NUM_AI_CLASSES
 };
@@ -795,8 +788,8 @@ public:
 	virtual bool	IsViewable( void );					// is this something that would be looked at (model, sprite, etc.)?
 
 	// Team Handling
-	CTeam			*GetTeam( void ) const;				// Get the Team this entity is on
-	int				GetTeamNumber( void ) const;		// Get the Team number of the team this entity is on
+	virtual CTeam	*GetTeam( void ) const;				// Get the Team this entity is on
+	virtual int		GetTeamNumber( void ) const;		// Get the Team number of the team this entity is on
 	virtual void	ChangeTeam( int iTeamNum );			// Assign this entity to a team.
 
 	virtual CBasePlayer* GetScorer(void) const { return NULL; }
@@ -1457,9 +1450,6 @@ private:
 
 	CNetworkVar( float, m_flShadowCastDistance );
 	float		m_flDesiredShadowCastDistance;
-
-	// Team handling
-	CNetworkVar( int, m_iTeamNum );				// Team number of this entity's team. 
 
 	// Sets water type + level for physics objects
 	unsigned char	m_nWaterTouch;

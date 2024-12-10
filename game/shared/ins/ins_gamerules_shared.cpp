@@ -16,12 +16,6 @@
 #include "imc_config.h"
 #include "weapon_ins_base.h"
 
-#ifdef GAME_DLL
-
-#include "ins_stats_shared.h"
-
-#endif
-
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -44,14 +38,6 @@ const char *g_pszGRModes[ GRMODE_COUNT ] = {
 	"Running"			// GRMODE_RUNNING
 };
 
-//=========================================================
-//=========================================================
-#define DEFAULT_MOTDMSG "Welcome to our Server"
-
-//=========================================================
-//=========================================================
-ConVar motdmsg( "motdmsg", DEFAULT_MOTDMSG, FCVAR_NOTIFY | FCVAR_REPLICATED, "Defines a MOTD Message" );
-
 ConVar allowspectators( "mp_allowspectators", "1.0", FCVAR_REPLICATED, "Toggles Whether the Server Allows Spectator Mode or Not", true, 0, true, 1 );
 ConVar friendlyfire( "mp_friendlyfire", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Defines Friendly-Fire Status", true, 0, true, 1 );
 ConVar chattime( "mp_chattime", "3", FCVAR_NOTIFY | FCVAR_REPLICATED, "Length of Time (in Seconds) for Players to Commune When the Game is Over", true, 2, true, 10 );
@@ -71,10 +57,10 @@ bool CINSRules::ShouldCollide( int collisionGroup0, int collisionGroup1 )
 	if( collisionGroup0 > collisionGroup1 )
 	{
 		// swap so that lowest is always first
-		swap( collisionGroup0, collisionGroup1 );
+		V_swap( collisionGroup0, collisionGroup1 );
 	}
 
-	if ( ( collisionGroup0 == COLLISION_GROUP_PLAYER || collisionGroup0 == COLLISION_GROUP_PLAYER_MOVEMENT ) &&
+	if ( ( collisionGroup0 == COLLISION_GROUP_PLAYER || collisionGroup0 == COLLISION_GROUP_PLAYER) &&
 		collisionGroup1 == COLLISION_GROUP_WEAPON )
 	{
 		return false;
@@ -362,7 +348,7 @@ void SendProxy_ScriptCheck( const SendProp *pProp, const void *pStruct, const vo
 
 void SendProxy_Stats( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
-	pOut->m_Int = GetINSStats( )->GetType( );
+	pOut->m_Int = 0; // GetINSStats( )->GetType( )
 }
 
 void SendProxy_GameStatus( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
@@ -718,7 +704,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CINSRules, DT_INSRules )
 	SendPropInt( "scriptcheck", 0, SIZEOF_IGNORE, 32, SPROP_UNSIGNED, SendProxy_ScriptCheck ),
 
 	// Using Status
-	SendPropInt( "stats", 0, SIZEOF_IGNORE, 2, SPROP_UNSIGNED, SendProxy_Stats ),
+	//SendPropInt( "stats", 0, SIZEOF_IGNORE, 2, SPROP_UNSIGNED, SendProxy_Stats ),
 
 	// Game Status
 	SendPropInt( "game_status", 0, SIZEOF_IGNORE, 4, SPROP_UNSIGNED, SendProxy_GameStatus ),
@@ -739,7 +725,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CINSRules, DT_INSRules )
 	RecvPropInt( "scriptcheck", 0, SIZEOF_IGNORE, SPROP_UNSIGNED, RecvProxy_ScriptCheck ),
 
 	// Using Stats
-	RecvPropInt( "stats", 0, SIZEOF_IGNORE, SPROP_UNSIGNED, RecvProxy_Stats ),
+	//RecvPropInt( "stats", 0, SIZEOF_IGNORE, SPROP_UNSIGNED, RecvProxy_Stats ),
 
 	// Game Status
 	RecvPropInt( "game_status", 0, SIZEOF_IGNORE, SPROP_UNSIGNED, RecvProxy_GameStatus ),

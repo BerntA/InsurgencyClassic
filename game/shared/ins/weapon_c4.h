@@ -14,6 +14,10 @@
 #ifndef	WEAPON_C4_H
 #define	WEAPON_C4_H
 
+#ifdef _WIN32
+#pragma once
+#endif
+
 #include "weapon_exhaustible_base.h"
 
 #ifdef CLIENT_DLL

@@ -1,9 +1,13 @@
+#ifndef INS_PANEL_H
+#define INS_PANEL_H
+
+#ifdef _WIN32
+#pragma once
+#endif
+
 #include <game/client/iviewport.h>
 #include <vgui_controls/panel.h>
 #include <vgui_controls/Button.h>
-
-#ifndef INS_PANEL_H
-#define INS_PANEL_H
 
 class CINSPanel : public vgui::Panel, public IViewPortPanel
 {
@@ -72,4 +76,4 @@ public:
 
 #define SCALE_CONTROL(panel,name) SetScaledBounds(panel,SZ_##name##_OFFSET_X,SZ_##name##_OFFSET_Y,SZ_##name##_SIZE_X,SZ_##name##_SIZE_Y)
 
-#endif //INS_PANEL_H
+#endif // INS_PANEL_H

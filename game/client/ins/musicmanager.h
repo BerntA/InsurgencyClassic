@@ -1,11 +1,14 @@
 // Insurgency Team (C) 2007
 // First revision
 
+#ifndef MUSIC_MANAGER_H
+#define MUSIC_MANAGER_H
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <vector>
-using namespace std;
-
 #include "stringlookup.h"
 
 enum MusicIngame_t
@@ -62,29 +65,35 @@ enum MusicOuputs_t
 
 class IMusicManager
 {
-	static IMusicManager *s_pSingleton;
+	static IMusicManager* s_pSingleton;
 
 public:
-	IMusicManager( void )
+	IMusicManager(void)
 	{
-		if(s_pSingleton)
+		if (s_pSingleton)
 			return;
 
 		s_pSingleton = this;
 	}
 
-	static IMusicManager &GetSingleton( void )
-	{ return *s_pSingleton; }
+	static IMusicManager& GetSingleton(void)
+	{
+		return *s_pSingleton;
+	}
 
-	static IMusicManager *GetSingletonPtr( void )
-	{ return s_pSingleton; }
+	static IMusicManager* GetSingletonPtr(void)
+	{
+		return s_pSingleton;
+	}
 
 	// Init/Shutdown stuff
-	virtual bool Init( void ) = 0;
-	virtual void Restart( void ) = 0;
-	virtual void Shutdown( void ) = 0;
+	virtual bool Init(void) = 0;
+	virtual void Restart(void) = 0;
+	virtual void Shutdown(void) = 0;
 
 	// Updates just check if it should add a music to song queue when player is in menu
-	virtual void Update( float flFrameTime ) = 0;
+	virtual void Update(float flFrameTime) = 0;
 
 };
+
+#endif // MUSIC_MANAGER_H

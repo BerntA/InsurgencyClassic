@@ -5,6 +5,10 @@
 #ifndef IMC_LOADER_K_H
 #define IMC_LOADER_K_H
 
+#ifdef _WIN32
+#pragma once
+#endif
+
 //=========================================================
 //=========================================================
 DECLARE_STRING_LOOKUP_CONSTANTS( int, theatertypes )

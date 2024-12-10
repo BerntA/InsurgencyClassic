@@ -27,7 +27,6 @@
 #include "physics_impact_damage.h"
 #include "eventqueue.h"
 #include "world.h"
-#include "items.h"
 #include "movevars_shared.h"
 #include "RagdollBoogie.h"
 #include "rumble_shared.h"
@@ -41,8 +40,6 @@
 
 ConVar ai_show_hull_attacks( "ai_show_hull_attacks", "0" );
 ConVar ai_force_serverside_ragdoll( "ai_force_serverside_ragdoll", "0" );
-
-ConVar nb_last_area_update_tolerance( "nb_last_area_update_tolerance", "4.0", FCVAR_CHEAT, "Distance a character needs to travel in order to invalidate cached area" ); // 4.0 tested as sweet spot (for wanderers, at least). More resulted in little benefit, less quickly diminished benefit [7/31/2008 tom]
 
 #ifndef _RETAIL
 ConVar ai_use_visibility_cache( "ai_use_visibility_cache", "1" );
@@ -341,22 +338,11 @@ CBaseCombatCharacter::CBaseCombatCharacter( void )
 	m_HackedGunPos.Init();
 #endif
 
-	// Zero the damage accumulator.
-	m_flDamageAccumulator = 0.0f;
-
 	// Init weapon and Ammo data
 	m_hActiveWeapon			= NULL;
 	
-	// not alive yet
-	m_aliveTimer.Invalidate();
-	m_hasBeenInjured = 0;
 	m_nGibFlags = 0;
 	m_nMaterialOverlayFlags = 0;
-
-	for( int t=0; t<MAX_DAMAGE_TEAMS; ++t )
-	{
-		m_damageHistory[t].team = TEAM_INVALID;
-	}
 
 	for (int i = 0; i < MAX_PWEAPONS; i++)
 	{
@@ -385,17 +371,10 @@ CBaseCombatCharacter::~CBaseCombatCharacter( void )
 void CBaseCombatCharacter::Spawn( void )
 {
 	BaseClass::Spawn();
-
 	SetBlocksLOS( false );
-	m_aliveTimer.Start();
-	m_hasBeenInjured = 0;
 	m_nGibFlags = 0;
 	m_nMaterialOverlayFlags = 0;
-
-	for( int t=0; t<MAX_DAMAGE_TEAMS; ++t )
-	{
-		m_damageHistory[t].team = TEAM_INVALID;
-	}
+	OnSetGibHealth();
 }
 
 //-----------------------------------------------------------------------------
@@ -454,12 +433,7 @@ void CBaseCombatCharacter::UpdateOnRemove( void )
 // UNDONE: Should these operate on a list of weapon/items
 Activity CBaseCombatCharacter::Weapon_TranslateActivity(Activity baseAct)
 {
-	Activity translated = baseAct;
-
-	if (m_hActiveWeapon)
-		translated = m_hActiveWeapon->ActivityOverride(baseAct);
-
-	return translated;
+	return baseAct;
 }
 
 //-----------------------------------------------------------------------------
@@ -472,7 +446,6 @@ Activity CBaseCombatCharacter::NPC_TranslateActivity( Activity baseAct )
 {
 	return baseAct;
 }
-
 
 void CBaseCombatCharacter::Weapon_SetActivity( Activity newActivity, float duration )
 {
@@ -489,7 +462,6 @@ void CBaseCombatCharacter::Weapon_FrameUpdate( void )
 		m_hActiveWeapon->Operator_FrameUpdate( this );
 	}
 }
-
 
 //------------------------------------------------------------------------------
 // Purpose :	expects a length to trace, amount 
@@ -932,74 +904,7 @@ void CBaseCombatCharacter::SetLightingOriginRelative( CBaseEntity *pLightingOrig
 //-----------------------------------------------------------------------------
 void CBaseCombatCharacter::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 {
-	// Add the weapon to my weapon inventory
-	for (int i = 0; i < MAX_PWEAPONS; i++)
-	{
-		if (!m_hMyWeapons[i])
-		{
-			m_hMyWeapons.Set(i, pWeapon);
-			break;
-		}
-	}
-
-	// Weapon is now on my team
-	pWeapon->ChangeTeam( GetTeamNumber() );
-	pWeapon->Equip( this );
-
-	// Players don't automatically holster their current weapon
-	if ( !IsPlayer() )
-	{
-		if ( m_hActiveWeapon )
-		{
-			m_hActiveWeapon->FullHolster();
-			// FIXME: isn't this handeled by the weapon?
-			m_hActiveWeapon->AddEffects( EF_NODRAW );
-		}
-		SetActiveWeapon( pWeapon );
-		m_hActiveWeapon->RemoveEffects( EF_NODRAW );
-	}
-
-	// Pass the lighting origin over to the weapon if we have one
-	pWeapon->SetLightingOriginRelative( GetLightingOriginRelative() );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns whether the weapon passed in would occupy a slot already occupied by the carrier
-// Input  : *pWeapon - weapon to test for
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool CBaseCombatCharacter::Weapon_SlotOccupied( CBaseCombatWeapon *pWeapon )
-{
-	if ( pWeapon == NULL )
-		return false;
-
-	//Check to see if there's a resident weapon already in this slot
-	if ( Weapon_GetSlot( pWeapon->GetSlot() ) == NULL )
-		return false;
-
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns the weapon (if any) in the requested slot
-// Input  : slot - which slot to poll
-//-----------------------------------------------------------------------------
-CBaseCombatWeapon *CBaseCombatCharacter::Weapon_GetSlot( int slot ) const
-{
-	int	targetSlot = slot;
-
-	// Check for that slot being occupied already
-	for ( int i=0; i < MAX_PWEAPONS; i++ )
-	{
-		if ( m_hMyWeapons[i].Get() != NULL )
-		{
-			// If the slots match, it's already occupied
-			if ( m_hMyWeapons[i]->GetSlot() == targetSlot )
-				return m_hMyWeapons[i];
-		}
-	}
-	
-	return NULL;
+	// see ins_player
 }
 
 //-----------------------------------------------------------------------------
@@ -1047,7 +952,6 @@ void CBaseCombatCharacter::RemoveAllWeapons()
 	}
 }
 
-
 // take health
 int CBaseCombatCharacter::TakeHealth (float flHealth, int bitsDamageType)
 {
@@ -1056,7 +960,6 @@ int CBaseCombatCharacter::TakeHealth (float flHealth, int bitsDamageType)
 	
 	return BaseClass::TakeHealth(flHealth, bitsDamageType);
 }
-
 
 /*
 ============
@@ -1072,12 +975,10 @@ When a NPC is poisoned via an arrow etc it takes all the poison damage at once.
 */
 int CBaseCombatCharacter::OnTakeDamage(const CTakeDamageInfo &info)
 {
-	int retVal = 0;
-
 	if (!m_takedamage)
 		return 0;
 
-	m_iDamageCount++;
+	int retVal = 0;
 
 	if (info.GetDamageType() & DMG_SHOCK)
 	{
@@ -1085,36 +986,13 @@ int CBaseCombatCharacter::OnTakeDamage(const CTakeDamageInfo &info)
 		UTIL_Smoke(info.GetDamagePosition(), random->RandomInt(10, 15), 10);
 	}
 
-	// track damage history
-	if (info.GetAttacker())
-	{
-		int attackerTeam = info.GetAttacker()->GetTeamNumber();
-
-		m_hasBeenInjured |= (1 << attackerTeam);
-
-		for (int i = 0; i < MAX_DAMAGE_TEAMS; ++i)
-		{
-			if (m_damageHistory[i].team == attackerTeam)
-			{
-				// restart the injury timer
-				m_damageHistory[i].interval.Start();
-				break;
-			}
-
-			if (m_damageHistory[i].team == TEAM_INVALID)
-			{
-				// team not registered yet
-				m_damageHistory[i].team = attackerTeam;
-				m_damageHistory[i].interval.Start();
-				break;
-			}
-		}
-	}
-
 	switch (m_lifeState)
 	{
+
 	case LIFE_ALIVE:
+	{
 		retVal = OnTakeDamage_Alive(info);
+
 		if (retVal)
 		{
 			CanGibEntity(info);
@@ -1122,7 +1000,7 @@ int CBaseCombatCharacter::OnTakeDamage(const CTakeDamageInfo &info)
 
 		if (m_iHealth <= 0)
 		{
-			IPhysicsObject *pPhysics = VPhysicsGetObject();
+			IPhysicsObject* pPhysics = VPhysicsGetObject();
 			if (pPhysics)
 			{
 				pPhysics->EnableCollisions(false);
@@ -1131,21 +1009,25 @@ int CBaseCombatCharacter::OnTakeDamage(const CTakeDamageInfo &info)
 			Event_Killed(info);
 			Event_Dying(info);
 		}
+
 		return retVal;
-		break;
+	}
 
 	case LIFE_DYING:
 		return OnTakeDamage_Dying(info);
 
 	default:
 	case LIFE_DEAD:
-		retVal = OnTakeDamage_Dead(info);
-		return retVal;
+		return OnTakeDamage_Dead(info);
+
 	}
 }
 
 int CBaseCombatCharacter::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 {
+	// set damage type sustained
+	m_bitsDamageType |= info.GetDamageType();
+
 	// grab the vector of the incoming attack. ( pretend that the inflictor is a little lower than it really is, so the body will tend to fly upward a bit).
 	Vector vecDir = vec3_origin;
 	if (info.GetInflictor())
@@ -1154,31 +1036,6 @@ int CBaseCombatCharacter::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 		VectorNormalize(vecDir);
 	}
 	g_vecAttackDir = vecDir;
-
-	//!!!LATER - make armor consideration here!
-	// do the damage
-	if (m_takedamage != DAMAGE_EVENTS_ONLY)
-	{
-		// Separate the fractional amount of damage from the whole
-		float flFractionalDamage = info.GetDamage() - floor(info.GetDamage());
-		float flIntegerDamage = info.GetDamage() - flFractionalDamage;
-
-		// Add fractional damage to the accumulator
-		m_flDamageAccumulator += flFractionalDamage;
-
-		// If the accumulator is holding a full point of damage, move that point
-		// of damage into the damage we're about to inflict.
-		if (m_flDamageAccumulator >= 1.0)
-		{
-			flIntegerDamage += 1.0;
-			m_flDamageAccumulator -= 1.0;
-		}
-
-		if (flIntegerDamage <= 0)
-			return 0;
-
-		m_iHealth -= flIntegerDamage;
-	}
 
 	return 1;
 }
@@ -1230,7 +1087,6 @@ Vector CBaseCombatCharacter::BodyDirection2D( void )
 	return vBodyDir;
 }
 
-
 Vector CBaseCombatCharacter::BodyDirection3D( void )
 {
 	QAngle angles = BodyAngles();
@@ -1240,7 +1096,6 @@ Vector CBaseCombatCharacter::BodyDirection3D( void )
 	AngleVectors( angles, &vBodyDir );
 	return vBodyDir;
 }
-
 
 void CBaseCombatCharacter::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 {
@@ -1273,14 +1128,12 @@ void CBaseCombatCharacter::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways 
 	}
 }
 
-
-
 //-----------------------------------------------------------------------------
 // Purpose: Add or Change a class relationship for this entity
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::AddClassRelationship ( Class_T class_type, Disposition_t disposition, int priority )
+void CBaseCombatCharacter::AddClassRelationship ( Class_T class_type, Disposition_t disposition )
 {
 	// First check to see if a relationship has already been declared for this class
 	// If so, update it with the new relationship
@@ -1289,8 +1142,6 @@ void CBaseCombatCharacter::AddClassRelationship ( Class_T class_type, Dispositio
 		if (m_Relationship[i].classType == class_type) 
 		{
 			m_Relationship[i].disposition = disposition;
-			if ( priority != DEF_RELATIONSHIP_PRIORITY )
-				m_Relationship[i].priority	  = priority;
 			return;
 		}
 	}
@@ -1300,7 +1151,6 @@ void CBaseCombatCharacter::AddClassRelationship ( Class_T class_type, Dispositio
 	m_Relationship[index].classType		= class_type;
 	m_Relationship[index].entity		= NULL;
 	m_Relationship[index].disposition	= disposition;
-	m_Relationship[index].priority		= ( priority != DEF_RELATIONSHIP_PRIORITY ) ? priority : 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -1308,7 +1158,7 @@ void CBaseCombatCharacter::AddClassRelationship ( Class_T class_type, Dispositio
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::AddEntityRelationship ( CBaseEntity* pEntity, Disposition_t disposition, int priority )
+void CBaseCombatCharacter::AddEntityRelationship ( CBaseEntity* pEntity, Disposition_t disposition )
 {
 	// First check to see if a relationship has already been declared for this entity
 	// If so, update it with the new relationship
@@ -1317,8 +1167,6 @@ void CBaseCombatCharacter::AddEntityRelationship ( CBaseEntity* pEntity, Disposi
 		if (m_Relationship[i].entity == pEntity) 
 		{
 			m_Relationship[i].disposition	= disposition;
-			if ( priority != DEF_RELATIONSHIP_PRIORITY )
-				m_Relationship[i].priority	= priority;
 			return;
 		}
 	}
@@ -1328,7 +1176,6 @@ void CBaseCombatCharacter::AddEntityRelationship ( CBaseEntity* pEntity, Disposi
 	m_Relationship[index].classType		= CLASS_NONE;
 	m_Relationship[index].entity		= pEntity;
 	m_Relationship[index].disposition	= disposition;
-	m_Relationship[index].priority		= ( priority != DEF_RELATIONSHIP_PRIORITY ) ? priority : 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -1363,25 +1210,20 @@ void CBaseCombatCharacter::AllocateDefaultRelationships( )
 
 		for (int i=0; i<NUM_AI_CLASSES; ++i)
 		{
-			// Be default all relationships are neutral of priority zero
 			m_DefaultRelationship[i] = new Relationship_t[NUM_AI_CLASSES];
 		}
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Return an interaction ID (so we have no collisions)
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::SetDefaultRelationship(Class_T nClass, Class_T nClassTarget, Disposition_t nDisposition, int nPriority)
+void CBaseCombatCharacter::SetDefaultRelationship(Class_T nClass, Class_T nClassTarget, Disposition_t nDisposition)
 {
-	if (m_DefaultRelationship)
-	{
-		m_DefaultRelationship[nClass][nClassTarget].disposition	= nDisposition;
-		m_DefaultRelationship[nClass][nClassTarget].priority	= nPriority;
-	}
+	if (m_DefaultRelationship)	
+		m_DefaultRelationship[nClass][nClassTarget].disposition	= nDisposition;	
 }
 
 //-----------------------------------------------------------------------------
@@ -1392,10 +1234,8 @@ void CBaseCombatCharacter::SetDefaultRelationship(Class_T nClass, Class_T nClass
 Disposition_t CBaseCombatCharacter::GetDefaultRelationshipDisposition( Class_T nClassTarget )
 {
 	Assert( m_DefaultRelationship != NULL );
-
 	return m_DefaultRelationship[Classify()][nClassTarget].disposition;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: describes the relationship between two types of NPC.
@@ -1444,18 +1284,6 @@ Disposition_t CBaseCombatCharacter::IRelationType(CBaseEntity *pTarget, int rela
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: describes the relationship between two types of NPC.
-// Input  :
-// Output :
-//-----------------------------------------------------------------------------
-int CBaseCombatCharacter::IRelationPriority(CBaseEntity *pTarget, int relation)
-{
-	if (pTarget || (relation != CLASS_NONE))
-		return FindEntityRelationship(pTarget, relation)->priority;
-	return 0;
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Get shoot position of BCC at current position/orientation
 // Input  :
 // Output :
@@ -1475,6 +1303,7 @@ Vector CBaseCombatCharacter::Weapon_ShootPosition( )
 }
 
 ConVar	phys_stressbodyweights( "phys_stressbodyweights", "5.0" );
+
 void CBaseCombatCharacter::VPhysicsUpdate( IPhysicsObject *pPhysics )
 {
 	ApplyStressDamage( pPhysics, false );
@@ -1563,7 +1392,6 @@ void CBaseCombatCharacter::VPhysicsShadowCollision( int index, gamevcollisioneve
 	float damage = 0;
 
 	damage = CalculatePhysicsImpactDamage( index, pEvent, GetPhysicsImpactDamageTable(), m_impactEnergyScale, false, damageType );
-	
 	if ( damage <= 0 )
 		return;
 	
@@ -1587,33 +1415,6 @@ void CBaseCombatCharacter::VPhysicsShadowCollision( int index, gamevcollisioneve
 	PhysCallbackDamage( this, dmgInfo, *pEvent, index );
 }
 
-
-//-----------------------------------------------------------------------------
-// Purpose: this entity is exploding, or otherwise needs to inflict damage upon 
-//			entities within a certain range.  only damage ents that can clearly 
-//			be seen by the explosion!
-// Input  :
-// Output :
-//-----------------------------------------------------------------------------	
-void RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc, float flRadius, int iClassIgnore, CBaseEntity *pEntityIgnore )
-{
-	// NOTE: I did this this way so I wouldn't have to change a whole bunch of
-	// code unnecessarily. We need TF2 specific rules for RadiusDamage, so I moved
-	// the implementation of radius damage into gamerules. All existing code calls
-	// this method, which calls the game rules method
-	g_pGameRules->RadiusDamage( info, vecSrc, flRadius, iClassIgnore, pEntityIgnore );
-
-	// Let the world know if this was an explosion.
-	if( info.GetDamageType() & DMG_BLAST )
-	{
-		// Even the tiniest explosion gets attention. Don't let the radius
-		// be less than 128 units.
-		float soundRadius = MAX( 128.0f, flRadius * 1.5 );
-
-		CSoundEnt::InsertSound( SOUND_COMBAT | SOUND_CONTEXT_EXPLOSION, vecSrc, soundRadius, 0.25, info.GetInflictor() );
-	}
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Change active weapon and notify derived classes
 //			
@@ -1635,7 +1436,7 @@ void CBaseCombatCharacter::SetActiveWeapon( CBaseCombatWeapon *pNewWeapon )
 //-----------------------------------------------------------------------------
 Vector CBaseCombatCharacter::GetAttackSpread( CBaseCombatWeapon *pWeapon, CBaseEntity *pTarget )
 {
-	return (pWeapon ? pWeapon->GetBulletSpread() : VECTOR_CONE_5DEGREES);
+	return VECTOR_CONE_5DEGREES;
 }
 
 //-----------------------------------------------------------------------------
@@ -1718,61 +1519,82 @@ void CBaseCombatCharacter::ChangeTeam( int iTeamNum )
 	BaseClass::ChangeTeam( iTeamNum );
 }
 
-//-----------------------------------------------------------------------------
-// Return true if we have ever been injured by a member of the given team
-//-----------------------------------------------------------------------------
-bool CBaseCombatCharacter::HasEverBeenInjured( int team /*= TEAM_ANY */ ) const
+void CBaseCombatCharacter::InitDefaultAIRelationships(void)
 {
-	if ( team == TEAM_ANY )
+	int i, j;
+
+	//  Allocate memory for default relationships
+	AllocateDefaultRelationships();
+
+	// --------------------------------------------------------------
+	// First initialize table so we can report missing relationships
+	// --------------------------------------------------------------
+	for (i = 0; i < NUM_AI_CLASSES; i++)
 	{
-		return ( m_hasBeenInjured == 0 ) ? false : true;
-	}
-
-	int teamMask = 1 << team;
-
-	if ( m_hasBeenInjured & teamMask )
-	{
-		return true;
-	}
-
-	return false;
-}
-
-//-----------------------------------------------------------------------------
-// Return time since we were hurt by a member of the given team
-//-----------------------------------------------------------------------------
-float CBaseCombatCharacter::GetTimeSinceLastInjury( int team /*= TEAM_ANY */ ) const
-{
-	const float never = 999999999999.9f;
-
-	if ( team == TEAM_ANY )
-	{
-		float time = never;
-
-		// find most recent injury time
-		for( int i=0; i<MAX_DAMAGE_TEAMS; ++i )
+		for (j = 0; j < NUM_AI_CLASSES; j++)
 		{
-			if ( m_damageHistory[i].team != TEAM_INVALID )
-			{
-				if ( m_damageHistory[i].interval.GetElapsedTime() < time )
-				{
-					time = m_damageHistory[i].interval.GetElapsedTime();
-				}
-			}
-		}
-
-		return time;
-	}
-	else
-	{
-		for( int i=0; i<MAX_DAMAGE_TEAMS; ++i )
-		{
-			if ( m_damageHistory[i].team == team )
-			{
-				return m_damageHistory[i].interval.GetElapsedTime();
-			}
+			// By default all relationships are neutral
+			SetDefaultRelationship((Class_T)i, (Class_T)j, D_NU);
 		}
 	}
 
-	return never;
+	// ------------------------------------------------------------
+	//	> CLASS_NONE
+	// ------------------------------------------------------------
+	SetDefaultRelationship(CLASS_NONE, CLASS_NONE, D_NU);
+	SetDefaultRelationship(CLASS_NONE, CLASS_PLAYER, D_NU);
+	SetDefaultRelationship(CLASS_NONE, CLASS_BULLSEYE, D_NU);
+	SetDefaultRelationship(CLASS_NONE, CLASS_FLARE, D_NU);
+	SetDefaultRelationship(CLASS_NONE, CLASS_MILITARY, D_NU);
+	SetDefaultRelationship(CLASS_NONE, CLASS_MISSILE, D_NU);
+
+	// ------------------------------------------------------------
+	//	> CLASS_BULLSEYE
+	// ------------------------------------------------------------
+	SetDefaultRelationship(CLASS_BULLSEYE, CLASS_NONE, D_NU);
+	SetDefaultRelationship(CLASS_BULLSEYE, CLASS_PLAYER, D_NU);
+	SetDefaultRelationship(CLASS_BULLSEYE, CLASS_BULLSEYE, D_NU);
+	SetDefaultRelationship(CLASS_BULLSEYE, CLASS_FLARE, D_NU);
+	SetDefaultRelationship(CLASS_BULLSEYE, CLASS_MILITARY, D_NU);
+	SetDefaultRelationship(CLASS_BULLSEYE, CLASS_MISSILE, D_NU);
+
+	// ------------------------------------------------------------
+	//	> CLASS_FLARE
+	// ------------------------------------------------------------
+	SetDefaultRelationship(CLASS_FLARE, CLASS_NONE, D_NU);
+	SetDefaultRelationship(CLASS_FLARE, CLASS_PLAYER, D_NU);
+	SetDefaultRelationship(CLASS_FLARE, CLASS_BULLSEYE, D_NU);
+	SetDefaultRelationship(CLASS_FLARE, CLASS_FLARE, D_NU);
+	SetDefaultRelationship(CLASS_FLARE, CLASS_MILITARY, D_NU);
+	SetDefaultRelationship(CLASS_FLARE, CLASS_MISSILE, D_NU);
+
+	// ------------------------------------------------------------
+	//	> CLASS_MILITARY
+	// ------------------------------------------------------------
+	SetDefaultRelationship(CLASS_MILITARY, CLASS_NONE, D_NU);
+	SetDefaultRelationship(CLASS_MILITARY, CLASS_PLAYER, D_HT);
+	SetDefaultRelationship(CLASS_MILITARY, CLASS_BULLSEYE, D_NU);
+	SetDefaultRelationship(CLASS_MILITARY, CLASS_FLARE, D_NU);
+	SetDefaultRelationship(CLASS_MILITARY, CLASS_MILITARY, D_LI);
+	SetDefaultRelationship(CLASS_MILITARY, CLASS_MISSILE, D_NU);
+
+	// ------------------------------------------------------------
+	//	> CLASS_MISSILE
+	// ------------------------------------------------------------
+	SetDefaultRelationship(CLASS_MISSILE, CLASS_NONE, D_NU);
+	SetDefaultRelationship(CLASS_MISSILE, CLASS_PLAYER, D_NU);
+	SetDefaultRelationship(CLASS_MISSILE, CLASS_BULLSEYE, D_NU);
+	SetDefaultRelationship(CLASS_MISSILE, CLASS_FLARE, D_NU);
+	SetDefaultRelationship(CLASS_MISSILE, CLASS_MILITARY, D_NU);
+	SetDefaultRelationship(CLASS_MISSILE, CLASS_MISSILE, D_NU);
+
+	// ------------------------------------------------------------
+	//	> CLASS_PLAYER
+	// ------------------------------------------------------------
+	SetDefaultRelationship(CLASS_PLAYER, CLASS_NONE, D_NU);
+	SetDefaultRelationship(CLASS_PLAYER, CLASS_PLAYER, D_NU);
+	SetDefaultRelationship(CLASS_PLAYER, CLASS_BULLSEYE, D_HT);
+	SetDefaultRelationship(CLASS_PLAYER, CLASS_FLARE, D_NU);
+	SetDefaultRelationship(CLASS_PLAYER, CLASS_MILITARY, D_HT);
+	SetDefaultRelationship(CLASS_PLAYER, CLASS_MISSILE, D_NU);
 }

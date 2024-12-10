@@ -203,7 +203,6 @@ extern ConVar limitteams;
 extern ConVar locksquads;
 extern ConVar chattime;
 extern ConVar firetype;
-extern ConVar motdmsg;
 extern ConVar ventrequired;
 extern ConVar decalfrequency;
 

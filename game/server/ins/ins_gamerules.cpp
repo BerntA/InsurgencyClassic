@@ -15,7 +15,6 @@
 #include "play_team_shared.h"
 #include "ins_obj.h"
 #include "ins_objmarker.h"
-#include "ins_stats_shared.h"
 #include "ins_squad_shared.h"
 #include "basic_colors.h"
 #include "script_check_shared.h"
@@ -24,7 +23,6 @@
 #include "ins_player.h"
 #include "ins_weaponcache.h"
 #include "voicemgr.h"
-#include "nav_mesh.h"
 #include "ins_imcsync.h"
 #include "ins_utils.h"
 #include "game.h"
@@ -32,9 +30,8 @@
 #include "ins_area.h"
 #include "movevars_shared.h"
 #include "grenadedef.h"
-#include "steamidcheck.h"
-#include "ins_gameinterface.h"
 #include "eventqueue.h"
+#include "gameinterface.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -42,12 +39,7 @@
 //=========================================================
 //=========================================================
 #define INVALID_VIEWPOINT -1
-
 #define VIEWPOINT_ROTATE 3.5f
-
-//=========================================================
-//=========================================================
-extern void Bot_Initialize( );
 
 //=========================================================
 //=========================================================
@@ -166,7 +158,7 @@ extern ConVar alltalk;
 class CVoiceGameMgrHelper : public IVoiceGameMgrHelper
 {
 public:
-	bool CanPlayerHearPlayer( CBasePlayer *pListener, CBasePlayer *pTalker )
+	bool CanPlayerHearPlayer(CBasePlayer* pListener, CBasePlayer* pTalker, bool& bProximity) OVERRIDE
 	{
 		CINSPlayer *pINSListener = ToINSPlayer( pListener );
 		CINSPlayer *pINSTalker = ToINSPlayer( pTalker );
@@ -302,7 +294,6 @@ CBaseEntity* CINSMapEntityFilter::CreateNextEntity( const char *pszClassname )
 
 //=========================================================
 //=========================================================
-ConVar motdpath( "motdpath", "motd", FCVAR_NOTIFY, "Path for the MOTD" );
 
 ConVar autoteambalance( "mp_autoteambalance", "1", FCVAR_NOTIFY | FCVAR_REPLICATED, "", true, 0, true, 1 );
 ConVar limitteams( "mp_limitteams", "2", FCVAR_NOTIFY | FCVAR_REPLICATED, "Minimum Difference between Team Sizes", true, 0, true, MAX_SQUAD_SLOTS );
@@ -356,7 +347,7 @@ void CINSRules::InitRules( void )
 	m_szServerString[ 0 ] = '\0';
 
 	// find sv_lan
-	sv_lan = ( ConVar* )ConCommandBase::FindCommand( "sv_lan" );
+	sv_lan = cvar->FindVar("sv_lan");
 
 	// init obj system
 	m_bUseObjs = false;
@@ -496,8 +487,8 @@ void CINSRules::LevelInitPreEntity( void )
 {
 	BaseClass::LevelInitPreEntity( );
 
-	// load stats
-	GetINSStats( )->Init( );
+	// load stats -- we dont use statsman stuff
+	//GetINSStats( )->Init( );
 
 	// setup script checking
 	g_ScriptCheckShared.Calculate( );
@@ -537,9 +528,6 @@ void CINSRules::LevelInitPostEntity( void )
 
 	// find fallback spawn
 	m_pFallbackSpawn = gEntList.FindEntityByClassname( NULL, "info_player_start" );
-
-	// init the bots
-	Bot_Initialize( );
 }
 
 //=========================================================
@@ -554,7 +542,7 @@ void CINSRules::LevelShutdown( void )
 void CINSRules::LevelShutdownPreEntity( void )
 {
 	// send off stats
-	GetINSStats( )->LogoutPlayers( );
+	//GetINSStats( )->LogoutPlayers( );
 
 	// clear spawn points
 	UTIL_CleanSpawnPoints( );
@@ -1187,7 +1175,7 @@ void CINSRules::ClientDisconnected( edict_t *pClient )
 	CPlayTeam *pOldPlayTeam = pPlayer->GetPlayTeam( );
 
 	// update stats
-	GetINSStats( )->LogoutPlayer( pPlayer );
+	//GetINSStats( )->LogoutPlayer( pPlayer );
 
 	// he's not connected anymore
 	pPlayer->SetConnected( false );
@@ -1204,7 +1192,7 @@ void CINSRules::ClientDisconnected( edict_t *pClient )
 		RunningMode( )->CheckDeathRoundWin( pOldPlayTeam );
 
 	// kill off view model entities
-	pPlayer->DestroyViewModel( );
+	pPlayer->DestroyViewModels( );
 
 	// check we don't have to start waiting
 	HandlePlayerCount( );
@@ -1937,66 +1925,6 @@ bool CINSRules::ChangeLevel( const char *pszMapName, int iProfileID )
 	engine->ChangeLevel( pszMapName, NULL );
 
 	return true;
-}
-
-//=========================================================
-//=========================================================
-extern INetworkStringTable *g_pStringTableInfoPanel;
-
-void CINSRules::LoadMessageOfTheDay( void )
-{
-	// find MOTD
-	const char *pszBasicMOTDPath = motdpath.GetString( );
-
-	if( pszBasicMOTDPath[ 0 ] != '\0' )
-	{
-		char szMOTDPath[ 32 ];
-		Q_snprintf( szMOTDPath, sizeof( szMOTDPath ), "%s.htm", motdpath.GetString( ) );
-
-		const char *pszMOTDMsg = motdmsg.GetString( );
-
-		if( pszMOTDMsg[ 0 ] != '\0' )
-		return;
-
-		char szMOTD[ MOTD_LENGTH ];
-		unsigned int iMOTDLength = filesystem->Size( szMOTDPath, "GAME" );
-
-		if( iMOTDLength < MOTD_LENGTH )
-		{
-			FileHandle_t hFile = filesystem->Open( szMOTDPath, "rb", "GAME" );
-
-			if( hFile == FILESYSTEM_INVALID_HANDLE )
-			{
-				filesystem->Read( szMOTD, iMOTDLength, hFile );
-				filesystem->Close( hFile );
-
-				szMOTD[ iMOTDLength ] = 0;
-			}
-			else
-			{
-				Q_strncpy( szMOTD, szMOTDPath, sizeof( szMOTD ) );
-				iMOTDLength = Q_strlen( szMOTDPath );
-			}
-
-			g_pStringTableInfoPanel->AddString( MOTD_STRING, iMOTDLength + 1, szMOTD );
-		}
-		else
-		{
-			Msg( "ERROR: Invalid FileSize for the MOTD\n" );
-		}
-	}
-
-	// find hostname
-	char szHostname[ INS_HOSTNAME_LENGTH ];
-	const char *pszHostname = cvar->FindVar( "hostname" )->GetString( );
-
-	Q_strncpy( szHostname, pszHostname, sizeof( szHostname ) );
-	int iHostnameLength = Q_strlen( pszHostname ) + 1;
-
-	if( iHostnameLength > INS_HOSTNAME_LENGTH )
-		iHostnameLength = INS_HOSTNAME_LENGTH;
-
-	g_pStringTableInfoPanel->AddString( INS_HOSTNAME_STRING, iHostnameLength, szHostname );
 }
 
 //=========================================================

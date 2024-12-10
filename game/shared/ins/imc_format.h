@@ -5,6 +5,10 @@
 #ifndef IMC_FORMAT_H
 #define IMC_FORMAT_H
 
+#ifdef _WIN32
+#pragma once
+#endif
+
 #include "stringlookup.h"
 #include "color.h"
 

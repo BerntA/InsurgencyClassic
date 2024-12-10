@@ -6,15 +6,14 @@
 
 #ifndef BASE_PLAYERANIMSTATE_H
 #define BASE_PLAYERANIMSTATE_H
+
 #ifdef _WIN32
 #pragma once
 #endif
 
-
 #include "iplayeranimstate.h"
 #include "studio.h"
 #include "sequence_transitioner.h"
-
 
 #ifdef CLIENT_DLL
 	class C_BaseAnimatingOverlay;
@@ -22,7 +21,6 @@
 #else
 	class CBaseAnimatingOverlay;
 #endif
-
 
 // If a guy is moving slower than this, then he's considered to not be moving
 // (so he goes to his idle animation at full playback rate rather than his walk 

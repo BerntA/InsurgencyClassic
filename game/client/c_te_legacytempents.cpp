@@ -36,7 +36,6 @@
 #include "c_props.h"
 #include "c_basedoor.h"
 #include "c_client_gib.h"
-#include "c_hl2mp_player.h"
 #include "GameBase_Shared.h"
 
 // NOTE: Always include this last!

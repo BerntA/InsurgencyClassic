@@ -1331,9 +1331,6 @@ public:
 	// was pev->speed
 	float							m_flSpeed;
 
-	// Team Handling
-	int								m_iTeamNum;
-
 #if !defined( NO_ENTITY_PREDICTION )
 	// Certain entities (projectiles) can be created on the client
 	CPredictableId					m_PredictableID;

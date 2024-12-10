@@ -52,13 +52,6 @@ extern CBaseEntity*	FindPickerEntity( CBasePlayer* pPlayer );
 
 ConVar  *sv_cheats = NULL;
 
-void ClientKill( edict_t *pEdict, const Vector &vecForce, bool bExplode = false )
-{
-	CBasePlayer *pPlayer = static_cast<CBasePlayer*>( GetContainingEntity( pEdict ) );
-	if (pPlayer)
-		pPlayer->CommitSuicide(vecForce, bExplode);
-}
-
 char* CheckChatText(char* text)
 {
 	char *p = text;
@@ -331,6 +324,18 @@ void ClientPrecache(void)
 	CBaseEntity::PrecacheScriptSound("Bounce.Concrete");
 
 	ClientGamePrecache();
+}
+
+CON_COMMAND(toggleflashlight, "Toggle flashlight")
+{
+	CINSPlayer* pPlayer = ToINSPlayer(UTIL_GetCommandClient());
+	if (pPlayer == NULL || pPlayer->IsRunningAround())
+		return;
+
+	if (pPlayer->FlashlightIsOn())
+		pPlayer->FlashlightTurnOff();
+	else
+		pPlayer->FlashlightTurnOn();
 }
 
 CON_COMMAND_F( cast_ray, "Tests collision detection", FCVAR_CHEAT )

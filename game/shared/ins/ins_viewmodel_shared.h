@@ -7,6 +7,7 @@
 
 #ifndef INS_VIEWMODEL_H
 #define INS_VIEWMODEL_H
+
 #ifdef _WIN32
 #pragma once
 #endif

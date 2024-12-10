@@ -70,6 +70,8 @@ CBaseEntity* FindEntity(edict_t* pEdict, char* classname)
 
 void ClientGamePrecache(void)
 {
+	CBaseEntity::PrecacheModel("models/weapons/w_projectile_rpg7.mdl");
+
 	CBaseEntity::PrecacheModel("sprites/white.vmt");
 	CBaseEntity::PrecacheModel("sprites/physbeam.vmt");
 

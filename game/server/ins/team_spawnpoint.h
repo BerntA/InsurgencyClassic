@@ -7,7 +7,10 @@
 
 #ifndef TEAM_SPAWNPOINT_H
 #define TEAM_SPAWNPOINT_H
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include "baseentity.h"
 

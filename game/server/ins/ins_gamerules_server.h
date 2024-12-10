@@ -270,8 +270,6 @@ public:
 	// Misc
 	static bool ChangeLevel( const char *pszMapName, int iProfileID );
 
-	static void LoadMessageOfTheDay( void );
-
 	bool AllowOrderedSquadSelection( void ) const;
 
 	bool ShouldForceDeathFade( void ) const;

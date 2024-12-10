@@ -9,6 +9,10 @@
 #ifndef COMMANDMENU_H
 #define COMMANDMENU_H
 
+#ifdef _WIN32
+#pragma once
+#endif
+
 #include <vgui_controls/Menu.h>
 #include <game/client/iviewport.h>
 #include <filesystem.h>

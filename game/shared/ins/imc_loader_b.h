@@ -5,6 +5,10 @@
 #ifndef IMC_LOADER_B_H
 #define IMC_LOADER_B_H
 
+#ifdef _WIN32
+#pragma once
+#endif
+
 // NOTE: this is code from 2004
 
 //=========================================================

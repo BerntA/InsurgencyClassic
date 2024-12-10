@@ -501,7 +501,7 @@ DECLARE_CLIENT_EFFECT( "bloodspray", BloodSprayCallback );
 //-----------------------------------------------------------------------------
 void BloodImpactCallback( const CEffectData & data )
 {
-	float lastTime = gpGlobals->curtime - m_flLastBloodParticleDispatchTime;
+	float lastTime = (engine->Time() - m_flLastBloodParticleDispatchTime);
 	if (lastTime <= 0.1f)
 		return;
 
@@ -541,7 +541,7 @@ void BloodImpactCallback( const CEffectData & data )
 		FX_BloodBulletImpact(vecPosition, data.m_vNormal, data.m_flScale, color.r, color.g, color.b);
 	}
 
-	m_flLastBloodParticleDispatchTime = gpGlobals->curtime;
+	m_flLastBloodParticleDispatchTime = engine->Time();
 }
 
 DECLARE_CLIENT_EFFECT( "BloodImpact", BloodImpactCallback );

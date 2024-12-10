@@ -257,7 +257,6 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
 	SendPropInt		(SENDINFO(m_nRenderMode),	8, SPROP_UNSIGNED ),
 	SendPropInt		(SENDINFO(m_fEffects),		EF_MAX_BITS, SPROP_UNSIGNED),
 	SendPropInt		(SENDINFO(m_clrRender),	32, SPROP_UNSIGNED),
-	SendPropInt		(SENDINFO(m_iTeamNum),		TEAMNUM_NUM_BITS, 0),
 	SendPropInt		(SENDINFO(m_CollisionGroup), 5, SPROP_UNSIGNED),
 	SendPropFloat	(SENDINFO(m_flElasticity), 0, SPROP_COORD),
 	SendPropFloat	(SENDINFO(m_flShadowCastDistance), 12, SPROP_UNSIGNED ),
@@ -364,7 +363,6 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 	m_flElasticity   = 1.0f;
 	m_flShadowCastDistance = m_flDesiredShadowCastDistance = 0;
 	SetRenderColor( 255, 255, 255, 255 );
-	m_iTeamNum = TEAM_UNASSIGNED;
 	m_nLastThinkTick = gpGlobals->tickcount;
 	m_nSimulationTick = -1;
 	SetIdentityMatrix( m_rgflCoordinateFrame );
@@ -3765,7 +3763,6 @@ void CBaseEntity::InputSetTeam( inputdata_t &inputdata )
 void CBaseEntity::ChangeTeam( int iTeamNum )
 {
 	RemoveGlowEffect();
-	m_iTeamNum = iTeamNum;
 }
 
 //-----------------------------------------------------------------------------
@@ -3773,7 +3770,7 @@ void CBaseEntity::ChangeTeam( int iTeamNum )
 //-----------------------------------------------------------------------------
 CTeam *CBaseEntity::GetTeam( void ) const
 {
-	return GetGlobalTeam( m_iTeamNum );
+	return GetGlobalTeam(GetTeamNumber());
 }
 
 //-----------------------------------------------------------------------------
@@ -3781,7 +3778,7 @@ CTeam *CBaseEntity::GetTeam( void ) const
 //-----------------------------------------------------------------------------
 int CBaseEntity::GetTeamNumber( void ) const
 {
-	return m_iTeamNum;
+	return TEAM_UNASSIGNED;
 }
 
 //-----------------------------------------------------------------------------
