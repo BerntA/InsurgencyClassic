@@ -210,9 +210,6 @@ void CWeaponRifleGrenadeBase::PrimaryAttack( void )
 		else
 			SendWeaponAnim( ACT_VM_SECONDARYATTACK );
 
-		// player "shoot" animation
-		pPlayer->SetAnimation( PLAYER_ATTACK1 );
-
 		// remove grenade
 		m_bGrenadeLoaded = false;
 

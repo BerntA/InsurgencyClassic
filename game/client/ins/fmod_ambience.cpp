@@ -22,6 +22,7 @@ CFMODAmbience::CFMODAmbience()
 	m_pChannel = NULL;
 	m_flVolume = 0.0f;
 	m_pchSoundFile[0] = 0;
+	m_bIsLooped = false;
 }
 
 CFMODAmbience::~CFMODAmbience()
@@ -35,15 +36,21 @@ void CFMODAmbience::Restart(void)
 		PlaySoundInternal();
 }
 
-void CFMODAmbience::PlaySound(const char* pSoundPath)
+void CFMODAmbience::PlaySound(const char* pSoundPath, bool bLooped)
 {
-	Q_strncpy(m_pchSoundFile, FMODManager()->GetFullPathToSound(pSoundPath), sizeof(m_pchSoundFile));
+	m_bIsLooped = bLooped;
+	Q_strncpy(m_pchSoundFile, FMODManager()->GetSoundPath(pSoundPath), sizeof(m_pchSoundFile));
 	PlaySoundInternal();
 }
 
 void CFMODAmbience::PlaySoundInternal(void)
 {
-	FMOD_RESULT result = FMODManager()->GetFMODSystem()->createStream(m_pchSoundFile, FMOD_LOOP_NORMAL | FMOD_2D | FMOD_HARDWARE, 0, &m_pSound);
+	FMOD_RESULT result = FMODManager()->GetFMODSystem()->createStream(
+		m_pchSoundFile,
+		(m_bIsLooped ? (FMOD_LOOP_NORMAL | FMOD_2D | FMOD_HARDWARE) : (FMOD_LOOP_OFF | FMOD_2D | FMOD_HARDWARE)),
+		0,
+		&m_pSound
+	);
 
 	if (result != FMOD_OK)
 	{
@@ -88,7 +95,7 @@ void CFMODAmbience::Think(void)
 	if (bIsMuted != bShouldMute)
 		m_pChannel->setMute(bShouldMute);
 
-	m_pChannel->setVolume(bShouldMute ? 0.0f : (m_flVolume * FMODManager()->GetMasterVolume()));
+	m_pChannel->setVolume(bShouldMute ? 0.0f : (m_flVolume * FMODManager()->GetMusicVolume()));
 }
 
 void CFMODAmbience::Destroy(void)
@@ -103,4 +110,15 @@ void CFMODAmbience::Destroy(void)
 
 	m_pSound = NULL;
 	m_pChannel = NULL;
+}
+
+bool CFMODAmbience::IsPlaying(void)
+{
+	if (m_pSound == NULL || m_pChannel == NULL)
+		return false;
+
+	bool bIsPlaying = false;
+	m_pChannel->isPlaying(&bIsPlaying);
+
+	return bIsPlaying;
 }

@@ -1,519 +1,337 @@
 // Insurgency Team (C) 2007
 // First revision
+// remastered by BerntA
 
-#define PROTECTED_THINGS_H
 #include "cbase.h"
-#include <Windows.h>
-#undef PROTECTED_THINGS_H
-#include "protected_things.h"
-#include "MusicManager.h"
-#include "musicplayer.h"
-
+#include "fmod_ambience.h"
+#include "musicmanager.h"
 #include "convar.h"
-#include "keyvalues.h"
+#include "KeyValues.h"
 #include "filesystem.h"
 #include "clientmode_shared.h"
 #include "c_ins_player.h"
-
 #include "c_team.h"
 #include "c_play_team.h"
-
 #include "ins_gamerules.h"
 #include "play_team_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMusicManager *IMusicManager::s_pSingleton = NULL;
+static CUtlVector<int> g_iMusicRandomizerHelper;
+static CUtlVector<const MusicEntry_t*> g_pMusicQueue;
 
-//=========================================================
-//=========================================================
-DECLARE_STRING_LOOKUP_CONSTANTS( int, MUSIC_MODE );
+DECLARE_STRING_LOOKUP_CONSTANTS(int, MUSIC_MODE);
 
-DEFINE_STRING_LOOKUP_CONSTANTS( int, MUSIC_MODE )
+DEFINE_STRING_LOOKUP_CONSTANTS(int, MUSIC_MODE)
 
-	ADD_LOOKUP(MUSIC_MODE_OFF)
-	ADD_LOOKUP(MUSIC_MODE_MENU)
-	ADD_LOOKUP(MUSIC_MODE_PREPARATION)
-	ADD_LOOKUP(MUSIC_MODE_COMBAT)
-	ADD_LOOKUP(MUSIC_MODE_DEATH)
-	ADD_LOOKUP(MUSIC_MODE_VICTORY)
-	ADD_LOOKUP(MUSIC_MODE_DEFEAT)
+ADD_LOOKUP(MUSIC_MODE_OFF)
+ADD_LOOKUP(MUSIC_MODE_MENU)
+ADD_LOOKUP(MUSIC_MODE_PREPARATION)
+ADD_LOOKUP(MUSIC_MODE_COMBAT)
+ADD_LOOKUP(MUSIC_MODE_DEATH)
+ADD_LOOKUP(MUSIC_MODE_VICTORY)
+ADD_LOOKUP(MUSIC_MODE_DEFEAT)
+ADD_LOOKUP(MUSIC_MODE_MAX)
 
 END_STRING_LOOKUP_CONSTANTS()
 
-
-bool g_bMusicPlayerInitialized;
-
-//=========================================================
-// CMusicManager
-//=========================================================
-DWORD WINAPI MusicPlayerThread( IMusicPlayer *pPlayer )
-{
-	if(!pPlayer)
-		return FALSE;
-
-	g_bMusicPlayerInitialized = pPlayer->Initialized( );
-
-	while( pPlayer->Update( ) )
-	{
-		// lets sleep a bit so the cpu doesnt get owned
-		Sleep( 5 );
-	}
-	
-	return TRUE;
-}
-
-//=========================================================
-// CMusicManager
-//=========================================================
-class CMusicManager : public IMusicManager, public IGameEventListener2, public CAutoGameSystem
+class CMusicManager : public CGameEventListener, public CAutoGameSystem
 {
 public:
-	CMusicManager( void );
-	virtual ~CMusicManager( void );
+	CMusicManager();
+	virtual ~CMusicManager();
 
-	// Init/Shutdown stuff
-	virtual bool Init( void );
-	virtual void Restart( void );
-	virtual void Shutdown( void );
+	virtual bool Init(void) OVERRIDE;
+	virtual void Restart(void);
+	virtual void Shutdown(void) OVERRIDE;
 
-	// Updates just check if it should add a music to song queue when player is in menu
-	virtual void Update( float flFrameTime );
+	virtual void Update(float flFrameTime) OVERRIDE;
 
-	virtual void FireGameEvent( IGameEvent *pEvent );
+	virtual void FireGameEvent(IGameEvent* pEvent) OVERRIDE;
 
-	virtual void LevelShutdownPreEntity( void );
-	virtual void LevelInitPostEntity( void );
+	virtual void LevelInitPostEntity(void) OVERRIDE;
+	virtual void LevelShutdownPreEntity(void) OVERRIDE;
 
-	// Settings
-	void SetVolume( float flVolume );
-	void SetOutput( int iOutput );
-	void SetDevice( int iDevice );
-	void SetMusicIngame( MusicIngame_t iState );
+	void SetMusicIngame(MusicIngame_t iState);
+	void SendMusic(int iMode);
+	void ClearMusicQueue(void);
 
-	static CMusicManager &GetSingleton( )
-	{
-		return *dynamic_cast< CMusicManager * >(GetSingletonPtr( ));
-	}
+protected:
+	bool LoadData(void);
 
 private:
-	IMusicPlayer *m_pPlayer;
-	DWORD		  m_dwPlayerThread;
-
 	MusicIngame_t m_iIngameMusicState;
-
-	void ClearMusicLists( void );
-	virtual bool LoadData( void );
-
+	CFMODAmbience m_fmodSound;
+	CSoundGroup m_soundGroups[MUSIC_GROUP_MAX]; // 0 = usmc, 1 = iraqi, 2 = Menu
 	int m_iCurrentSoundGroup;
-
-	void SendMusic( MusicModes_t iMode ); 
-
-	struct Sound_t
-	{
-		int iSoundType;
-		int iSoundIdx;
-	};
-
-	typedef vector< Sound_t > SoundList;
-
-	struct SoundGroup_t
-	{
-		SoundList sounds[MUSIC_MODE_MAX];
-		char szName[32];
-		int iTeam; // 0 = usmc, 1 = iraqi, 3 = Menu
-
-	};
-
-	SoundGroup_t m_soundGroups[3]; // 0 = usmc, 1 = iraqi, 3 = Menu
 };
 
-//=========================================================
-//=========================================================
-CMusicManager *g_pMusicManagerInstance = new CMusicManager( );
+static CMusicManager s_MusicManager;
 
-//=========================================================
-//=========================================================
-void MusicIngameCallback(IConVar* pConVar, char const* pOldString, float flOldValue)
+CMusicManager::CMusicManager() : CAutoGameSystem("MusicManager")
 {
-	ConVar* var = (ConVar*)pConVar;
-	CMusicManager::GetSingleton( ).SetMusicIngame( (MusicIngame_t)var->GetInt( ) );
-}
-
-//=========================================================
-//=========================================================
-void MusicVolumeCallback(IConVar* pConVar, char const* pOldString, float flOldValue)
-{
-	ConVar* var = (ConVar*)pConVar;
-	CMusicManager::GetSingleton( ).SetVolume( var->GetFloat( ) );
-}
-
-//=========================================================
-//=========================================================
-void MusicOuputCallback(IConVar* pConVar, char const* pOldString, float flOldValue)
-{
-	ConVar* var = (ConVar*)pConVar;
-	CMusicManager::GetSingleton( ).SetOutput( var->GetFloat( ) );
-}
-
-//=========================================================
-//=========================================================
-void MusicDeviceCallback(IConVar* pConVar, char const* pOldString, float flOldValue)
-{
-	ConVar* var = (ConVar*)pConVar;
-	CMusicManager::GetSingleton( ).SetDevice( var->GetInt( ) );
-}
-
-//=========================================================
-// Music Variables
-//=========================================================
-ConVar snd_music_volume( "snd_music_volume", "1", FCVAR_ARCHIVE|FCVAR_CLIENTDLL, "Volume of the ingame music", true, 0.0f, true, 1.0f, MusicVolumeCallback );
-ConVar snd_music_ingame( "snd_music_ingame", "1", FCVAR_ARCHIVE|FCVAR_CLIENTDLL, "Enables the In-Game music\n\n0) No In-Game music\n1) Limited In-Game music (not during playtime)\n2) Full In-Game music", MusicIngameCallback );
-ConVar snd_music_output( "snd_music_output", "6", FCVAR_ARCHIVE|FCVAR_CLIENTDLL, "Selects the music system output\nWill change on restart\n\n0) No output\n1) DirectSound (default)\n2) Windows MultiMedia\n3) Audio stream I/O (you need ASIO drivers)", MusicOuputCallback );
-ConVar snd_music_device( "snd_music_device", "0", FCVAR_ARCHIVE|FCVAR_CLIENTDLL, "Selects the music system driver for the selected output\nWill change on restart\n\nSee snd_music_status for possible values (0 is the default)", MusicDeviceCallback );
-
-//=========================================================
-// Music Command
-//=========================================================
-CON_COMMAND_F( snd_music_restart, "Restarts the music system", FCVAR_CLIENTDLL )
-{
-	IMusicManager::GetSingleton( ).Restart( );
-}
-
-CON_COMMAND_F( snd_music_shutdown, "Stop the music system", FCVAR_CLIENTDLL )
-{
-	CMusicManager::GetSingleton( ).SetMusicIngame( MUSIC_INGAME_OFF );
-}
-
-//=========================================================
-//=========================================================
-CMusicManager::CMusicManager( void )
-{
-	m_pPlayer = CreateMusicPlayer( );
-
-	m_iIngameMusicState  = MUSIC_INGAME_LIMITED;
+	m_iIngameMusicState = MUSIC_INGAME_LIMITED;
 	m_iCurrentSoundGroup = 2;
 }
 
-//=========================================================
-//=========================================================
-CMusicManager::~CMusicManager( void )
+CMusicManager::~CMusicManager()
 {
-	if(m_pPlayer)
-		delete m_pPlayer;
 }
 
-//=========================================================
-//=========================================================
-bool CMusicManager::Init( void )
+bool CMusicManager::Init(void)
 {
-	if(m_pPlayer && !m_pPlayer->Init( ))
+	if (!LoadData())
 		return false;
 
-	if(!LoadData( ))
-		return false;
-
-	gameeventmanager->AddListener( this, "player_spawn", false );
-	gameeventmanager->AddListener( this, "player_death", false );
-	gameeventmanager->AddListener( this, "player_team", false );
-	gameeventmanager->AddListener( this, "round_end", false );
-	gameeventmanager->AddListener( this, "game_newmap", false );
-
-	CloseHandle( g_pVCR->Hook_CreateThread( NULL, 0, MusicPlayerThread, m_pPlayer, 0, &m_dwPlayerThread ) );
+	ListenForGameEvent("player_spawn");
+	ListenForGameEvent("player_death");
+	ListenForGameEvent("player_team");
+	ListenForGameEvent("round_end");
+	ListenForGameEvent("game_newmap");
 
 	return true;
 }
 
-//=========================================================
-//=========================================================
-bool CMusicManager::LoadData( void )
+bool CMusicManager::LoadData(void)
 {
-	if(!m_pPlayer || !m_pPlayer->Initialized( ))
-		return false;
+	bool success = false;
+	KeyValues* pSounds = new KeyValues("Music");
 
-	KeyValues *pSounds = new KeyValues( "Music" );
-
-	if(!pSounds->LoadFromFile( ::filesystem, "music/music.txt" ))
-		return false;
-
-	int i = 0;
-	int iSoundCount = 0;
-	// Sound groups like teams, and songs for menu
-	for( KeyValues *pSoundGroup = pSounds->GetFirstTrueSubKey( ); pSoundGroup; pSoundGroup = pSoundGroup->GetNextKey( ) )
+	if (pSounds->LoadFromFile(filesystem, "scripts/music.txt", "MOD"))
 	{
-		Q_strncpy( m_soundGroups[i].szName, pSoundGroup->GetName( ), 32 );
-		m_soundGroups[i].iTeam = i;
+		int i = 0;
+		int iMode = 0;
 
-		// Sounds types like Death, Victory songs, Menu songs
-		for (KeyValues *pSoundTypes = pSoundGroup->GetFirstTrueSubKey( ); pSoundTypes; pSoundTypes = pSoundTypes->GetNextKey( ))
+		// Sound groups like teams, and songs for menu
+		for (KeyValues* pSoundGroup = pSounds->GetFirstTrueSubKey(); pSoundGroup; pSoundGroup = pSoundGroup->GetNextKey())
 		{
-			int iMode = 0;
-			if (!STRING_LOOKUP( MUSIC_MODE, pSoundTypes->GetName( ), iMode ) 
-				|| iMode <= MUSIC_MODE_OFF
-				|| iMode >= MUSIC_MODE_MAX )
+			Q_strncpy(m_soundGroups[i].szName, pSoundGroup->GetName(), sizeof(m_soundGroups[i].szName));
+			m_soundGroups[i].iTeam = i;
+
+			// Sounds types like Death, Victory songs, Menu songs
+			for (KeyValues* pSoundTypes = pSoundGroup->GetFirstTrueSubKey(); pSoundTypes; pSoundTypes = pSoundTypes->GetNextKey())
 			{
-				Warning( "Music: invalid music mode %s\n", pSoundTypes->GetName( ) );
-				continue;
-			}
-
-			// Now you can have several songs per type, lets read them and load them all
-			for (KeyValues *pSound = pSoundTypes->GetFirstSubKey( ); pSound; pSound = pSound->GetNextKey( ))
-			{
-				Sound_t sound;
-				sound.iSoundType	= iMode;
-				sound.iSoundIdx		= iSoundCount;
-
-				char szFileName[MAX_PATH];
-				Q_snprintf( szFileName, MAX_PATH, "%s/%s", engine->GetGameDirectory( ),  pSound->GetString( ) );
-
-				// If we can load it, add it to the list
-				if(m_pPlayer->LoadSong( szFileName ))
+				if (!STRING_LOOKUP(MUSIC_MODE, pSoundTypes->GetName(), iMode)
+					|| iMode <= MUSIC_MODE_OFF
+					|| iMode >= MUSIC_MODE_MAX)
 				{
-					m_soundGroups[i].sounds[iMode].push_back( sound );
-					iSoundCount++;
+					Warning("Music: invalid music mode %s\n", pSoundTypes->GetName());
+					continue;
+				}
+
+				// Now you can have several songs per type, lets read them and load them all
+				for (KeyValues* pSound = pSoundTypes->GetFirstSubKey(); pSound; pSound = pSound->GetNextKey())
+				{
+					MusicEntry_t sound;
+					sound.type = iMode;
+					Q_strncpy(sound.pchSoundFile, pSound->GetString(), MAX_PATH);
+					m_soundGroups[i].sounds.AddToTail(sound);
 				}
 			}
+			i++;
 		}
-		i++;
+
+		success = true;
 	}
 
-	pSounds->deleteThis( );
-
-	return true;
+	pSounds->deleteThis();
+	return success;
 }
 
-//=========================================================
-//=========================================================
-void CMusicManager::Restart( void )
+void CMusicManager::Restart(void)
 {
-	if(!m_pPlayer)
+	if (m_iIngameMusicState == MUSIC_MODE_OFF) // Ok music is off, lets not load it again
 		return;
 
-	ClearMusicLists( );
-
-	m_pPlayer->Shutdown( );
-
-	if(m_iIngameMusicState == MUSIC_MODE_OFF) // Ok music is off, lets not load it again
-		return;
-
-	if(!m_pPlayer->Init( ))
-		return;
-
-	LoadData( );
-
-	// Recreate the thread if needed
-	CloseHandle( g_pVCR->Hook_CreateThread( NULL, 0, MusicPlayerThread, m_pPlayer, 0, &m_dwPlayerThread ) );
+	m_fmodSound.Restart();
 }
 
-//=========================================================
-//=========================================================
-void CMusicManager::Shutdown( void )
+void CMusicManager::Shutdown(void)
 {
-	gameeventmanager->RemoveListener( this );
-
-	m_pPlayer->Shutdown( );
-
-	ClearMusicLists( );
+	g_iMusicRandomizerHelper.Purge();
+	m_fmodSound.Destroy();
+	ClearMusicQueue();
 }
 
-//=========================================================
-//=========================================================
-void CMusicManager::ClearMusicLists( void )
+void CMusicManager::Update(float flFrameTime)
 {
-	for( int i = 0; i < 3; i++ )
-	{
-		// Clear all sound lists of that group
-		for( int j = 0; j < MUSIC_MODE_MAX; j++ )
-		{
-			m_soundGroups[i].sounds[j].clear( );
-		}
-		
-		// Reset sound group data
-		m_soundGroups[i].iTeam = -1;
-		Q_strncpy( m_soundGroups[i].szName, "", 32 );
-	}
-}
-
-//=========================================================
-//=========================================================
-void CMusicManager::Update( float flFrameTime )
-{
-	if(!m_pPlayer || !m_pPlayer->Initialized( ))
-		return;
-
 	// Music for menu
-	if ( !m_pPlayer->IsPlaying( ) && m_iCurrentSoundGroup == 2 && !engine->IsInGame( ) )
+	if (!m_fmodSound.IsPlaying() && m_iCurrentSoundGroup == 2 && !engine->IsInGame())
 	{
-		m_pPlayer->ClearMusicQueue( );
-
-		SendMusic( MUSIC_MODE_MENU );
+		ClearMusicQueue();
+		SendMusic(MUSIC_MODE_MENU);
 	}
-}
 
-//=========================================================
-//=========================================================
-void CMusicManager::LevelShutdownPreEntity( void )
-{
-	m_pPlayer->ClearMusicQueue( );
+	m_fmodSound.Think();
 
-	m_iCurrentSoundGroup = 2;
-	SendMusic( MUSIC_MODE_MENU );
-}
-
-//=========================================================
-//=========================================================
-void CMusicManager::LevelInitPostEntity( void )
-{
-	m_pPlayer->ClearMusicQueue( );
-
-	m_iCurrentSoundGroup = 2;
-	SendMusic( MUSIC_MODE_PREPARATION );
-}
-
-//=========================================================
-//=========================================================
-void CMusicManager::SetVolume( float flVolume )
-{
-	if(!m_pPlayer || !m_pPlayer->Initialized( ))
+	if ((g_pMusicQueue.Count() == 0) || m_fmodSound.IsPlaying())
 		return;
 
-	// Volume for FMOD is between [0, 255]
-	m_pPlayer->SetVolume( flVolume * 255.0f );
+	const MusicEntry_t* pNextSong = g_pMusicQueue.Head();
+	m_fmodSound.PlaySound(pNextSong->pchSoundFile, false);
+	m_fmodSound.Think();
+	g_pMusicQueue.Remove(0);
 }
 
-//=========================================================
-//=========================================================
-void CMusicManager::SetMusicIngame( MusicIngame_t iState )
+void CMusicManager::LevelShutdownPreEntity(void)
+{
+	ClearMusicQueue();
+	m_iCurrentSoundGroup = 2;
+	SendMusic(MUSIC_MODE_MENU);
+}
+
+void CMusicManager::LevelInitPostEntity(void)
+{
+	ClearMusicQueue();
+	m_iCurrentSoundGroup = 2;
+	SendMusic(MUSIC_MODE_PREPARATION);
+}
+
+void CMusicManager::ClearMusicQueue(void)
+{
+	g_pMusicQueue.RemoveAll();
+}
+
+void CMusicManager::SetMusicIngame(MusicIngame_t iState)
 {
 	m_iIngameMusicState = iState;
 
-	if(m_iIngameMusicState != MUSIC_INGAME_OFF)
-		Restart( );
+	if (m_iIngameMusicState != MUSIC_INGAME_OFF)
+		Restart(); // TODO
 	else
-		m_pPlayer->Shutdown( );
+		m_fmodSound.Destroy();
 }
 
-//=========================================================
-//=========================================================
-void CMusicManager::SetDevice( int iDevice )
+void CMusicManager::SendMusic(int iMode)
 {
-	if(m_pPlayer)
-		m_pPlayer->SetDevice( iDevice );
-}
+	const auto* pMusicItem = m_soundGroups[m_iCurrentSoundGroup].GetRandomSongForMode(iMode);
 
-//=========================================================
-//=========================================================
-void CMusicManager::SetOutput( int iOutput )
-{
-	if(m_pPlayer)
-		m_pPlayer->SetOutput( iOutput );
-}
-
-//=========================================================
-//=========================================================
-void CMusicManager::SendMusic( MusicModes_t iMode )
-{
-	Assert( m_iCurrentSoundGroup >= 0 && m_iCurrentSoundGroup <= 2 );
-
-	if(!m_pPlayer || !m_pPlayer->Initialized( ))
+	if (pMusicItem == NULL)
+	{
+		Warning("Found no valid music for mode %i!\n", iMode);
 		return;
+	}
 
-	SoundList sList = m_soundGroups[m_iCurrentSoundGroup].sounds[iMode];
-	if(!sList.size( ))
-		return;
-
-	int id = RandomInt( 0, sList.size( ) ); // Lets choose a random id
-
-	m_pPlayer->AddMusicToQueue( sList[id == 0 ? 0 : id-1].iSoundIdx );
+	g_pMusicQueue.AddToTail(pMusicItem);
 }
 
-//=========================================================
-//=========================================================
-void CMusicManager::FireGameEvent( IGameEvent *pEvent )
+void CMusicManager::FireGameEvent(IGameEvent* pEvent)
 {
-	const char *pszEventName = pEvent->GetName( );
+	const char* pszEventName = pEvent->GetName();
 
-	C_INSPlayer *pPlayer = C_INSPlayer::GetLocalPlayer( );
-
-	if( !pPlayer )
-		return;
-
-	if(!m_pPlayer || !m_pPlayer->Initialized( ))
+	C_INSPlayer* pPlayer = C_INSPlayer::GetLocalPlayer();
+	if (!pPlayer)
 		return;
 
 	// Constants....
-	const int iTeam		= pEvent->GetInt( "team" );
-	const int iUserID	= pEvent->GetInt( "userid" );
-	const int iNoDeath	= pEvent->GetInt( "nodeath" );
-	const bool bDeath	= pEvent->GetBool( "death" );
-	const int iWinner	= pEvent->GetInt( "winner" );
-	const int iPlayerTeam= pPlayer->GetTeamID( );
+	const int iTeam = pEvent->GetInt("team");
+	const int iUserID = pEvent->GetInt("userid");
+	const int iNoDeath = pEvent->GetInt("nodeath");
+	const bool bDeath = pEvent->GetBool("death");
+	const int iWinner = pEvent->GetInt("winner");
+	const int iPlayerTeam = pPlayer->GetTeamID();
 
 	// Check if it's a player event
-	if( !Q_strncmp( pszEventName, "player_", 7 ) )
+	if (!Q_strncmp(pszEventName, "player_", 7))
 	{
 		// Check this event is for me
-		if( ToINSPlayer( USERID2PLAYER( iUserID ) ) != pPlayer )
+		if (ToINSPlayer(USERID2PLAYER(iUserID)) != pPlayer)
 			return;
 
-		if ( !Q_strcmp( "player_spawn", pszEventName ) && m_iIngameMusicState == MUSIC_INGAME_FULL )
+		if (!Q_strcmp("player_spawn", pszEventName) && m_iIngameMusicState == MUSIC_INGAME_FULL)
 		{
-			if (IsPlayTeam( iTeam ))
+			if (IsPlayTeam(iTeam))
 				if (!bDeath)
 				{
-					m_pPlayer->ClearMusicQueue( );
-					SendMusic( MUSIC_MODE_COMBAT );
+					ClearMusicQueue();
+					SendMusic(MUSIC_MODE_COMBAT);
 				}
-			else
-			{
-				m_pPlayer->ClearMusicQueue( );
-				SendMusic( MUSIC_MODE_PREPARATION );
-			}
+				else
+				{
+					ClearMusicQueue();
+					SendMusic(MUSIC_MODE_PREPARATION);
+				}
 		}
-		else if ( !Q_strcmp( "player_death", pszEventName ) && m_iIngameMusicState == MUSIC_INGAME_FULL )
+		else if (!Q_strcmp("player_death", pszEventName) && m_iIngameMusicState == MUSIC_INGAME_FULL)
 		{
 			if (!iNoDeath)
 			{
-				m_pPlayer->ClearMusicQueue( );
-				SendMusic( MUSIC_MODE_DEATH );
+				ClearMusicQueue();
+				SendMusic(MUSIC_MODE_DEATH);
 			}
 			else
 			{
-				m_pPlayer->ClearMusicQueue( );
-				SendMusic( MUSIC_MODE_PREPARATION );
+				ClearMusicQueue();
+				SendMusic(MUSIC_MODE_PREPARATION);
 			}
 		}
-		else if ( !Q_strcmp( "player_team", pszEventName ) )
+		else if (!Q_strcmp("player_team", pszEventName))
 		{
-			m_pPlayer->ClearMusicQueue( );
+			ClearMusicQueue();
 
-			if (!IsPlayTeam( iTeam ) && m_iIngameMusicState == MUSIC_INGAME_FULL)
-				SendMusic( MUSIC_MODE_PREPARATION );
+			if (!IsPlayTeam(iTeam) && m_iIngameMusicState == MUSIC_INGAME_FULL)
+				SendMusic(MUSIC_MODE_PREPARATION);
 
-			if (IsPlayTeam( iTeam ))
+			if (IsPlayTeam(iTeam))
 			{
-				if(GetGlobalPlayTeam( iTeam )->GetTeamLookupID( ) == TEAM_IRAQI)
+				if (GetGlobalPlayTeam(iTeam)->GetTeamLookupID() == TEAM_IRAQI)
 					m_iCurrentSoundGroup = 1;
-				else if(GetGlobalPlayTeam( iTeam )->GetTeamLookupID( ) == TEAM_USMC)
+				else if (GetGlobalPlayTeam(iTeam)->GetTeamLookupID() == TEAM_USMC)
 					m_iCurrentSoundGroup = 0;
 			}
 			else
 				m_iCurrentSoundGroup = 2;
 		}
 	}
-	else if( !Q_strcmp( pszEventName, "round_end" ) && m_iIngameMusicState == MUSIC_INGAME_FULL )
+	else if (!Q_strcmp(pszEventName, "round_end") && m_iIngameMusicState == MUSIC_INGAME_FULL)
 	{
-		m_pPlayer->ClearMusicQueue( );
+		ClearMusicQueue();
 
-		if (iPlayerTeam == iWinner )
-			SendMusic( MUSIC_MODE_VICTORY );
+		if (iPlayerTeam == iWinner)
+			SendMusic(MUSIC_MODE_VICTORY);
 		else
-			SendMusic( MUSIC_MODE_DEFEAT );
+			SendMusic(MUSIC_MODE_DEFEAT);
 	}
-	else if( !Q_strcmp( pszEventName, "game_newmap" ) && m_iIngameMusicState > MUSIC_INGAME_OFF )
+	else if (!Q_strcmp(pszEventName, "game_newmap") && m_iIngameMusicState > MUSIC_INGAME_OFF)
 	{
-		m_pPlayer->ClearMusicQueue( );
-		SendMusic( MUSIC_MODE_PREPARATION );
+		ClearMusicQueue();
+		SendMusic(MUSIC_MODE_PREPARATION);
 	}
+}
+
+const MusicEntry_t* CSoundGroup::GetRandomSongForMode(int mode) const
+{
+	g_iMusicRandomizerHelper.Purge();
+
+	for (int i = 0; i < sounds.Count(); i++)
+	{
+		if (sounds[i].type == mode)
+			g_iMusicRandomizerHelper.AddToTail(i);
+	}
+
+	if (g_iMusicRandomizerHelper.Count() == 0)
+		return NULL;
+
+	int index = g_iMusicRandomizerHelper[random->RandomInt(0, g_iMusicRandomizerHelper.Count() - 1)];
+
+	return &sounds[index];
+}
+
+void MusicIngameCallback(IConVar* pConVar, char const* pOldString, float flOldValue)
+{
+	ConVar* var = (ConVar*)pConVar;
+	s_MusicManager.SetMusicIngame((MusicIngame_t)var->GetInt());
+}
+
+ConVar snd_music_ingame("snd_music_ingame", "1", FCVAR_ARCHIVE | FCVAR_CLIENTDLL, "Enables the In-Game music\n\n0) No In-Game music\n1) Limited In-Game music (not during playtime)\n2) Full In-Game music", MusicIngameCallback);
+
+CON_COMMAND_F(snd_music_restart, "Restarts the music system", FCVAR_CLIENTDLL)
+{
+	s_MusicManager.Restart();
+}
+
+CON_COMMAND_F(snd_music_shutdown, "Stop the music system", FCVAR_CLIENTDLL)
+{
+	s_MusicManager.SetMusicIngame(MUSIC_INGAME_OFF);
 }

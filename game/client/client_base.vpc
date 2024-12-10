@@ -579,8 +579,6 @@ $Project
 				$File "ins/fmod_ambience.h"
 				$File "ins/musicmanager.cpp"
 				$File "ins/musicmanager.h"
-				$File "ins/musicplayer.cpp"
-				$File "ins/musicplayer.h"				
 			}
 			
 			$Folder "VGUI_Controls"

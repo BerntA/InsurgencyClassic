@@ -27,11 +27,12 @@ public:
 	virtual ~CFMODAmbience();
 
 	void Restart(void);
-	void PlaySound(const char* pSoundPath);
+	void PlaySound(const char* pSoundPath, bool bLooped = true);
 	void StopSound(void);
 	void SetVolume(float volume);
 	void Think(void);
 	void Destroy(void);
+	bool IsPlaying(void);
 
 private:
 	void PlaySoundInternal(void);
@@ -41,6 +42,7 @@ private:
 	FMOD::Channel* m_pChannel;
 	float m_flVolume;
 	char m_pchSoundFile[512];
+	bool m_bIsLooped;
 };
 
 #endif //FMOD_AMBIENCE_H

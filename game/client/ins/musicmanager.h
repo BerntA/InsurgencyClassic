@@ -8,7 +8,6 @@
 #pragma once
 #endif
 
-#include <vector>
 #include "stringlookup.h"
 
 enum MusicIngame_t
@@ -27,73 +26,50 @@ enum MusicModes_t
 	MUSIC_MODE_DEATH,
 	MUSIC_MODE_VICTORY,
 	MUSIC_MODE_DEFEAT,
+
 	MUSIC_MODE_MAX,
 };
 
-enum MusicOuputs_t
+enum
 {
-	MUSIC_OUTPUTTYPE_NOSOUND = 0,
-	MUSIC_OUTPUTTYPE_DSOUND,
-	MUSIC_OUTPUTTYPE_WINMM,
-	MUSIC_OUTPUTTYPE_ASIO,
-	MUSIC_OUTPUTTYPE_MAX,
+	MUSIC_GROUP_USMC = 0,
+	MUSIC_GROUP_IRAQI,
+	MUSIC_GROUP_MENU,
+
+	MUSIC_GROUP_MAX
 };
 
-// returns on error
-#define FMODErrorCheck( eResult ) \
-	if (_FMODErrorCheck( eResult, __LINE__ )) \
-	return
-
-// returns value on error
-#define FMODErrorCheckV( eResult, vReturn ) \
-	if (_FMODErrorCheck( eResult, __LINE__ )) \
-	return vReturn
-
-// Leaves critical section and returns on error
-#define FMODErrorCheckLCS( eResult ) \
-	if (_FMODErrorCheck( eResult, __LINE__ )) \
-{	LeaveCS( ); return; }
-
-// Leaves critical section and returns value on error
-#define FMODErrorCheckVLCS( eResult, vReturn ) \
-	if (_FMODErrorCheck( eResult, __LINE__)) \
-{	LeaveCS( ); return vReturn; }
-
-// only reports errors
-#define FMODErrorCheckN( eResult ) \
-	_FMODErrorCheck( eResult,__LINE__ )
-
-class IMusicManager
+struct MusicEntry_t
 {
-	static IMusicManager* s_pSingleton;
+	int type;
+	char pchSoundFile[MAX_PATH];
+};
 
+class CSoundGroup
+{
 public:
-	IMusicManager(void)
+	CSoundGroup()
 	{
-		if (s_pSingleton)
-			return;
-
-		s_pSingleton = this;
+		szName[0] = 0;
+		iTeam = 0;
+		Clear();
 	}
 
-	static IMusicManager& GetSingleton(void)
+	virtual ~CSoundGroup()
 	{
-		return *s_pSingleton;
+		Clear();
 	}
 
-	static IMusicManager* GetSingletonPtr(void)
+	void Clear()
 	{
-		return s_pSingleton;
+		sounds.Purge();
 	}
 
-	// Init/Shutdown stuff
-	virtual bool Init(void) = 0;
-	virtual void Restart(void) = 0;
-	virtual void Shutdown(void) = 0;
+	const MusicEntry_t* GetRandomSongForMode(int mode) const;
 
-	// Updates just check if it should add a music to song queue when player is in menu
-	virtual void Update(float flFrameTime) = 0;
-
+	char szName[32];
+	int iTeam; // 0 = usmc, 1 = iraqi, 2 = Menu
+	CUtlVector<MusicEntry_t> sounds;
 };
 
 #endif // MUSIC_MANAGER_H

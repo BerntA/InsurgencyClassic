@@ -475,8 +475,6 @@ void CWeaponGrenadeBase::FinishAttack( WeaponSound_t iSoundType )
 
 	WeaponSound( iSoundType );
 
-	pPlayer->SetAnimation( PLAYER_ATTACK1 );
-
 	Redraw( );
 }
 

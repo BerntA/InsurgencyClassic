@@ -17,47 +17,41 @@
 #include "ins_panel.h"
 #include "gameuipanel.h"
 #include "insvgui_utils.h"
-#include <string>
-#include <map>
 
 //=========================================================
 //=========================================================
 class INSLoadingDialog : public CINSPanel
 {
-	DECLARE_CLASS_SIMPLE( INSLoadingDialog, CINSPanel );
+	DECLARE_CLASS_SIMPLE(INSLoadingDialog, CINSPanel);
 
 public:
 	INSLoadingDialog();
 	~INSLoadingDialog();
 
-	void LoadingUpdate( void );
-	void LoadedUpdate( void );
+	void LoadingUpdate(void);
+	void LoadedUpdate(void);
 
-	const CLoadElements &GetModifiedDimensions( void ) const;
+	const CLoadElements& GetModifiedDimensions(void) const;
 
-	void OnCommand( const char *pszCommand );
+	void OnCommand(const char* pszCommand);
 
 	void PerformLayout();
 
-	void ApplySchemeSettings(vgui::IScheme *pScheme);
+	void ApplySchemeSettings(vgui::IScheme* pScheme);
 
 private:
-	void Paint( void );
+	void Paint(void);
 	void PaintBackground();
 
-	void Setup( void );
+	void Setup(void);
 	void SetupContents();
-	void TranslateLoadDimensions( void );
+	void TranslateLoadDimensions(void);
 
 private:
 	CLoadElements m_ModifiedElements;
 
 	float m_flFadeTime;
 	bool m_bFading;
-
-	typedef map< int, string > TipList;
-
-	TipList m_tips;
 
 	vgui::Panel* m_pMapImage;
 	vgui::Label* m_pLoadingStatus;
@@ -72,6 +66,5 @@ private:
 	int m_iMapImage;
 	char m_szMapImage[MAX_PATH];
 };
-
 
 #endif // INS_LOADINGPANEL_H

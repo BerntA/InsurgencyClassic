@@ -219,10 +219,6 @@ void CGameBaseClient::PostInit(void)
 	//	if (MainMenu)
 	//	MainMenu->ActivateMainMenu();
 
-	// FORCE Base Stuff:
-	FMODManager()->SetSoundVolume(1.0f);
-	FMODManager()->TransitionAmbientSound("ui/mainmenu_theme.ogg");
-
 	if (bb2_enable_multicore.GetBool())
 		engine->ClientCmd_Unrestricted("exec multicore.cfg\n");
 	else
