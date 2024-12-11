@@ -1046,10 +1046,6 @@ const char *CServerGameDLL::GetServerBrowserGameData()
 //-----------------------------------------------------------------------------
 void CServerGameDLL::Status( void (*print) (const char *fmt, ...) )
 {
-	if ( g_pGameRules )
-	{
-		g_pGameRules->Status( print );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1080,11 +1076,6 @@ IServerGameDLL::eCanProvideLevelResult CServerGameDLL::CanProvideLevel( /* in/ou
 //-----------------------------------------------------------------------------
 bool CServerGameDLL::IsManualMapChangeOkay( const char **pszReason )
 {
-	if ( GameRules() )
-	{
-		return GameRules()->IsManualMapChangeOkay( pszReason );
-	}
-
 	return true;
 }
 

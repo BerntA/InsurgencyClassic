@@ -6,20 +6,19 @@
 
 #include "cbase.h"
 #include "movevars_shared.h"
+#include "ins_shared_global.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 // some cvars used by player movement system
 
-#define DEFAULT_GRAVITY_STRING	"800"
-
 float GetCurrentGravity(void)
 {
 	return sv_gravity.GetFloat();
 }
 
-ConVar	sv_gravity("sv_gravity", DEFAULT_GRAVITY_STRING, FCVAR_NOTIFY | FCVAR_REPLICATED, "World gravity.");
+ConVar	sv_gravity("sv_gravity", INS_DEFAULT_GRAVITY, FCVAR_NOTIFY | FCVAR_REPLICATED, "World gravity.");
 ConVar	sv_stopspeed("sv_stopspeed", "100", FCVAR_NOTIFY | FCVAR_REPLICATED, "Minimum stopping speed when on ground.");
 ConVar	sv_stopspeed_prone("sv_stopspeed_prone", "45", FCVAR_NOTIFY | FCVAR_REPLICATED, "Minimum stopping speed when on ground and prone.");
 ConVar	sv_noclipaccelerate("sv_noclipaccelerate", "5", FCVAR_NOTIFY | FCVAR_ARCHIVE | FCVAR_REPLICATED);

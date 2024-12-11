@@ -13,6 +13,7 @@
 #endif
 
 #include "ins_shared_global.h"
+#include "basic_colors.h"
 
 #define TICK_INTERVAL			(gpGlobals->interval_per_tick)
 

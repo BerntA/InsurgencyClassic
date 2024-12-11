@@ -314,6 +314,7 @@ public:
 	virtual int	UpdateTransmitState(void);
 
 	virtual void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float flValue);
+	virtual bool ShouldShowControlPanels(void) { return true; }
 
 #else
 
@@ -364,6 +365,13 @@ public:
 
 	virtual bool EnsureCorrectRenderingModel();
 	virtual bool ShouldDoAnimEvents();
+
+	// Viewmodel overriding
+	virtual bool			ViewModel_IsTransparent(void) { return IsTransparent(); }
+	virtual bool			ViewModel_IsUsingFBTexture(void) { return UsesPowerOfTwoFrameBufferTexture(); }
+	virtual bool			IsOverridingViewmodel(void) { return false; };
+	virtual int				DrawOverriddenViewmodel(C_BaseViewModel* pViewmodel, int flags) { return 0; };
+	virtual bool			WantsToOverrideViewmodelAttachments(void) { return false; }
 
 	// Action Type
 	virtual int ActionType(void) const;

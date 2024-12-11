@@ -120,8 +120,7 @@ void CINSViewModel::SetWeaponModel( const char *pszModelname, CBaseCombatWeapon 
 	if( iArmsGroup == -1 )
 		return;
 
-	CBasePlayer *pPlayer = GetOwner( );
-
+	CBasePlayer* pPlayer = ToBasePlayer(GetOwner());
 	if( !pPlayer )
 		return;
 

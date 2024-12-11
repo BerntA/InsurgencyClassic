@@ -3665,24 +3665,10 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 		break;
 
 	case AE_WPN_MELEE_START:
-	{
-		C_BaseCombatWeapon *pLocalWeapon = GetActiveWeapon();
-		if (pLocalWeapon)
-		{
-			int type = atoi(options);
-			if (type)
-				pLocalWeapon->MeleeAttackStart(type);
-		}
-	}
-	break;
+		break;
 
-	case AE_WPN_MELEE_END:
-	{
-		C_BaseCombatWeapon *pLocalWeapon = GetActiveWeapon();
-		if (pLocalWeapon)
-			pLocalWeapon->MeleeAttackEnd();
-	}
-	break;
+	case AE_WPN_MELEE_END:		
+		break;
 
 	case AE_CL_STOPSOUND:
 		{

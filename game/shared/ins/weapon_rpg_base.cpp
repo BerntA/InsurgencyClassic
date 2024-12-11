@@ -14,7 +14,6 @@
 #ifdef CLIENT_DLL
 #include "baseviewmodel_shared.h"
 #include "iinput.h"
-#include "hud_weaponselection.h"
 #include "pain_helper.h"
 #else
 #include "npcevent.h"
