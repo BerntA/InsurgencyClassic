@@ -303,7 +303,6 @@ ConVar tkpunish( "mp_tkpunish", "1", FCVAR_NOTIFY, "Toggles Team-Killing Punishm
 ConVar deadchat( "ins_deadchat", "0", FCVAR_NOTIFY, "Determines whether Dead Players can Chat to Alive Players", true, 0, true, 1 );
 
 ConVar clanmode( "ins_clanmode", "0", FCVAR_NOTIFY, "Defines whether Clan Mode is Active", true, 0, true, 1);
-ConVar clanleaderpass( "ins_clanleaderpass", "0", FCVAR_NEVER_AS_STRING | FCVAR_UNLOGGED, "Defines the Password for Clan Leaders" );
 
 ConVar strictnaming( "ins_strictnaming", "1", FCVAR_REPLICATED, "When Enabled, the Player can only Change his name Once per Round", true, 0, true, 1 );
 ConVar cachesabotage( "ins_cachesabotage", "1", FCVAR_NOTIFY, "When Enabled, Allows a Team to Sabotage their own Caches", true, 0, true, 1 );

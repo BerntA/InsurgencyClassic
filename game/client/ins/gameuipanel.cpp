@@ -401,10 +401,6 @@ void CGameUIPanel::HackButton( Panel *pButton, VPANEL Parent, const char *pszChi
 //=========================================================
 void CGameUIPanel::OnTick( void )
 {
-	// TODO: this needs movin
-	IMusicManager::GetSingleton( ).Update( 0.0f );
-
-
 	// don't do anything when we're not waiting for
 	// a join-game or we are not in-game
 	if( !engine->IsInGame( ) )
@@ -412,7 +408,6 @@ void CGameUIPanel::OnTick( void )
 
 	// handle the state of the ldialog when in-game
 	bool bIsVisible = ipanel( )->IsFullyVisible( GetVPanel( ) );
-
 
 	if( m_bWaitingJoinGame )
 	{

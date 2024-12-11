@@ -27,31 +27,13 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-//=========================================================
-//=========================================================
 #if defined( CINSPlayer )
 #undef CINSPlayer	
 #endif
 
 //=========================================================
 //=========================================================
-#ifdef _DEBUG
 
-#define INS_STATS_USERNAME "Pongles"
-#define INS_STATS_PASSWORD "apple76"
-
-#else
-
-#define INS_STATS_USERNAME ""
-#define INS_STATS_PASSWORD ""
-
-#endif
-
-ConVar cl_stats_username("cl_stats_username", INS_STATS_USERNAME, FCVAR_ARCHIVE, "");
-ConVar cl_stats_password("cl_stats_password", INS_STATS_PASSWORD, FCVAR_ARCHIVE, "");
-
-//=========================================================
-//=========================================================
 #define MAX_LOCAL_DISTANCE 512
 #define MAX_TARGET_DISTANCE 128
 

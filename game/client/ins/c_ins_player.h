@@ -501,11 +501,6 @@ public:
 
 //=========================================================
 //=========================================================
-extern ConVar cl_stats_username;
-extern ConVar cl_stats_password;
-
-//=========================================================
-//=========================================================
 class C_INSRagdoll : public C_BaseAnimatingOverlay
 {
 	DECLARE_CLASS(C_INSRagdoll, C_BaseAnimatingOverlay);

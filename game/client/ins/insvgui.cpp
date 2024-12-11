@@ -214,7 +214,7 @@ bool CINSVGUIHelper::CanShowTeamPanel( void )
 		return false;
 
 	// ensure that we can actually show something
-	if( !IsGameReady( ) || CINSStats::IsBlocked( pLocalPlayer ) )
+	if( !IsGameReady( ) /* || CINSStats::IsBlocked( pLocalPlayer )*/ )
 		return false;
 
 	// ensure the panel isn't being shown already

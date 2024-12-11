@@ -282,7 +282,6 @@ void ClientModeShared::Init()
 	ListenForGameEvent("player_team");
 	ListenForGameEvent("server_cvar");
 	ListenForGameEvent("player_changename");
-	ListenForGameEvent("teamplay_broadcast_audio");
 	ListenForGameEvent("round_start");
 	ListenForGameEvent("changelevel");
 	ListenForGameEvent("game_achievement");
@@ -967,7 +966,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			C_Team *pTeam = GetGlobalTeam(team);
 			if (pTeam)
 			{
-				g_pVGuiLocalize->ConvertANSIToUnicode(pTeam->Get_Name(), wszTeam, sizeof(wszTeam));
+				g_pVGuiLocalize->ConvertANSIToUnicode("N/A", wszTeam, sizeof(wszTeam));
 			}
 			else
 			{
@@ -1018,51 +1017,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 
 		m_pChatElement->Printf("%s", szLocalized);
-	}
-	else if (Q_strcmp( "teamplay_broadcast_audio", eventname ) == 0 )
-	{
-		int team = event->GetInt( "team" );
-
-		bool bValidTeam = false;
-
-		if ( (GetLocalTeam() && GetLocalTeam()->GetTeamNumber() == team) )
-		{
-			bValidTeam = true;
-		}
-
-		//If we're in the spectator team then we should be getting whatever messages the person I'm spectating gets.
-		if ( bValidTeam == false )
-		{
-			CBasePlayer *pSpectatorTarget = UTIL_PlayerByIndex( GetSpectatorTarget() );
-
-			if ( pSpectatorTarget && (GetSpectatorMode() == OBS_MODE_IN_EYE || GetSpectatorMode() == OBS_MODE_CHASE) )
-			{
-				if ( pSpectatorTarget->GetTeamNumber() == team )
-				{
-					bValidTeam = true;
-				}
-			}
-		}
-
-		if ( team == 0 && GetLocalTeam() > 0 )
-		{
-			bValidTeam = false;
-		}
-
-		if ( team == 255 )
-		{
-			bValidTeam = true;
-		}
-
-		if ( bValidTeam == true )
-		{
-			EmitSound_t et;
-			et.m_pSoundName = event->GetString("sound");
-			et.m_nFlags = event->GetInt("additional_flags");
-
-			CLocalPlayerFilter filter;
-			C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, et );
-		}
 	}
 	else if ( Q_strcmp( "server_cvar", eventname ) == 0 )
 	{
