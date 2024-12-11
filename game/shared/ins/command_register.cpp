@@ -65,7 +65,7 @@ void UTIL_UpdateCommandRegisters( void )
 class CRegisteredConVar : public ConVar
 {
 public:
-	CRegisteredConVar( int iID, const char *pszCommand, const char *pszDefaultValue, const char *pszHelp, int iMaxValue, FnChangeCallback Callback );
+	CRegisteredConVar( int iID, const char *pszCommand, const char *pszDefaultValue, const char *pszHelp, int iMaxValue, FnChangeCallback_t Callback );
 };
 
 //=========================================================
@@ -74,7 +74,7 @@ CRegisteredConVar *g_pCommandRegisters[ CMDREGISTER_COUNT ];
 
 //=========================================================
 //=========================================================
-CRegisteredConVar::CRegisteredConVar( int iID, const char *pszCommand, const char *pszDefaultValue, const char *pszHelp, int iMaxValue, FnChangeCallback Callback )
+CRegisteredConVar::CRegisteredConVar( int iID, const char *pszCommand, const char *pszDefaultValue, const char *pszHelp, int iMaxValue, FnChangeCallback_t Callback )
 	: ConVar( pszCommand, pszDefaultValue, FCVAR_ARCHIVE, pszHelp, true, 0, true, iMaxValue, Callback )
 {
 	g_pCommandRegisters[ iID ] = this;
@@ -83,9 +83,10 @@ CRegisteredConVar::CRegisteredConVar( int iID, const char *pszCommand, const cha
 //=========================================================
 //=========================================================
 #define DEFINE_CMDREGISTER( cmd, name, defaultvalue, help, maxvalue ) \
-	void name##__Callback( ConVar *pVar, const char *pszOldString ) { \
+	void name##__Callback( IConVar* pConVar, char const* pOldString, float flOldValue ) { \
 		C_INSPlayer *pPlayer = C_INSPlayer::GetLocalPlayer( ); \
 		if( !pPlayer ) { return; } \
+		ConVar* pVar = (ConVar*)pConVar; \
 		UTIL_SendRegisterUpdate( cmd, pVar->GetInt( ) ); \
 		pPlayer->SetCmdValue( cmd, pVar->GetInt( ) ); \
 	} \

@@ -30,16 +30,17 @@ bool LoadDefinedSquad(const char *pszFileName, int iTeamID, char *pszName, SlotD
 	char szFilePath[256];
 	Q_snprintf(szFilePath, sizeof(szFilePath), "scripts/dsquads/%s_%s", pTeamLookup->GetFileName(), pszFileName);
 
-	KeyValues *pSquadData = ReadEncryptedKVFile( ::filesystem, szFilePath, GetEncryptionKey( ) );
-
+	KeyValues *pSquadData = ReadEncryptedKVFile( filesystem, szFilePath, GetEncryptionKey( ) );
 	if( !pSquadData )
 		return false;
 
-	if( LoadDefinedSquadData( pSquadData, iTeamID, pszName, Data ) )
+	if (LoadDefinedSquadData(pSquadData, iTeamID, pszName, Data))
+	{
+		pSquadData->deleteThis();
 		return true;
+	}
 
-	pSquadData->deleteThis( );
-
+	pSquadData->deleteThis();
 	return false;
 }
 

@@ -278,7 +278,7 @@ bool CTeamLookup::AddClass( const DefinedPlayerClass_t &DefinedPlayerClass )
 	char szFilePath[ 256 ];
 	Q_snprintf( szFilePath, sizeof( szFilePath ), "scripts/pclasses/%s_%s", m_pszFileName, pszFileName );
 
-	KeyValues *pClass = ReadEncryptedKVFile( ::filesystem, szFilePath, GetEncryptionKey( ) );
+	KeyValues *pClass = ReadEncryptedKVFile( filesystem, szFilePath, GetEncryptionKey( ) );
 
 	if( !pClass )
 		return false;

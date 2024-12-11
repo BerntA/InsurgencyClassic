@@ -124,14 +124,12 @@ CGameRulesRegister* CGameRulesRegister::FindByName( const char *pName )
 		// Make sure the client gets notification to make a new game rules object.
 		Assert( g_StringTableGameRules );
 
-		// Pongles [
 		char szStringName[64];
 		Q_snprintf(szStringName, sizeof(szStringName), "gamerules_%i", g_iServerCount);
 
-		g_StringTableGameRules->AddString( szStringName, strlen( pClassName ) + 1, pClassName );
+		g_StringTableGameRules->AddString(CBaseEntity::IsServer(), szStringName, strlen( pClassName ) + 1, pClassName );
 
 		g_iServerCount++;
-		// Pongles ]
 	}			
 
 #endif

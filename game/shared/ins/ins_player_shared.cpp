@@ -1557,15 +1557,11 @@ void CINSPlayer::LoadData( void )
 	if( bLoadedPlayerData )
 		return;
 
-	KeyValues *pPlayerData = new KeyValues( "PlayerData" );
-	Assert( pPlayerData );
-
-	if( !pPlayerData )
-		return;
+	KeyValues * pPlayerData = new KeyValues( "PlayerData" );
 
 	bLoadedPlayerData = true;
 
-	pPlayerData->LoadFromFile( ::filesystem, "scripts/playerdata.txt" );
+	pPlayerData->LoadFromFile( filesystem, "scripts/playerdata.txt" );
 
 #ifdef GAME_DLL
 

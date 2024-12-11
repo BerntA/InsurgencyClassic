@@ -129,8 +129,6 @@ CHudWeaponSelection::CHudWeaponSelection( const char *pElementName )
 void CHudWeaponSelection::Init( void )
 {
 	Reset( );
-
-	//gWR.Init( );
 }
 
 //=========================================================
@@ -188,8 +186,6 @@ void CHudWeaponSelection::Reset( void )
 	m_bSelectionVisible = false;
 	m_flSoonestNextInput = 0.0f;
 	m_iSelectedSlot = WEAPON_INVALID;
-
-	//gWR.Reset( );
 }
 
 //=========================================================

@@ -17,7 +17,6 @@
 #include <baseviewport.h>
 
 class CBaseHudChat;
-class CBaseHudWeaponSelection;
 class CViewSetup;
 class C_BaseEntity;
 class C_BasePlayer;
@@ -150,7 +149,6 @@ private:
 	// All modes share a common chat interface
 	CBaseHudChat			*m_pChatElement;
 	vgui::HCursor			m_CursorNone;
-	CBaseHudWeaponSelection *m_pWeaponSelection;
 	int						m_nRootSize[2];
 };
 

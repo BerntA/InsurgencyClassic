@@ -176,14 +176,13 @@ void CLoadIMCk::Init( CIMCData *pIMCData )
 //=========================================================
 bool KeyValuesLoadFromHFile( KeyValues *pData, const char *pszResourceName, FileHandle_t hFile )
 {
-	IBaseFileSystem *pFileSystem = ::filesystem;
 	Assert( _heapchk() == _HEAPOK );
 
 	if( !hFile )
 		return false;
 
 	// load file into a null-terminated buffer
-	int iFileSize = pFileSystem->Size( hFile );
+	int iFileSize = filesystem->Size( hFile );
 	char *pszBuffer = ( char* )MemAllocScratch( iFileSize + 1 );
 
 	 // read into local buffer
@@ -194,9 +193,9 @@ bool KeyValuesLoadFromHFile( KeyValues *pData, const char *pszResourceName, File
 	pszBuffer[ iFileSize ] = '\0';
 
 	// close file after reading
-	pFileSystem->Close( hFile );
+	filesystem->Close( hFile );
 
-	bool bRetOK = pData->LoadFromBuffer( pszResourceName, pszBuffer, pFileSystem );
+	bool bRetOK = pData->LoadFromBuffer( pszResourceName, pszBuffer, filesystem);
 
 	MemFreeScratch( );
 

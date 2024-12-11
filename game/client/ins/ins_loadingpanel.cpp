@@ -178,8 +178,6 @@ void LPDrawCropped(int iXPos, int iYPos, int iWide, int iHeight, int iTexWide, i
 	TexCoord_t texCoords;
 	CreateTexCoord(texCoords, 0, 0, CINSPanel::SZ_SQSIZE, CINSPanel::SZ_SQSIZE, CINSPanel::SZ_SQSIZE, CINSPanel::SZ_SQSIZE);
 
-
-
 	float fw = (float)iTexWide;
 	float fh = (float)iTexTall;
 
@@ -279,12 +277,7 @@ void INSLoadingDialog::Setup(void)
 	SetupContents();
 
 	KeyValues* pLoadingScreenData = new KeyValues("LoadingScreen");
-	Assert(pLoadingScreenData);
-
-	if (!pLoadingScreenData)
-		return;
-
-	pLoadingScreenData->LoadFromFile(::filesystem, "scripts/loadingscreen.txt");
+	pLoadingScreenData->LoadFromFile(filesystem, "scripts/loadingscreen.txt");
 
 	KeyValues* pGameTypes = pLoadingScreenData->FindKey("GameTypes");
 
@@ -324,7 +317,7 @@ void INSLoadingDialog::Setup(void)
 	}
 
 	// Lets choose a random tip
-	const char* pszTip = tipList[random->RandomInt(0, tipList.Count())].pchLoadingTip;
+	const char* pszTip = tipList[random->RandomInt(0, (tipList.Count() - 1))].pchLoadingTip;
 
 	std::string finalTip = "";
 	std::string command = "";
@@ -369,6 +362,8 @@ void INSLoadingDialog::Setup(void)
 
 	// apply our changes
 	LoadDialog.Apply(m_ModifiedElements);
+
+	pLoadingScreenData->deleteThis();
 }
 
 //=========================================================

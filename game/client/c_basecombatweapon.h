@@ -15,7 +15,6 @@
 
 #include "shareddefs.h"
 #include "basecombatweapon_shared.h"
-#include "weapons_resource.h"
 #include "hud.h"
 #include "utldict.h"
 

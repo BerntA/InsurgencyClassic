@@ -87,7 +87,7 @@ void CHudStringFont::LoadFont(const char *pszPath, const char *pszFontName)
 
 	// load the file
 	Q_snprintf(szBuffer, sizeof(szBuffer), "materials/%s/%s.txt", pszPath, pszFontName);
-	pFontData->LoadFromFile(::filesystem, szBuffer, "MOD");
+	pFontData->LoadFromFile(filesystem, szBuffer, "MOD");
 
 	// take font data
 	int iTall = pFontData->GetInt("height", 1);
@@ -113,9 +113,11 @@ void CHudStringFont::LoadFont(const char *pszPath, const char *pszFontName)
 	}
 
 	pCharData = pFontData->FindKey("CharData");
-
-	if(!pCharData)
+	if (!pCharData)
+	{
+		pFontData->deleteThis();
 		return;
+	}
 
 	// take char data
 	pChar = pCharData->GetFirstSubKey();
@@ -148,6 +150,8 @@ void CHudStringFont::LoadFont(const char *pszPath, const char *pszFontName)
 
 		pChar = pChar->GetNextKey();
 	}
+
+	pFontData->deleteThis();
 }
 
 //=========================================================

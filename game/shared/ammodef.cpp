@@ -56,7 +56,7 @@ bool CAmmoDef::Init(void)
 bool CAmmoDef::Load(void)
 {
 	// load from file
-	KeyValues* pAmmoData = ReadEncryptedKVFile(::filesystem, PATH_AMMODATA, GetEncryptionKey());
+	KeyValues* pAmmoData = ReadEncryptedKVFile(filesystem, PATH_AMMODATA, GetEncryptionKey());
 
 	if (!pAmmoData)
 		return false;

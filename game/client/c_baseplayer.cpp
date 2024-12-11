@@ -8,7 +8,6 @@
 #include "cbase.h"
 #include "c_baseplayer.h"
 #include "flashlighteffect.h"
-#include "weapon_selection.h"
 #include "iinput.h"
 #include "input.h"
 #include "view.h"

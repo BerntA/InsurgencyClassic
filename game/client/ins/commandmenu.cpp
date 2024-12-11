@@ -18,7 +18,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-
 CommandMenu::CommandMenu( Panel *parent, const char *panelName, IViewPort * viewport) : Menu( parent, panelName )
 { 
 	if ( !viewport )
@@ -35,12 +34,15 @@ bool CommandMenu::LoadFromFile( const char * fileName)	// load menu from KeyValu
 {
 	KeyValues * kv = new KeyValues(fileName);
 
-	if  ( !kv->LoadFromFile( vgui::filesystem(), fileName, "GAME" ) )
+	if (!kv->LoadFromFile(filesystem, fileName, "GAME"))
+	{
+		kv->deleteThis();
 		return false;
+	}
 
 	bool ret = LoadFromKeyValues( kv );
-
 	kv->deleteThis();
+
 	return ret;
 }
 
@@ -265,7 +267,6 @@ bool CommandMenu::LoadFromKeyValues( KeyValues * params )
 		return false;
 
 	Q_snprintf( m_CurrentTeam, 4, "%i", GetLocalPlayerTeam() );
-
 	Q_FileBase( engine->GetLevelName(), m_CurrentMap, sizeof(m_CurrentMap) );
 	
 	if ( params != m_MenuKeys )

@@ -2656,7 +2656,7 @@ void CTriggerPlayerMovement::StartTouch( CBaseEntity *pOther )
 
 	if ( HasSpawnFlags( SF_TRIGGER_AUTO_DUCK ) )
 	{
-		pPlayer->ForceButtons( IN_DUCK );
+		pPlayer->ForceButtons( IN_CROUCH );
 	}
 
 	// UNDONE: Currently this is the only operation this trigger can do
@@ -2678,7 +2678,7 @@ void CTriggerPlayerMovement::EndTouch( CBaseEntity *pOther )
 
 	if ( HasSpawnFlags( SF_TRIGGER_AUTO_DUCK ) )
 	{
-		pPlayer->UnforceButtons( IN_DUCK );
+		pPlayer->UnforceButtons(IN_CROUCH);
 	}
 
 	if ( HasSpawnFlags(SF_TRIGGER_MOVE_AUTODISABLE) )

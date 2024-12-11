@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "iclientmode.h"
 #include "iinput.h"
-#include "weapon_selection.h"
 #include "engine/ivmodelinfo.h"
 #include "tier0/vprof.h"
 #include "hltvcamera.h"
@@ -106,16 +105,8 @@ void C_BaseCombatWeapon::OnDataChanged(DataUpdateType_t updateType)
 		// If I was just picked up, or created & immediately carried, add myself to this client's list of weapons
 		if ((m_iState != WEAPON_NOT_CARRIED) && (m_iOldState == WEAPON_NOT_CARRIED))
 		{
-			// Tell the HUD this weapon's been picked up
 			if (ShouldDrawPickup())
-			{
-				CBaseHudWeaponSelection* pHudSelection = GetHudWeaponSelection();
-				if (pHudSelection)
-				{
-					pHudSelection->OnWeaponPickup(this);
-				}
 				pPlayer->EmitSound("Player.PickupWeapon");
-			}
 		}
 	}
 	else // weapon carried by other player or not at all

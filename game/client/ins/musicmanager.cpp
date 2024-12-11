@@ -313,7 +313,7 @@ const MusicEntry_t* CSoundGroup::GetRandomSongForMode(int mode) const
 	if (g_iMusicRandomizerHelper.Count() == 0)
 		return NULL;
 
-	int index = g_iMusicRandomizerHelper[random->RandomInt(0, g_iMusicRandomizerHelper.Count() - 1)];
+	int index = g_iMusicRandomizerHelper[random->RandomInt(0, (g_iMusicRandomizerHelper.Count() - 1))];
 
 	return &sounds[index];
 }

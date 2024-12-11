@@ -67,7 +67,7 @@ bool CClipDef::Init( void )
 //=========================================================
 bool CClipDef::Load( void )
 {
-	KeyValues *pClipDef = ReadEncryptedKVFile( ::filesystem, PATH_CLIPDATA, GetEncryptionKey( ) );
+	KeyValues *pClipDef = ReadEncryptedKVFile(filesystem, PATH_CLIPDATA, GetEncryptionKey( ) );
 
 	if( !pClipDef )
 		return false;

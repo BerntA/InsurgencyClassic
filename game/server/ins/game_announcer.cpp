@@ -45,11 +45,6 @@ void CGameAnnouncer::Reset(void)
 	m_flIsBusy = 0.0f;
 	m_iLastTime = 0;
 	m_pAnnouncerList.Purge();
-
-	if (HL2MPRules() && !HL2MPRules()->CanUseGameAnnouncer())
-		return;
-
-	HL2MPRules()->EmitSoundToClient(NULL, "GameStart", BB2_SoundTypes::TYPE_ANNOUNCER, false);
 }
 
 void CGameAnnouncer::RemoveItemsForPlayer(int index)

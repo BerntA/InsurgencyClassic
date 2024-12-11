@@ -49,7 +49,7 @@ CWeaponDef *CWeaponDef::GetWeaponDef( void )
 //=========================================================
 bool CWeaponDef::Load( void )
 {
-	KeyValues *pWeaponDef = ReadEncryptedKVFile( ::filesystem, PATH_WEAPONDEF, GetEncryptionKey( ) );
+	KeyValues *pWeaponDef = ReadEncryptedKVFile( filesystem, PATH_WEAPONDEF, GetEncryptionKey( ) );
 
 	if( !pWeaponDef )
 		return false;

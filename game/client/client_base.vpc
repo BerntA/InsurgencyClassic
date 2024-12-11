@@ -324,8 +324,6 @@ $Project
 		$File	"warp_overlay.cpp"
 		$File	"WaterLODMaterialProxy.cpp"
 		$File	"$SRCDIR\game\shared\weapon_parse.cpp"
-		$File	"weapon_selection.cpp"
-		$File	"weapons_resource.cpp"
 		$File	"WorldDimsProxy.cpp"
 		$File	"vgui_video.cpp"
 		$File   "vgui_video_player.cpp"
@@ -1033,8 +1031,6 @@ $Project
 		$File	"view_scene.h"
 		$File	"viewangleanim.h"
 		$File	"viewrender.h"
-		$File	"weapon_selection.h"
-		$File	"weapons_resource.h"
 		$File	"vgui_video.h"
 		$File   "vgui_video_player.h"
 	}
