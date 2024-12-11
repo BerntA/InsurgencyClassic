@@ -3233,3 +3233,86 @@ void CTempEnts::RocketFlare( const Vector& pos )
 	pTemp->SetAbsOrigin( pos );
 	pTemp->die = gpGlobals->curtime + 0.01;
 }
+
+#define SHELLTYPE_PISTOL	0
+#define SHELLTYPE_RIFLE		1
+#define SHELLTYPE_SHOTGUN	2
+
+void CTempEnts::CSEjectBrass(const Vector& vecPosition, const QAngle& angVelocity, int nVelocity, int shellType, CBasePlayer* pShooter)
+{
+	const model_t* pModel = NULL;
+	int hitsound = TE_BOUNCE_SHELL;
+
+	// TODO -- lookup model based on bullet type, in bulletdefs, use model from there, 
+	// also, local player is not necessarily the shooter...
+
+	if (pModel == NULL)
+		return;
+
+	Vector forward, right, up;
+	Vector velocity;
+	Vector origin;
+	QAngle angle;
+
+	// Add some randomness to the velocity
+
+	AngleVectors(angVelocity, &forward, &right, &up);
+
+	velocity = forward * nVelocity * random->RandomFloat(1.2, 2.8) +
+		up * random->RandomFloat(-10, 10) +
+		right * random->RandomFloat(-20, 20);
+
+	if (pShooter)
+		velocity += pShooter->GetAbsVelocity();
+
+	C_LocalTempEntity* pTemp = TempEntAlloc(vecPosition, (model_t*)pModel);
+	if (!pTemp)
+		return;
+
+	if (pShooter)
+		pTemp->SetAbsAngles(pShooter->EyeAngles());
+	else
+		pTemp->SetAbsAngles(vec3_angle);
+
+	pTemp->SetVelocity(velocity);
+
+	pTemp->hitSound = hitsound;
+
+	pTemp->SetGravity(0.4);
+
+	pTemp->m_nBody = 0;
+	pTemp->flags = FTENT_FADEOUT | FTENT_GRAVITY | FTENT_COLLIDEALL | FTENT_HITSOUND | FTENT_ROTATE | FTENT_CHANGERENDERONCOLLIDE;
+
+	pTemp->m_vecTempEntAngVelocity[0] = random->RandomFloat(-256, 256);
+	pTemp->m_vecTempEntAngVelocity[1] = random->RandomFloat(-256, 256);
+	pTemp->m_vecTempEntAngVelocity[2] = 0;
+	pTemp->SetRenderMode(kRenderNormal);
+	pTemp->tempent_renderamt = 255;
+
+	pTemp->die = gpGlobals->curtime + 10;
+
+	bool bViewModelBrass = false;
+
+	if (pShooter && pShooter->GetObserverMode() == OBS_MODE_IN_EYE)
+	{
+		// we are spectating the shooter in first person view
+		pShooter = ToBasePlayer(pShooter->GetObserverTarget());
+		bViewModelBrass = true;
+	}
+
+	if (pShooter)
+	{
+		pTemp->clientIndex = pShooter->entindex();
+		bViewModelBrass |= pShooter->IsLocalPlayer();
+	}
+	else
+	{
+		pTemp->clientIndex = 0;
+	}
+
+	if (bViewModelBrass)
+	{
+		// for viewmodel brass put it in the viewmodel renderer group
+		pTemp->m_RenderGroup = RENDER_GROUP_VIEW_MODEL_OPAQUE;
+	}
+}

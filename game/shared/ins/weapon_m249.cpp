@@ -28,11 +28,7 @@ public:
 	int GetWeaponID(void) const { return WEAPON_M249; }
 
 private:
-	CWeaponM249(const CWeaponM249 &);
-
-#ifdef GAME_DLL
-	DECLARE_ACTTABLE();
-#endif
+	CWeaponM249(const CWeaponM249&);
 }; 
 
 //=========================================================

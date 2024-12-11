@@ -278,12 +278,12 @@ void ClientModeShared::Init()
 	m_pViewport->LoadControlSettings( "scripts/HudLayout.res", NULL, NULL, pConditions );
 
 	ListenForGameEvent("player_connect_client");
+	ListenForGameEvent("player_connect");
 	ListenForGameEvent("player_disconnect");
 	ListenForGameEvent("player_team");
 	ListenForGameEvent("server_cvar");
 	ListenForGameEvent("player_changename");
-	ListenForGameEvent("round_start");
-	ListenForGameEvent("changelevel");
+	ListenForGameEvent("round_reset");
 	ListenForGameEvent("game_achievement");
 	ListenForGameEvent("player_spawn");
 
@@ -820,12 +820,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 {
 	const char *eventname = event->GetName();
 
-	if (Q_strcmp("changelevel", eventname) == 0)
-	{
-		const char *szMap = event->GetString("map");
-		GameBaseClient->Changelevel(szMap);
-	}
-	else if (Q_strcmp("player_spawn", eventname) == 0)
+	if (Q_strcmp("player_spawn", eventname) == 0)
 	{
 		// PNOTE: this is very broken when the player changes his
 		// squad because it doesn't have the class information
@@ -872,11 +867,11 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			m_pChatElement->Printf("%c%s", COLOR_ACHIEVEMENT, szLocalized);
 		}
 	}
-	else if (Q_strcmp("round_start", eventname) == 0)
+	else if (Q_strcmp("round_reset", eventname) == 0)
 	{
 		RemoveAllClientGibs();
 	}
-	else if ( Q_strcmp( "player_connect_client", eventname ) == 0 )
+	else if (Q_strcmp("player_connect_client", eventname) == 0 || Q_strcmp("player_connect", eventname) == 0)
 	{
 		if (!m_pChatElement)
 			return;
@@ -931,7 +926,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_team", eventname ) == 0 )
 	{
-		C_BasePlayer *pPlayer = USERID2PLAYER(event->GetInt("userid"));
 		if (!m_pChatElement)
 			return;
 
@@ -939,55 +933,33 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if (bDisconnected)
 			return;
 
-		int team = event->GetInt("team");
-		bool bAutoTeamed = event->GetInt("autoteam", false);
-		bool bSilent = event->GetInt("silent", false);
+		C_BasePlayer* pPlayer = USERID2PLAYER(event->GetInt("userid"));
+		if (!pPlayer)
+			return;
 
-		const char *pszName = event->GetString("name");
+		int team = event->GetInt("team");
+		const char *pszName = pPlayer->GetPlayerName();
+
 		if (PlayerNameNotSetYet(pszName))
 			return;
 
-		bSilent = true;
-		if (pPlayer && g_PR)
-		{
-			int selectedTeam = g_PR->GetTeam(pPlayer->entindex());
-			if (selectedTeam <= 0 || (selectedTeam != team && (team > TEAM_SPECTATOR)))
-			{
-				bSilent = false;
-			}
-		}
+		wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
+		g_pVGuiLocalize->ConvertANSIToUnicode(pszName, wszPlayerName, sizeof(wszPlayerName));
 
-		if (!bSilent)
-		{
-			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-			g_pVGuiLocalize->ConvertANSIToUnicode(pszName, wszPlayerName, sizeof(wszPlayerName));
+		wchar_t wszTeam[64];
+		C_Team* pTeam = GetGlobalTeam(team);
+		if (pTeam)		
+			g_pVGuiLocalize->ConvertANSIToUnicode(pTeam->GetName(), wszTeam, sizeof(wszTeam));		
+		else		
+			_snwprintf(wszTeam, sizeof(wszTeam) / sizeof(wchar_t), L"%d", team);		
 
-			wchar_t wszTeam[64];
-			C_Team *pTeam = GetGlobalTeam(team);
-			if (pTeam)
-			{
-				g_pVGuiLocalize->ConvertANSIToUnicode("N/A", wszTeam, sizeof(wszTeam));
-			}
-			else
-			{
-				_snwprintf(wszTeam, sizeof(wszTeam) / sizeof(wchar_t), L"%d", team);
-			}
+		wchar_t wszLocalized[100];
+		g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#game_player_joined_team"), 2, wszPlayerName, wszTeam);
 
-			wchar_t wszLocalized[100];
-			if (bAutoTeamed)
-			{
-				g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#game_player_joined_autoteam"), 2, wszPlayerName, wszTeam);
-			}
-			else
-			{
-				g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#game_player_joined_team"), 2, wszPlayerName, wszTeam);
-			}
+		char szLocalized[100];
+		g_pVGuiLocalize->ConvertUnicodeToANSI(wszLocalized, szLocalized, sizeof(szLocalized));
 
-			char szLocalized[100];
-			g_pVGuiLocalize->ConvertUnicodeToANSI(wszLocalized, szLocalized, sizeof(szLocalized));
-
-			m_pChatElement->Printf("%s", szLocalized);
-		}
+		m_pChatElement->Printf("%s", szLocalized);
 
 		if (pPlayer && pPlayer->IsLocalPlayer())
 		{

@@ -32,7 +32,6 @@ public:
 	// Shared
 	virtual void OnUpdate(void) = 0;
 	virtual bool IsInGame(void) = 0;
-	virtual void Changelevel(const char* szMap) = 0;
 
 	// In-Game 
 	virtual void OnLocalPlayerExternalRendering(void) = 0;

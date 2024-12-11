@@ -101,14 +101,12 @@ private:
 
 	bool ShouldDraw( void );
 	void Paint( void );
-	void DrawDamageIndicator( int iLocation );
 
 private:
 	CMaterialReference m_Tex;
 	int m_iTexWide, m_iTexTall;
 
 	DamagePositions_t m_Positions;
-
 	DamageDrawData_t m_DrawData[ DAMAGELOC_COUNT ];
 	int m_iLastUpdate;
 };
@@ -265,6 +263,7 @@ bool CHudDamageIndicator::ShouldDraw( void )
 //=========================================================
 void CHudDamageIndicator::Paint( void )
 {
+	CMatRenderContextPtr pRenderContext(materials);
 	for( int i = 0; i < DAMAGELOC_COUNT; i++ )
 	{
 		float &flDrawTime = m_DrawData[ i ].m_flTime;
@@ -283,7 +282,7 @@ void CHudDamageIndicator::Paint( void )
 		int iWide, iTall;
 		GetAdjustedDimensions( i, m_iTexWide, m_iTexTall, iWide, iTall );
 
-		IMesh *pMesh = materials->GetDynamicMesh( true, NULL, NULL, m_Tex );
+		IMesh* pMesh = pRenderContext->GetDynamicMesh(true, NULL, NULL, m_Tex);
 
 		CMeshBuilder meshBuilder;
 		meshBuilder.Begin( pMesh, MATERIAL_QUADS, 1 );

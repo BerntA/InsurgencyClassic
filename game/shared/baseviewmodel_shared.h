@@ -64,7 +64,6 @@ public:
 	void					SpawnControlPanels();
 	void					DestroyControlPanels();
 	void					SetControlPanelsActive( bool bState );
-	void					ShowControlPanells( bool show );
 
 	virtual CBaseCombatWeapon *GetOwningWeapon( void );
 	
@@ -84,10 +83,6 @@ public:
 #else
 
 	virtual RenderGroup_t	GetRenderGroup();
-
-#if defined( CLIENT_DLL )
-	virtual bool IsPlayerHands(void) { return false; }
-#endif
 
 	virtual void			FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options );
 

@@ -409,13 +409,8 @@ void CSpectatorMenu::OnCommand( const char *pszCommand )
 //=========================================================
 void CSpectatorMenu::OnKeyCodePressed( KeyCode code )
 {
-	// we can't compare the keycode to a known code, because translation from bound keys
-	// to vgui key codes is not 1:1. Get the engine version of the key for the binding
-	// and the actual pressed key, and compare those..
-	int iLastTrappedKey = engine->GetLastPressedEngineKey();	// the enginekey version of the code param
-
-	if( iLastTrappedKey == m_iHideKey )
-		ShowPanel( false );
+	if (code == m_iHideKey)
+		ShowPanel(false);
 }
 
 //=========================================================

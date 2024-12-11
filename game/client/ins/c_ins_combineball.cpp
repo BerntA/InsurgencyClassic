@@ -115,7 +115,8 @@ void C_INSCombineBall::DrawMotionBlur( void )
 
 	float flBase = RemapValClamped( flSpeed, 4, 32, 0.0f, 1.0f );
 
-	materials->Bind( m_pBlurMaterial );
+	CMatRenderContextPtr pRenderContext(materials);
+	pRenderContext->Bind(m_pBlurMaterial);
 
 	// draw the motion blurred trail
 	for( int i = 0; i < 8; i++ )
@@ -145,17 +146,21 @@ void C_INSCombineBall::DrawFlicker( void )
 	flColor[ 0 ] = flColor[ 1 ] = flColor[ 2 ] = flRand1;
 
 	// draw the flickering glow
-	materials->Bind( m_pFlickerMaterial );
+	CMatRenderContextPtr pRenderContext(materials);
+	pRenderContext->Bind(m_pFlickerMaterial);
 	DrawHalo( m_pFlickerMaterial, GetAbsOrigin( ), m_flRadius * flRand2, flColor );
 }
 
 //=========================================================
 //=========================================================
-void DrawHaloOriented( const Vector &vecSource, float flScale, float const *pColor, float flRoll )
+void DrawHaloOriented(IMaterial *pTexture, C_BaseEntity *pEntity, const Vector &vecSource, float flScale, float const *pColor, float flRoll )
 {
+	CMatRenderContextPtr pRenderContext(materials);
+	pRenderContext->Bind(pTexture, (C_BaseEntity*)pEntity);
+
 	Vector vecPoint, vecScreen;
 	
-	IMesh *pMesh = materials->GetDynamicMesh( );
+	IMesh* pMesh = pRenderContext->GetDynamicMesh();
 
 	CMeshBuilder meshBuilder;
 	meshBuilder.Begin( pMesh, MATERIAL_QUADS, 1 );
@@ -234,8 +239,7 @@ int C_INSCombineBall::DrawModel( int iFlags )
 	float flRoll = SpawnTime( );
 
 	// Draw the main ball body
-	materials->Bind( m_pBodyMaterial, ( C_BaseEntity* ) this );
-	DrawHaloOriented( GetAbsOrigin( ), m_flRadius + flSinOffs, flColor, flRoll );
+	DrawHaloOriented(m_pBodyMaterial, this, GetAbsOrigin(), m_flRadius + flSinOffs, flColor, flRoll);
 	
 	m_vecLastOrigin = GetAbsOrigin( );
 

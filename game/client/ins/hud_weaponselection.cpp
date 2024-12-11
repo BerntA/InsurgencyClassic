@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "vgui/ilocalize.h"
 #include "hud_macros.h"
-#include "vgui_entitypanel.h"
 #include "clientmode_shared.h"
 #include <vgui/ivgui.h>
 #include "basic_colors.h"
@@ -18,6 +17,7 @@
 #include "view.h"
 #include "inshud.h"
 #include "iinput.h"
+#include "filesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -92,7 +92,6 @@ private:
 
 	CMaterialReference m_BG;
 	CMaterialReference m_Weapons[ MAX_WEAPONS ];
-
 	CMaterialReference m_Achter;
 };
 
@@ -282,10 +281,12 @@ void CHudWeaponSelection::DrawBar( CMaterialReference &Material, const Vector &v
 	Vector vecDepth = ( CurrentViewForward( ) * ( bSelected ? WEAPONBAR_SELECTED_DEPTH : WEAPONBAR_NORMAL_DEPTH ) );
 
 	// start drawing
-	materials->Bind( Material, TEXTURE_GROUP_VGUI );
 
+	CMatRenderContextPtr pRenderContext(materials);
+
+	pRenderContext->Bind(Material);
+	IMesh* pMesh = pRenderContext->GetDynamicMesh();
 	CMeshBuilder Builder;
-	IMesh *pMesh = materials->GetDynamicMesh( );
 
 	Builder.Begin( pMesh, MATERIAL_QUADS, 1 );
 

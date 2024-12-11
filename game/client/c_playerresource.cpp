@@ -152,12 +152,15 @@ int C_PlayerResource::GetTeam(int iIndex)
 const char * C_PlayerResource::GetTeamName(int index)
 {
 	C_Team *team = GetGlobalTeam(index);
-	return (team ? team->Get_Name() : "Unknown");
+	return (team ? team->GetName() : "Unknown");
 }
 
 int C_PlayerResource::GetTeamScore(int index)
 {
-	C_Team *team = GetGlobalTeam(index);
+	if (!IsPlayTeam(index))
+		return 0;
+
+	C_PlayTeam* team = GetGlobalPlayTeam(index);
 	return (team ? team->GetTotalPlayerScore() : 0);
 }
 
@@ -258,6 +261,10 @@ bool C_PlayerResource::IsConnected(int iIndex)
 bool C_PlayerResource::GetSquadData(int index, SquadData_t& SquadData)
 {
 	int iTeamID = GetTeamID(index);
+
+	if (!IsPlayTeam(iTeamID))
+		return false;
+
 	C_PlayTeam* pTeam = GetGlobalPlayTeam(iTeamID);
 	return (pTeam ? pTeam->GetSquadData(index, SquadData) : false);
 }

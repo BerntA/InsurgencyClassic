@@ -106,9 +106,6 @@ public:
 	// Are we in-game?
 	bool IsInGame(void);
 
-	// Connection, Changelevel and Map commands.
-	void Changelevel(const char* szMap);
-
 	// Post Init - Late Init - Starts up the main menu.
 	void PostInit(void);
 
@@ -129,7 +126,6 @@ public:
 static CGameBaseClient g_GameBaseClient;
 IGameBaseClient* GameBaseClient = (IGameBaseClient*)&g_GameBaseClient;
 
-// Constructor
 CGameBaseClient::CGameBaseClient(void) : m_CallbackUserStatsReceived(this, &CGameBaseClient::Steam_OnUserStatsReceived)
 {
 	ClientWorkshopInstallerPanel = NULL;
@@ -201,14 +197,6 @@ bool CGameBaseClient::IsInGame(void)
 {
 	C_BasePlayer* pClient = C_BasePlayer::GetLocalPlayer();
 	return ((pClient != NULL) && !engine->IsLevelMainMenuBackground());
-}
-
-// Called on level 'transit' changelevel to the next map.
-void CGameBaseClient::Changelevel(const char* szMap)
-{
-	// TODO
-	// run soundtrack
-	engine->ClientCmd_Unrestricted("progress_enable\n");
 }
 
 // Post Init - Late Init : Loads the main menu

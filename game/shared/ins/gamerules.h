@@ -95,6 +95,10 @@ public:
 	virtual int DefaultFOV( void ) const = 0;
 	virtual int DefaultWeaponFOV( void ) const = 0;
 
+	virtual bool AllowThirdPersonCamera(void) { return true; }
+	virtual bool AllowMapParticleEffect(const char* pszParticleEffect) { return true; }
+	virtual bool AllowWeatherParticles(void) { return true; }
+
 #ifdef GAME_DLL
 
 public:

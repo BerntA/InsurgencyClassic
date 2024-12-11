@@ -116,7 +116,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 	CBaseCombatWeapon();
-	virtual 				~CBaseCombatWeapon();
 
 	virtual bool			IsBaseCombatWeapon(void) const { return true; }
 	virtual CBaseCombatWeapon* MyCombatWeaponPointer(void) { return this; }
@@ -289,7 +288,6 @@ public:
 	virtual char const* GetName(void) const;
 	virtual char const* GetShootSound(int iIndex) const;
 	virtual float GetWeight(void) const;
-	virtual bool IsPassiveWeapon(bool) const;
 
 #ifdef GAME_DLL
 
@@ -353,7 +351,6 @@ public:
 	virtual void HandleInput(void) {}
 	virtual void OverrideMouseInput(float* x, float* y) {}
 	virtual int	 KeyInput(int down, int keynum, const char* pszCurrentBinding) { return 1; }
-	virtual bool AddLookShift(void) { return true; }
 
 	virtual void GetViewmodelBoneControllers(C_BaseViewModel* pViewModel, float controllers[MAXSTUDIOBONECTRLS]) { return; }
 	virtual void NotifyShouldTransmit(ShouldTransmitState_t state);

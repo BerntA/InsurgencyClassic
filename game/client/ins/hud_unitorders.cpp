@@ -157,15 +157,12 @@ void CHUDUnitOrders::PostRender( void )
 
 	view.origin = pViewSetup->origin;
 	view.angles = pViewSetup->angles;
-	view.m_vUnreflectedOrigin = view.origin;
 	view.zNear = VIEW_NEARZ;
 	view.zFar = 1000;
 
 	Frustum dummyFrustum;
-	render->Push3DView( view, 0, false, NULL, dummyFrustum );
-
+	render->Push3DView(view, 0, NULL, dummyFrustum);
 	m_pCursorModel->DrawModel( STUDIO_RENDER );
-
 	render->PopView( dummyFrustum );
 }
 

@@ -154,7 +154,7 @@ void CHLTVDirector::SetHLTVServer( IHLTVServer *hltv )
 		ListenForGameEvent( "player_hurt" );
 		ListenForGameEvent( "player_death" );
 		ListenForGameEvent( "round_end" );
-		ListenForGameEvent( "round_start" );
+		ListenForGameEvent( "round_reset" );
 		ListenForGameEvent( "hltv_cameraman" );
 		ListenForGameEvent( "hltv_rank_entity" );
 		ListenForGameEvent( "hltv_rank_camera" );
@@ -242,7 +242,7 @@ const char** CHLTVDirector::GetModEvents()
 		"server_cvar",
 		"player_death",
 		"player_chat",
-		"round_start",
+		"round_reset",
 		"round_end",
 		NULL
 	};
@@ -536,7 +536,7 @@ void CHLTVDirector::CreateShotFromEvent( CHLTVGameEvent *event )
 	bool bPlayerHurt = Q_strcmp( "player_hurt", name ) == 0;
 	bool bPlayerKilled = Q_strcmp("player_death", name) == 0;
 
-	bool bRoundStart = Q_strcmp( "round_start", name ) == 0;
+	bool bRoundStart = Q_strcmp( "round_reset", name ) == 0;
 	bool bRoundEnd = Q_strcmp( "round_end", name ) == 0;
 
 	if ( bPlayerHurt || bPlayerKilled )
