@@ -210,8 +210,7 @@ void CVoiceGameMgr::UpdateMasks()
 		if(!pEnt || !pEnt->IsPlayer())
 			continue;
 
-		CBasePlayer *pPlayer = (CBasePlayer*)pEnt;
-
+		CINSPlayer* pPlayer = ToINSPlayer(pEnt);
 		CSingleUserRecipientFilter user( pPlayer );
 
 		// Request the state of their "VModEnable" cvar.

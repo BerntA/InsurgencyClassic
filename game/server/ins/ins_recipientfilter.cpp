@@ -52,7 +52,7 @@ CReliableSquadRecipientFilter::CReliableSquadRecipientFilter( CINSSquad *pSquad 
 
 //=========================================================
 //=========================================================
-typedef void ( CRecipientFilter::*FilterMod_t )( CBasePlayer *pPlayer );
+typedef void ( CRecipientFilter::*FilterMod_t )( const CBasePlayer *pPlayer );
 
 void UnitFilter( CINSPlayer *pFilterPlayer, CINSSquad *pSquad, CRecipientFilter *pFilter, FilterMod_t FilterMod )
 {

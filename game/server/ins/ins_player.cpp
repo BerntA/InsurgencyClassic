@@ -1224,7 +1224,7 @@ bool CINSPlayer::ClientCommand(const CCommand& args)
 	}
 	else if ( FStrEq( pszCommand, PCMD_VOICECYCLE ) )
 	{
-		extern ConVar alltalk;
+		extern ConVar sv_alltalk;
 
 		// ensure we can switch to squad
 		if( m_iVoiceType == PVOICETYPE_SQUAD )
@@ -1232,7 +1232,7 @@ bool CINSPlayer::ClientCommand(const CCommand& args)
 			m_iVoiceType = PVOICETYPE_ALL;
 
 			// if we can alltalk, exit it now, otherwise rotate again
-			if( alltalk.GetBool( ) )
+			if(sv_alltalk.GetBool( ) )
 				return true;
 		}
 

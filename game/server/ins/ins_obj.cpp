@@ -106,8 +106,10 @@ void SendProxy_ObjName( const SendProp *pProp, const void *pStruct, const void *
 {
 	CINSObjective *pObjective = ( CINSObjective* )pData;
 
-	pOut->m_pString = new char[ MAX_OBJNAME_LENGTH ];
-	Q_strncpy( pOut->m_pString, pObjective->IsCapturable( ) ? pObjective->GetName( ) : "", MAX_OBJNAME_LENGTH );
+	char *data = new char[MAX_OBJNAME_LENGTH];
+	Q_strncpy(data, pObjective->IsCapturable() ? pObjective->GetName() : "", MAX_OBJNAME_LENGTH);
+
+	pOut->m_pString = data;
 }
 
 void SendProxy_ObjPhonetic( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )

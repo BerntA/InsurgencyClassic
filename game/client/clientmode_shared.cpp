@@ -950,7 +950,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		bSilent = true;
 		if (pPlayer && g_PR)
 		{
-			int selectedTeam = g_PR->GetSelectedTeam(pPlayer->entindex());
+			int selectedTeam = g_PR->GetTeam(pPlayer->entindex());
 			if (selectedTeam <= 0 || (selectedTeam != team && (team > TEAM_SPECTATOR)))
 			{
 				bSilent = false;

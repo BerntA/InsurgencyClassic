@@ -20,7 +20,6 @@ ConVar lservercfgfile("lservercfgfile", "listenserver.cfg");
 // multiplayer server rules
 ConVar	falldamage( "mp_falldamage","1", FCVAR_NOTIFY );
 ConVar	footsteps( "mp_footsteps","1", FCVAR_NOTIFY );
-ConVar	decalfrequency( "decalfrequency","10", FCVAR_NOTIFY );
 
 // Engine Cvars
 const ConVar	*g_pDeveloper = NULL;

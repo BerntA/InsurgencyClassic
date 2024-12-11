@@ -6,7 +6,7 @@
 #include "materialsystem/imaterial.h"
 #include "materialsystem/itexture.h"
 #include <keyvalues.h>
-#include "vmatrix.h"
+#include "mathlib/vmatrix.h"
 #include "functionproxy.h"
 
 // Render Targets

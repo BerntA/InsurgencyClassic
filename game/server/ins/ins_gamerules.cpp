@@ -152,7 +152,7 @@ static ConVar *sv_lan = NULL;
 
 //=========================================================
 //=========================================================
-extern ConVar alltalk;
+extern ConVar sv_alltalk;
 
 class CVoiceGameMgrHelper : public IVoiceGameMgrHelper
 {
@@ -166,7 +166,7 @@ public:
 		if( !g_pGameRules->PlayerCanCommunicate( pListener, pTalker ) )
 			return false;
 
-		bool bGlobalTalk = alltalk.GetBool( );
+		bool bGlobalTalk = sv_alltalk.GetBool( );
 
 		if( OnSameTeam( pINSListener, pINSTalker ) )
 		{

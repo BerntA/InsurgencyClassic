@@ -576,8 +576,10 @@ bool CPlayTeam::IsValidSquadData( const SquadData_t &SquadData ) const
 
 //=========================================================
 //=========================================================
-void TeamSizeCallback( ConVar *pVar, char const *pszOldString )
+void TeamSizeCallback(IConVar* var, const char* pOldValue, float flOldValue)
 {
+	ConVar* pVar = (ConVar*)var;
+
 	if( !INSRules( ) )
 		return;
 
