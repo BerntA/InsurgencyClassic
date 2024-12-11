@@ -111,9 +111,6 @@ public:
 
 	static Color CalculateTeamColor( int iType, bool bBackup );
 
-	// Misc
-	void SetScriptsCRC32( unsigned int iCRC32 );
-
 	bool AllowAttacking( void );
 
 	int GetDeadCamMode( void ) const;
@@ -134,8 +131,6 @@ private:
 
 	Vector m_vecCurrentViewpoint;
 	QAngle m_angCurrentViewpoint;
-
-	unsigned int m_iScriptsCRC32;
 
 	ColorCorrectionHandle_t m_ColorCorrection;
 };

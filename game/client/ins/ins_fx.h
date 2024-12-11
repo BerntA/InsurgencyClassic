@@ -38,8 +38,4 @@ void FX_INS_Combine_MuzzleEffect(const Vector& vecOrigin, const QAngle& vecAngle
 void FX_INS_Default_Tracer(const Vector& start, const Vector& end, int type, float velocity);
 void FX_INS_Default_TracerSound(const Vector& start, const Vector& end, int type);
 
-//=========================================================
-//=========================================================
-int FX_INS_GetMuzzleFlashType(CBaseCombatWeapon* pWeapon);
-
 #endif // INS_FX_H

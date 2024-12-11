@@ -11,7 +11,6 @@
 #if defined( CLIENT_DLL )
 #include "iprediction.h"
 #include "prediction.h"
-#include "c_hl2mp_player.h"
 #else
 #include "vguiscreen.h"
 #endif

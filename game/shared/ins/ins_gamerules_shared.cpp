@@ -7,11 +7,9 @@
 #include "cbase.h"
 #include "ins_player_shared.h"
 #include "ins_gamerules.h"
-#include "gameeventdefs.h"
 #include "in_buttons.h"
 #include "play_team_shared.h"
 #include "basic_colors.h"
-#include "script_check_shared.h"
 #include "takedamageinfo.h"
 #include "imc_config.h"
 #include "weapon_ins_base.h"
@@ -341,11 +339,6 @@ bool CINSRules::IsRoundCold( void ) const
 //=========================================================
 #ifdef GAME_DLL
 
-void SendProxy_ScriptCheck( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
-{
-	pOut->m_Int = g_ScriptCheckShared.GetScriptCRC32( );
-}
-
 void SendProxy_Stats( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	pOut->m_Int = 0; // GetINSStats( )->GetType( )
@@ -508,11 +501,6 @@ void SendProxy_CurrentViewpointAngle( const SendProp *pProp, const void *pStruct
 }
 
 #else
-
-void RecvProxy_ScriptCheck( const CRecvProxyData *pData, void *pStruct, void *pOut )
-{
-	INSRules( )->SetScriptsCRC32( pData->m_Value.m_Int );
-}
 
 void RecvProxy_Stats( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
@@ -700,9 +688,6 @@ BEGIN_NETWORK_TABLE_NOBASE( CINSRules, DT_INSRules )
 
 #ifdef GAME_DLL
 
-	// Scripts
-	SendPropInt( "scriptcheck", 0, SIZEOF_IGNORE, 32, SPROP_UNSIGNED, SendProxy_ScriptCheck ),
-
 	// Using Status
 	//SendPropInt( "stats", 0, SIZEOF_IGNORE, 2, SPROP_UNSIGNED, SendProxy_Stats ),
 
@@ -720,9 +705,6 @@ BEGIN_NETWORK_TABLE_NOBASE( CINSRules, DT_INSRules )
 	SendPropQAngles( "vp_angle", 0, SIZEOF_IGNORE, 32, 0, SendProxy_CurrentViewpointAngle ),
 
 #else
-
-	// Scripts
-	RecvPropInt( "scriptcheck", 0, SIZEOF_IGNORE, SPROP_UNSIGNED, RecvProxy_ScriptCheck ),
 
 	// Using Stats
 	//RecvPropInt( "stats", 0, SIZEOF_IGNORE, SPROP_UNSIGNED, RecvProxy_Stats ),

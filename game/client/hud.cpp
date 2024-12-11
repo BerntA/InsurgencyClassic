@@ -1257,8 +1257,6 @@ bool CHud::DoesRenderGroupExist( int iGroupIndex )
 //-----------------------------------------------------------------------------
 void CHud::UpdateHud( bool bActive )
 {
-	// clear the weapon bits.
-	gHUD.m_iKeyBits &= (~(IN_WEAPON1|IN_WEAPON2));
 	g_pClientMode->Update();
 }
 

@@ -450,8 +450,6 @@ $Project
 					$File "$SRCDIR\game\shared\ins\mapname_utils.h"
 					$File "$SRCDIR\game\shared\ins\play_team_shared.cpp"
 					$File "$SRCDIR\game\shared\ins\play_team_shared.h"
-					$File "$SRCDIR\game\shared\ins\script_check_shared.cpp"
-					$File "$SRCDIR\game\shared\ins\script_check_shared.h"
 					$File "$SRCDIR\game\shared\ins\squad_data.h"
 					$File "$SRCDIR\game\shared\ins\team_lookup.cpp"
 					$File "$SRCDIR\game\shared\ins\team_lookup.h"
@@ -561,7 +559,6 @@ $Project
 			
 			$Folder "Shaders"
 			{
-				$File "ins/BloodyTextureProxy.cpp"
 				$File "ins/TeamTextureProxy.cpp"
 				$File "ins/GlobalRenderEffects.cpp"
 				$File "ins/GlobalRenderEffects.h"

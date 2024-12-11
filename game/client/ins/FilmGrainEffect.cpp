@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "ScreenSpaceEffects.h"
 #include "GlobalRenderEffects.h"
-#include "c_hl2mp_player.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -17,7 +16,7 @@ ConVar bb2_fx_filmgrain("bb2_fx_filmgrain", "0", FCVAR_ARCHIVE, "Enable or Disab
 class CFilmGrainEffect : public IScreenSpaceEffect
 {
 public:
-	CFilmGrainEffect(void) { }
+	CFilmGrainEffect(void) {}
 
 	void Init(void);
 	void Shutdown(void);

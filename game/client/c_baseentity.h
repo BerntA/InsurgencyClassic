@@ -215,6 +215,7 @@ public:
 	virtual void					Precache(void);
 	virtual void					Activate();
 	virtual void                    OnDormantStateChange(void) { }
+	virtual int						ActionType(void) const { return -1; }
 
 	virtual void					ParseMapData(CEntityMapData *mapData);
 	virtual bool					KeyValue(const char *szKeyName, const char *szValue);

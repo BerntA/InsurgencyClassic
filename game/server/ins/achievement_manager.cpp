@@ -9,60 +9,10 @@
 #include "GameBase_Shared.h"
 #include "GameBase_Server.h"
 
-static globalStatItem_t szGameStats[] =
-{
-	{ "BBX_ST_XP_CURRENT", 0 },
-	{ "BBX_ST_XP_LEFT", 65 },
-	{ "BBX_ST_LEVEL", 1 },
-	{ "BBX_ST_TALENTS", 0 },
-	{ "BBX_ST_ZM_POINTS", 0 },
-};
-
-const char* pszGameSkills[40] =
+const char* pszGameSkills[] = // TODO
 {
 	"BBX_ST_AGI_SPEED",
 	"BBX_ST_AGI_ACROBATICS",
-	"BBX_ST_AGI_SLIDE",
-	"BBX_ST_AGI_SNIPER_MASTER",
-	"BBX_ST_AGI_ENHANCED_REFLEXES",
-	"BBX_ST_AGI_MELEE_SPEED",
-	"BBX_ST_AGI_LIGHTWEIGHT",
-	"BBX_ST_AGI_WEIGHTLESS",
-	"BBX_ST_AGI_HEALTH_REGEN",
-	"BBX_ST_AGI_REALITY_PHASE",
-
-	"BBX_ST_STR_HEALTH",
-	"BBX_ST_STR_IMPENETRABLE",
-	"BBX_ST_STR_PAINKILLER",
-	"BBX_ST_STR_LIFE_LEECH",
-	"BBX_ST_STR_POWER_KICK",
-	"BBX_ST_STR_BLEED",
-	"BBX_ST_STR_CRIPPLING_BLOW",
-	"BBX_ST_STR_ARMOR_MASTER",
-	"BBX_ST_STR_MELEE_MASTER",
-	"BBX_ST_STR_BLOOD_RAGE",
-
-	"BBX_ST_PRO_RIFLE_MASTER",
-	"BBX_ST_PRO_SHOTGUN_MASTER",
-	"BBX_ST_PRO_PISTOL_MASTER",
-	"BBX_ST_PRO_RESOURCEFUL",
-	"BBX_ST_PRO_BLAZING_AMMO",
-	"BBX_ST_PRO_COLDSNAP",
-	"BBX_ST_PRO_SHOUT_AND_SPRAY",
-	"BBX_ST_PRO_EMPOWERED_BULLETS",
-	"BBX_ST_PRO_MAGAZINE_REFILL",
-	"BBX_ST_PRO_GUNSLINGER",
-
-	"BBX_ST_ZM_HEALTH",
-	"BBX_ST_ZM_DAMAGE",
-	"BBX_ST_ZM_DAMAGE_REDUCTION",
-	"BBX_ST_ZM_SPEED",
-	"BBX_ST_ZM_JUMP",
-	"BBX_ST_ZM_LEAP",
-	"BBX_ST_ZM_DEATH",
-	"BBX_ST_ZM_LIFE_LEECH",
-	"BBX_ST_ZM_HEALTH_REGEN",
-	"BBX_ST_ZM_MASS_INVASION",
 };
 
 void AchievementManager::AnnounceAchievement(int plIndex, const char* pcAchievement, int iAchievementType)
@@ -163,7 +113,7 @@ bool AchievementManager::WriteToStatPvP(CBasePlayer* pPlayer, const char* szStat
 {
 	// Make sure we have loaded stats, have PvP mode on, and have a server context!
 	if (
-		!pPlayer || !pPlayer->HasLoadedStats() || pPlayer->IsBot() || !GameBaseServer()->CanEditSteamStats() ||
+		!pPlayer || !pPlayer->HasLoadedStats() || pPlayer->IsBot() ||
 		!steamgameserverapicontext || !steamgameserverapicontext->SteamGameServerStats()
 		)
 		return false;
@@ -187,14 +137,12 @@ bool AchievementManager::WriteToStatPvP(CBasePlayer* pPlayer, const char* szStat
 
 bool AchievementManager::IsGlobalStatsAllowed(void)
 {
-	// Make sure that our interfaces have been locked and loaded.
-	// Are we using stats, and has cheats NOT been on?
-	return (steamgameserverapicontext && steamgameserverapicontext->SteamGameServerStats() && GameBaseServer() && (GameBaseServer()->CanStoreSkills() == PROFILE_GLOBAL));
+	return (steamgameserverapicontext && steamgameserverapicontext->SteamGameServerStats());
 }
 
 bool AchievementManager::CanLoadSteamStats(CBasePlayer* pPlayer)
 {
-	if (!engine->IsDedicatedServer() || !pPlayer || pPlayer->m_bHasReadProfileData || pPlayer->IsBot() || !steamgameserverapicontext || !steamgameserverapicontext->SteamGameServerStats())
+	if (!engine->IsDedicatedServer() || !pPlayer || pPlayer->HasLoadedStats() || pPlayer->IsBot() || !steamgameserverapicontext || !steamgameserverapicontext->SteamGameServerStats())
 		return false;
 
 	CSteamID pSteamClient;
@@ -212,7 +160,7 @@ bool AchievementManager::CanLoadSteamStats(CBasePlayer* pPlayer)
 // Can we write to this achiev/stat?
 bool AchievementManager::CanWrite(CBasePlayer* pClient, const char* szParam, int iAchievementType)
 {
-	if (!pClient || !pClient->m_bHasReadProfileData || pClient->IsBot() || !IsGlobalStatsAllowed() || !szParam || !szParam[0])
+	if (!pClient || !pClient->HasLoadedStats() || pClient->IsBot() || !IsGlobalStatsAllowed() || !szParam || !szParam[0])
 		return false;
 
 	if (iAchievementType == ACHIEVEMENT_TYPE_MAP)

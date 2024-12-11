@@ -48,7 +48,6 @@
 #include "eventlist.h"
 #include "npcevent.h"
 #include "datacache/imdlcache.h"
-#include "env_debughistory.h"
 #include "fogcontroller.h"
 #include "gameinterface.h"
 #include "dt_utlvector_send.h"
@@ -205,6 +204,9 @@ CBasePlayer::CBasePlayer( )
 	pl.replay = false;
 	pl.frags = 0;
 	pl.deaths = 0;
+
+	m_bHasLoadedStats = false;
+	m_ullCachedSteamID = 0ULL;
 
 	m_szNetname[0] = '\0';
 
@@ -4520,3 +4522,23 @@ uint64 CBasePlayer::GetSteamIDAsUInt64( void )
 	return 0;
 }
 #endif // NO_STEAM
+
+void CBasePlayer::OnReceivedSteamStats(GSStatsReceived_t* pCallback, bool bIOFailure)
+{
+	if (m_bHasLoadedStats || bIOFailure || (pCallback->m_eResult != k_EResultOK))
+		return;
+
+	m_bHasLoadedStats = true;
+	m_ullCachedSteamID = ((unsigned long long)GetSteamIDAsUInt64());
+
+	// EXAMPLE - load stats array and accumulate!
+	//for (int i = 0; i < ACHIEVEMENTS::GetNumAchievements(); i++)
+	//{
+	//	const auto* pAchievement = ACHIEVEMENTS::GetAchievementItem(i);
+	//	if (pAchievement == NULL || pAchievement->szStat == NULL || pAchievement->szStat[0] == 0)
+	//		continue;
+	//	
+	//	int iValue = 0;
+	//	steamgameserverapicontext->SteamGameServerStats()->GetUserStat(pCallback->m_steamIDUser, pAchievement->szStat, &iValue);
+	//}
+}

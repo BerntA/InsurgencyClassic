@@ -471,7 +471,7 @@ void FX_INS_Default_TracerSound(const Vector& start, const Vector& end, int type
 
 		CLocalPlayerFilter filter;
 		enginesound->EmitSound(filter, SOUND_FROM_WORLD, CHAN_STATIC, params.soundname,
-			params.volume, SNDLVL_TO_ATTN(params.soundlevel), 0, params.pitch, &start, &shotDir, false);
+			params.volume, SNDLVL_TO_ATTN(params.soundlevel), 0, params.pitch, 0, &start, &shotDir, NULL, false);
 	}
 
 	// make an effect

@@ -6,6 +6,7 @@
 
 #ifndef PLAYER_H
 #define PLAYER_H
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -17,6 +18,7 @@
 #include "game/server/iplayerinfo.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "util_shared.h"
+#include "achievement_manager.h"
 
 // For queuing and processing usercmds
 class CCommandContext
@@ -845,6 +847,17 @@ private:
 
 public:
 	virtual unsigned int PlayerSolidMask( bool brushOnly = false ) const;	// returns the solid mask for the given player, so bots can have a more-restrictive set
+
+protected: // steam stats & achievs logic
+	friend bool AchievementManager::CanLoadSteamStats(CBasePlayer* pPlayer);
+
+	void OnReceivedSteamStats(GSStatsReceived_t* pCallback, bool bIOFailure);
+	CCallResult<CBasePlayer, GSStatsReceived_t> m_SteamCallResultRequestPlayerStats;
+	bool m_bHasLoadedStats;
+	unsigned long long m_ullCachedSteamID;
+
+public:
+	bool HasLoadedStats(void) { return m_bHasLoadedStats; }
 };
 
 typedef CHandle<CBasePlayer> CBasePlayerHandle;

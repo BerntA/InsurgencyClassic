@@ -36,22 +36,6 @@ const char *g_pszTheaterTypes[ THEATERTYPE_COUNT ] = {
 
 //=========================================================
 //=========================================================
-#ifdef GAME_DLL
-
-struct MapCRC32_t
-{
-	const char *m_pszMapName;
-	unsigned int m_iIMC_CRC32, m_iMap_CRC32;
-
-} g_ValidIMCs[ ] = {
-	/* { "ins_ramadi", 1745551462, 4260314295 }, */
-	{ NULL, 0, 0 }
-};
-
-#endif
-
-//=========================================================
-//=========================================================
 CUtlVector< CLoadIMC* > m_IMCLoadTypes;
 
 ConVar currentprofile( "ins_currentprofile", "0", FCVAR_UNREGISTERED, "", true, 0, true, MAX_IMC_PROFILES - 1 );
@@ -191,49 +175,7 @@ void CIMCConfig::Setup( void )
 		m_iProfileID = GetNextProfile( );
 
 	#ifdef GAME_DLL
-
-		if( pszIMCSuffix )
-		{
-			// check CRC32's for valid IMC
-			const char *pszMapName = STRING( gpGlobals->mapname );
-			bool bValidIMC = false;
-
-		#ifdef _DEBUG
-
-			if( Q_strcmp( pszMapName, "testmap3" ) == 0 )
-				bValidIMC = true;
-
-		#endif
-
-			for( int i = 0; !bValidIMC; i++ )
-			{
-				MapCRC32_t *pMapCRC32 = &g_ValidIMCs[ i ];
-
-				if( !pMapCRC32->m_pszMapName )
-					break;
-
-				if( Q_strcmp( pMapCRC32->m_pszMapName, pszMapName ) != 0 )
-					continue;
-
-				char szIMCPath[ 128 ];
-				unsigned int iIMC_CRC32, iMap_CRC32;
-
-				Q_snprintf( szIMCPath, sizeof( szIMCPath ), "maps/%s.%s", pMapCRC32->m_pszMapName, pszIMCSuffix );
-
-				if( !UTIL_GetCRC32File( szIMCPath, iIMC_CRC32 ) || iIMC_CRC32 != pMapCRC32->m_iIMC_CRC32 )
-					continue;
-
-				Q_snprintf( szIMCPath, sizeof( szIMCPath ), "maps/%s.bsp", pMapCRC32->m_pszMapName );
-
-				if( !UTIL_GetCRC32File( szIMCPath, iMap_CRC32 ) || iMap_CRC32 != pMapCRC32->m_iMap_CRC32 )
-					continue;
-
-				bValidIMC = true;
-			}
-
-			m_bCertifiedIMC = bValidIMC;
-		}
-
+		m_bCertifiedIMC = true;
 	#endif
 
 	}

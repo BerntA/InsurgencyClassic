@@ -18,7 +18,7 @@
 #ifdef GAME_DLL
 
 #include "te_effect_dispatch.h"
-#include "te_nmr_firebullets.h"
+#include "te_bullet_shot.h"
 #include "ilagcompensationmanager.h"
 
 #else
@@ -717,7 +717,7 @@ void UTIL_FireBullets( IFireBullets *pWeapon, const Vector &vecOrigin, const Vec
 #ifdef GAME_DLL
 
 	// tell the other clients of the effect
-	TE_FireBullets( pAttacker->entindex( ), vecOrigin, vecDir, iSeed ); // TODO !!!
+	TE_HL2MPFireBullets(pAttacker->entindex(), pAttacker->WorldSpaceCenter(), vecOrigin, vecDir, iBulletType, true, true, false, (iBulletType == BULLET_BUCKSHOT), true, true, true);
 
 	// apply damage
 	ApplyMultiDamage( );

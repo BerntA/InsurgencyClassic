@@ -37,8 +37,8 @@ private:
 	void ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove );
 
 	Vector GetPlayerViewOffset( int iStance ) const;
-	const Vector &GetPlayerMins( void ) const;
-	const Vector &GetPlayerMaxs( void ) const;
+	virtual Vector	GetPlayerMins(void) const; // uses local player
+	virtual Vector	GetPlayerMaxs(void) const; // uses local player
 
 	bool CheckJumpButton( void );
 
@@ -105,14 +105,14 @@ Vector CINSGameMovement::GetPlayerViewOffset( int iStance ) const
 
 //=========================================================
 //=========================================================
-const Vector& CINSGameMovement::GetPlayerMins( void ) const
+Vector CINSGameMovement::GetPlayerMins( void ) const
 {
 	return UTIL_PlayerViewMins( m_pINSPlayer );
 }
 
 //=========================================================
 //=========================================================
-const Vector& CINSGameMovement::GetPlayerMaxs( void ) const
+Vector CINSGameMovement::GetPlayerMaxs( void ) const
 {	
 	return UTIL_PlayerViewMaxs( m_pINSPlayer );
 }
@@ -142,7 +142,7 @@ bool CINSGameMovement::CheckJumpButton( void )
 	if ( player->GetWaterLevel( ) >= 2 )
 	{	
 		// swimming, not jumping
-		SetGroundEntity( ( CBaseEntity * )NULL );
+		SetGroundEntity(NULL);
 
 		if( player->GetWaterType( ) == CONTENTS_WATER )    // we move up a certain amount
 			mv->m_vecVelocity[ 2 ] = 100;
@@ -178,11 +178,9 @@ bool CINSGameMovement::CheckJumpButton( void )
 		return false;
 
 	// in the air now
-    SetGroundEntity( ( CBaseEntity* )NULL );
+	SetGroundEntity(NULL);
 	
 	player->PlayStepSound( mv->m_vecAbsOrigin, player->m_pSurfaceData, 1.0, true );
-	
-	MoveHelper( )->PlayerSetAnimation( PLAYER_JUMP );
 
 	float flGroundFactor = 1.0f;
 
@@ -434,7 +432,7 @@ bool CINSGameMovement::CanChangeStance( int iFromStance, int iToStance )
 	Ray_t ray;
 
 	ray.Init( vecStartOrigin, vecNewOrigin, vecHullMin, vecHullMax );
-	UTIL_TraceRay( ray, PlayerSolidMask( ), mv->m_nPlayerHandle.Get( ), COLLISION_GROUP_PLAYER_MOVEMENT, &trace );
+	UTIL_TraceRay(ray, PlayerSolidMask(), mv->m_nPlayerHandle.Get(), m_pINSPlayer->GetCollisionGroup(), &trace);
 
 #if defined( _DEBUG ) && defined( GAME_DLL )
 

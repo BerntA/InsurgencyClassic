@@ -902,7 +902,7 @@ public:
 	virtual CBaseEntity *Respawn( void ) { return NULL; }
 
 	// Method used to deal with attacks passing through triggers
-	void TraceAttackToTriggers( const CTakeDamageInfo &info, const Vector& start, const Vector& end, const Vector& dir );
+	static void TraceAttackToTriggers(const CTakeDamageInfo& info, const Vector& start, const Vector& end, const Vector& dir);
 
 	// Do the bounding boxes of these two intersect?
 	bool	Intersects( CBaseEntity *pOther );

@@ -17,7 +17,6 @@
 #include "prediction.h"
 #include "bitbuf.h"
 #include "checksum_md5.h"
-#include "c_hl2mp_player.h"
 #include "hltvcamera.h"
 #include <ctype.h> // isalnum()
 #include <voice_status.h>

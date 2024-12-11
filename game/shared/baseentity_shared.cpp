@@ -23,7 +23,6 @@
 
 #ifdef CLIENT_DLL
 	#include "c_te_effect_dispatch.h"
-    #include "c_hl2mp_player.h"
 #else
 	#include "te_effect_dispatch.h"
 	#include "soundent.h"

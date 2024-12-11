@@ -415,7 +415,7 @@ void RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrcIn, float fl
 				}
 
 				// now hit all triggers along the way that respond to damage... 
-				pEntity->TraceAttackToTriggers( adjustedInfo, vecSrc, tr.endpos, dir );
+				CBaseEntity::TraceAttackToTriggers( adjustedInfo, vecSrc, tr.endpos, dir );
 			}
 		}
 

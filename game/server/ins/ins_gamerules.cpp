@@ -17,7 +17,6 @@
 #include "ins_objmarker.h"
 #include "ins_squad_shared.h"
 #include "basic_colors.h"
-#include "script_check_shared.h"
 #include "keyvalues.h"
 #include "filesystem.h"
 #include "ins_player.h"
@@ -489,9 +488,6 @@ void CINSRules::LevelInitPreEntity( void )
 	// load stats -- we dont use statsman stuff
 	//GetINSStats( )->Init( );
 
-	// setup script checking
-	g_ScriptCheckShared.Calculate( );
-
 	// sync the IMC with the client
 	CIMCSync::Create( );
 
@@ -874,21 +870,6 @@ bool CINSRules::ClientCommand(CBasePlayer* pBasePlayer, const CCommand& args)
 
 		EncodedSquadData_t EncodedSquadData = atoi( args[1] );
 		SetupPlayerSquad( pPlayer, false, &EncodedSquadData, false );
-
-		return true;
-	}
-	else if( FStrEq( pszCommand, GRCMD_INVALIDSCRIPTS ) )
-	{
-		// GRCMD_INVALIDSCRIPTS "playercrc32"
-		if( args.ArgC() != 2 )
-			return true;
-		
-		unsigned int iPlayerCRC32 = atoi( args[1] );
-
-		Warning( "*** Invalid Scripts Detected: %s has %u and needs %u\n",
-			pPlayer->GetPlayerName( ), iPlayerCRC32, g_ScriptCheckShared.GetScriptCRC32( ) );
-
-		PlayerKick( pPlayer );
 
 		return true;
 	}

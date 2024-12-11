@@ -207,7 +207,7 @@ void CWeaponMeleeBase::Hit( trace_t &tr )
 	#ifdef GAME_DLL
 
 		// now hit all triggers along the ray
-		TraceAttackToTriggers( dmgInfo, tr.startpos, tr.endpos, vForward );
+		CBaseEntity::TraceAttackToTriggers( dmgInfo, tr.startpos, tr.endpos, vForward );
 
 	#endif 
 	}

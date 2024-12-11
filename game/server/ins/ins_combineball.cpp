@@ -8,7 +8,6 @@
 #include "ins_combineball.h"
 #include "props.h"
 #include "explode.h"
-#include "saverestore_utlvector.h"
 #include "materialsystem/imaterial.h"
 #include "beam_flags.h"
 #include "physics_prop_ragdoll.h"

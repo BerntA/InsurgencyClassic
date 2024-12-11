@@ -138,6 +138,13 @@ bool CGameDefinitionsShared::Precache(void)
 	PrecacheParticleSystem("helm_aurora_parent_purple");
 	PrecacheParticleSystem("helm_halo01");
 
+	// Guns
+	PrecacheParticleSystem("generic_tracer");
+	PrecacheParticleSystem("generic_tracer_nosmoke");
+	PrecacheParticleSystem("weapon_smoke_trail_01");
+	PrecacheParticleSystem("muzzleflash_pistol");
+	PrecacheParticleSystem("muzzleflash_pistol_tp");
+
 	// Impacts
 	PrecacheParticleSystem("impact_concrete");
 	PrecacheParticleSystem("impact_dirt");

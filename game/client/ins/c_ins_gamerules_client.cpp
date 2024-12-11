@@ -12,8 +12,6 @@
 #include <game/client/iviewport.h>
 #include "hud_macros.h"
 
-#include "script_check_shared.h"
-
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 
@@ -66,10 +64,6 @@ C_INSRules::C_INSRules( )
 	// init crappy vars
 	m_vecCurrentViewpoint.Init( );
 	m_angCurrentViewpoint.Init( );
-
-	// calculate shared scripts etc
-	g_ScriptCheckShared.Calculate( );
-	m_iScriptsCRC32 = g_ScriptCheckShared.GetScriptCRC32( );
 
 	// init game status
 	m_iCurrentMode = GRMODE_IDLE;
@@ -264,20 +258,6 @@ const Color &C_INSRules::TeamColor( int iTeamID ) const
 
 	CPlayTeam *pTeam = GetGlobalPlayTeam( iTeamID );
 	return ( pTeam ? pTeam->GetColor( ) : g_DefaultTeamColor );
-}
-
-//=========================================================
-//=========================================================
-void C_INSRules::SetScriptsCRC32( unsigned int iCRC32 )
-{
-	if( m_iScriptsCRC32 == 0 )
-		return;
-
-	char szInvalidScripts[ 64 ];
-	Q_snprintf( szInvalidScripts, sizeof( szInvalidScripts ), "%s %u", GRCMD_INVALIDSCRIPTS, iCRC32);
-
-	if( iCRC32 != m_iScriptsCRC32 )
-		engine->ServerCmd( szInvalidScripts, true );
 }
 
 //=========================================================

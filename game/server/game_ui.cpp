@@ -364,9 +364,9 @@ void CGameUI::Think( void )
 		}
 	}
 
-	if ( nButtonsChanged & IN_ATTACK2 )
+	if ( nButtonsChanged & IN_SPECIAL2 )
 	{
-		if ( m_nLastButtonState & IN_ATTACK2 )
+		if ( m_nLastButtonState & IN_SPECIAL2)
 		{
 			m_unpressedAttack2.FireOutput( pPlayer, this, 0 );
 		}
@@ -403,7 +403,7 @@ void CGameUI::Think( void )
 		attack = 1;
 	}
 
-	if ( pPlayer->m_nButtons & IN_ATTACK2 )
+	if ( pPlayer->m_nButtons & IN_SPECIAL2)
 	{
 		attack2 = 1;
 	}

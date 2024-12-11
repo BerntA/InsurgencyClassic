@@ -28,6 +28,4 @@ namespace AchievementManager
 	int GetMaxValueForStat(const char* szStat);
 }
 
-extern const char* pszGameSkills[40]; // Skill stat definition array.
-
 #endif // SHARED_ACHIEVEMENT_HANDLER_H

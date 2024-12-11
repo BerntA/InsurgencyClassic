@@ -9,9 +9,9 @@
 #include <vgui_controls/panel.h>
 #include "hud_macros.h"
 #include "c_playerresource.h"
-#include "vgui_entitypanel.h"
 #include "iclientmode.h"
 #include "vgui/ilocalize.h"
+#include "vgui/ISurface.h"
 #include "ins_gamerules.h"
 #include "c_ins_obj.h"
 #include "ins_player_shared.h"
@@ -168,9 +168,9 @@ void CObjDots::Paint(void)
 		else
 			iDotTexID = m_iDotFilledTexID;
 
-		vgui::surface()->DrawSetTexture(iDotTexID);
-		vgui::surface()->DrawSetColor(Color(255, 255, 255, 255));
-		vgui::surface()->DrawTexturedRect(iDotXPos, 0, iDotXPos + m_iDotSize, m_iDotSize);
+		surface()->DrawSetTexture(iDotTexID);
+		surface()->DrawSetColor(Color(255, 255, 255, 255));
+		surface()->DrawTexturedRect(iDotXPos, 0, iDotXPos + m_iDotSize, m_iDotSize);
 
 		iDotXPos += m_iDotXGap + m_iDotSize;
 	}
@@ -180,6 +180,6 @@ void CObjDots::Paint(void)
 //=========================================================
 void CObjDots::LoadDot(int &iTexID, const char *pszPath)
 {
-	iTexID = vgui::surface()->CreateNewTextureID();
-	vgui::surface()->DrawSetTextureFile(iTexID, pszPath, false, false);
+	iTexID = surface()->CreateNewTextureID();
+	surface()->DrawSetTextureFile(iTexID, pszPath, false, false);
 }

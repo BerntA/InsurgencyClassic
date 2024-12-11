@@ -143,8 +143,6 @@ enum EndGame_Balance_t
 #define GRCMD_TEAMSETUP			"pteamsetup"
 #define GRCMD_SQUADSETUP		"psquadsetup"
 #define GRCMD_FULLSETUP			"pfullsetup"
-#define GRCMD_INVALIDSCRIPTS	"invalidscripts"
-#define GRCMD_REGDI				"regdi"
 #define GRCMD_MODIFYLAYOUT		"modifylayout"
 #define GRCMD_CREINFORCE		"creinforce"
 #define GRCMD_OBJORDERS			"objorders"
