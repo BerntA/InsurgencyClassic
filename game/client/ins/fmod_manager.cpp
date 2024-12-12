@@ -10,6 +10,7 @@
 #include "filesystem.h"
 #include "GameBase_Client.h"
 #include "c_soundscape.h"
+#include "musicmanager.h"
 
 using namespace FMOD;
 
@@ -58,15 +59,10 @@ void CFMODManager::Restart()
 
 const char* CFMODManager::GetSoundPath(const char* pathToFileFromModFolder)
 {
-	return GetFilePath("sound", pathToFileFromModFolder);
-}
-
-const char* CFMODManager::GetFilePath(const char* folder, const char* file)
-{
 	static char fullPath[512];
 	static char relativePath[256];
 
-	Q_snprintf(relativePath, sizeof(relativePath), "%s/%s", folder, file);
+	Q_snprintf(relativePath, sizeof(relativePath), "sound/%s", pathToFileFromModFolder);
 	filesystem->RelativePathToFullPath(relativePath, "MOD", fullPath, sizeof(fullPath));
 
 	// convert backwards slashes to forward slashes
@@ -86,6 +82,7 @@ void CFMODManager::Think(void)
 		return;
 
 	pSystem->update();
+	g_pMusicManager->Update(0.0f);
 }
 
 System* CFMODManager::GetFMODSystem()

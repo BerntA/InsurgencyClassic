@@ -9,6 +9,7 @@
 #endif
 
 #include "stringlookup.h"
+#include "fmod_ambience.h"
 
 enum MusicIngame_t
 {
@@ -71,5 +72,38 @@ public:
 	int iTeam; // 0 = usmc, 1 = iraqi, 2 = Menu
 	CUtlVector<MusicEntry_t> sounds;
 };
+
+class CMusicManager : public CGameEventListener, public CAutoGameSystem
+{
+public:
+	CMusicManager();
+	virtual ~CMusicManager();
+
+	virtual bool Init(void) OVERRIDE;
+	virtual void Restart(void);
+	virtual void Shutdown(void) OVERRIDE;
+
+	virtual void Update(float flFrameTime) OVERRIDE;
+
+	virtual void FireGameEvent(IGameEvent* pEvent) OVERRIDE;
+
+	virtual void LevelInitPostEntity(void) OVERRIDE;
+	virtual void LevelShutdownPreEntity(void) OVERRIDE;
+
+	void SetMusicIngame(MusicIngame_t iState);
+	void SendMusic(int iMode);
+	void ClearMusicQueue(void);
+
+protected:
+	bool LoadData(void);
+
+private:
+	MusicIngame_t m_iIngameMusicState;
+	CFMODAmbience m_fmodSound;
+	CSoundGroup m_soundGroups[MUSIC_GROUP_MAX]; // 0 = usmc, 1 = iraqi, 2 = Menu
+	int m_iCurrentSoundGroup;
+};
+
+extern CMusicManager* g_pMusicManager;
 
 #endif // MUSIC_MANAGER_H

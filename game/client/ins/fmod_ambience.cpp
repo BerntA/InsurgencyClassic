@@ -36,9 +36,10 @@ void CFMODAmbience::Restart(void)
 		PlaySoundInternal();
 }
 
-void CFMODAmbience::PlaySound(const char* pSoundPath, bool bLooped)
+void CFMODAmbience::PlaySound(const char* pSoundPath, bool bLooped, float flVolOverride)
 {
 	m_bIsLooped = bLooped;
+	m_flVolume = flVolOverride;
 	Q_strncpy(m_pchSoundFile, FMODManager()->GetSoundPath(pSoundPath), sizeof(m_pchSoundFile));
 	PlaySoundInternal();
 }
@@ -85,7 +86,7 @@ void CFMODAmbience::SetVolume(float volume)
 void CFMODAmbience::Think(void)
 {
 	if (m_pChannel == NULL)
-		return;
+		return;	
 
 	bool bShouldMute = (engine->IsPaused() || !engine->IsActiveApp());
 	bool bIsMuted = false;

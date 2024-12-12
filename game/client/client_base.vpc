@@ -615,6 +615,11 @@ $Project
 				$File "ins/musicoptions.cpp"
 				$File "ins/spectatorgui.cpp"
 				$File "ins/spectatorgui.h"
+				$File "ins/allegiance.cpp"
+				//$File "ins/armory.cpp"
+				$File "ins/customize.cpp"
+				$File "ins/ins_allegiance_content.cpp"
+				$File "ins/ins_allegiance_content.cpp"
 			}
 
 			$Folder "Player"

@@ -37,8 +37,6 @@ public:
 	const float GetGameVolume() const { return (m_pVarGameVolume ? m_pVarGameVolume->GetFloat() : 1.0f); }
 
 private:
-	const char* GetFilePath(const char* folder, const char* file);
-
 	ConVar* m_pVarMusicVolume;
 	ConVar* m_pVarGameVolume;
 	ConVar* m_pVarMuteSoundFocus;

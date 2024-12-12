@@ -3,7 +3,6 @@
 // remastered by BerntA
 
 #include "cbase.h"
-#include "fmod_ambience.h"
 #include "musicmanager.h"
 #include "convar.h"
 #include "KeyValues.h"
@@ -36,38 +35,8 @@ ADD_LOOKUP(MUSIC_MODE_MAX)
 
 END_STRING_LOOKUP_CONSTANTS()
 
-class CMusicManager : public CGameEventListener, public CAutoGameSystem
-{
-public:
-	CMusicManager();
-	virtual ~CMusicManager();
-
-	virtual bool Init(void) OVERRIDE;
-	virtual void Restart(void);
-	virtual void Shutdown(void) OVERRIDE;
-
-	virtual void Update(float flFrameTime) OVERRIDE;
-
-	virtual void FireGameEvent(IGameEvent* pEvent) OVERRIDE;
-
-	virtual void LevelInitPostEntity(void) OVERRIDE;
-	virtual void LevelShutdownPreEntity(void) OVERRIDE;
-
-	void SetMusicIngame(MusicIngame_t iState);
-	void SendMusic(int iMode);
-	void ClearMusicQueue(void);
-
-protected:
-	bool LoadData(void);
-
-private:
-	MusicIngame_t m_iIngameMusicState;
-	CFMODAmbience m_fmodSound;
-	CSoundGroup m_soundGroups[MUSIC_GROUP_MAX]; // 0 = usmc, 1 = iraqi, 2 = Menu
-	int m_iCurrentSoundGroup;
-};
-
 static CMusicManager s_MusicManager;
+CMusicManager* g_pMusicManager = &s_MusicManager;
 
 CMusicManager::CMusicManager() : CAutoGameSystem("MusicManager")
 {
@@ -155,7 +124,7 @@ void CMusicManager::Shutdown(void)
 }
 
 void CMusicManager::Update(float flFrameTime)
-{
+{	
 	// Music for menu
 	if (!m_fmodSound.IsPlaying() && m_iCurrentSoundGroup == 2 && !engine->IsInGame())
 	{
@@ -169,7 +138,7 @@ void CMusicManager::Update(float flFrameTime)
 		return;
 
 	const MusicEntry_t* pNextSong = g_pMusicQueue.Head();
-	m_fmodSound.PlaySound(pNextSong->pchSoundFile, false);
+	m_fmodSound.PlaySound(pNextSong->pchSoundFile, false, 1.0f);
 	m_fmodSound.Think();
 	g_pMusicQueue.Remove(0);
 }

@@ -27,7 +27,7 @@ public:
 	virtual ~CFMODAmbience();
 
 	void Restart(void);
-	void PlaySound(const char* pSoundPath, bool bLooped = true);
+	void PlaySound(const char* pSoundPath, bool bLooped = true, float flVolOverride = 0.0f);
 	void StopSound(void);
 	void SetVolume(float volume);
 	void Think(void);

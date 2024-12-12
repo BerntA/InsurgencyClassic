@@ -61,7 +61,7 @@ private:
 
 //=========================================================
 //=========================================================
-//#define INSVGUI_FINAL_CHANGETEAM
+#define INSVGUI_FINAL_CHANGETEAM
 //#define INSVGUI_FINAL_SQUADSELECTION
 //#define INSVGUI_FINAL_GAMEINFO
 //#define INSVGUI_FINAL_DEATHINFO
