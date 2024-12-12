@@ -27,9 +27,9 @@
 
 // SendTable stuff.
 IMPLEMENT_SERVERCLASS_ST(CBaseFlex, DT_BaseFlex)
-SendPropFloat(SENDINFO_VECTORELEM(m_vecViewOffset, 0), 8, 0, -32.0, 32.0f),
-SendPropFloat(SENDINFO_VECTORELEM(m_vecViewOffset, 1), 8, 0, -32.0, 32.0f),
-SendPropFloat(SENDINFO_VECTORELEM(m_vecViewOffset, 2), 10, SPROP_CHANGES_OFTEN, 0.0f, 128.0f),
+SendPropFloat(SENDINFO_VECTORELEM(m_vecViewOffset, 0), 0, SPROP_NOSCALE),
+SendPropFloat(SENDINFO_VECTORELEM(m_vecViewOffset, 1), 0, SPROP_NOSCALE),
+SendPropFloat(SENDINFO_VECTORELEM(m_vecViewOffset, 2), 0, SPROP_NOSCALE),
 END_SEND_TABLE()
 
 LINK_ENTITY_TO_CLASS(baseflexer, CBaseFlex); // meaningless independant class!!

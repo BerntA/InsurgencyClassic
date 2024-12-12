@@ -34,8 +34,6 @@ public:
 	CNetworkArray(unsigned char, m_chAreaBits, MAX_AREA_STATE_BYTES);								// Which areas are potentially visible to the client?
 	CNetworkArray(unsigned char, m_chAreaPortalBits, MAX_AREA_PORTAL_STATE_BYTES);	// Which area portals are open?
 
-	CNetworkVar(int, m_iHideHUD);		// bitfields containing sections of the HUD to hide
-
 	CNetworkVar(int, m_iDefaultFOV);
 	CNetworkVar(float, m_flFOVRate);
 	CNetworkVar(float, m_flViewmodelFOVRate);

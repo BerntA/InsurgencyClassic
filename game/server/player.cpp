@@ -111,7 +111,6 @@ BEGIN_DATADESC( CBasePlayer )
 
 	// Inputs
 	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetHealth", InputSetHealth ),
-	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetHUDVisibility", InputSetHUDVisibility ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetFogController", InputSetFogController ),
 
 END_DATADESC()
@@ -955,7 +954,6 @@ bool CBasePlayer::StartObserverMode(int mode)
 	ShowViewPortPanel(PANEL_SPECGUI, true);
 	
 	// Setup flags
-    m_Local.m_iHideHUD = HIDEHUD_HEALTH;
 	m_takedamage = DAMAGE_NO;		
 
 	// Become invisible
@@ -3446,9 +3444,9 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 		SendPropEHandle		( SENDINFO( m_hLastWeapon ) ),
 		SendPropEHandle		( SENDINFO( m_hGroundEntity ), SPROP_CHANGES_OFTEN ),
 
-		SendPropFloat(SENDINFO_VECTORELEM(m_vecVelocity, 0), 20, SPROP_CHANGES_OFTEN, -2048.0f, 2048.0f),
-		SendPropFloat(SENDINFO_VECTORELEM(m_vecVelocity, 1), 20, SPROP_CHANGES_OFTEN, -2048.0f, 2048.0f),
-		SendPropFloat(SENDINFO_VECTORELEM(m_vecVelocity, 2), 16, SPROP_CHANGES_OFTEN, -2048.0f, 2048.0f),
+		SendPropFloat(SENDINFO_VECTORELEM(m_vecVelocity, 0), 32, SPROP_NOSCALE | SPROP_CHANGES_OFTEN),
+		SendPropFloat(SENDINFO_VECTORELEM(m_vecVelocity, 1), 32, SPROP_NOSCALE | SPROP_CHANGES_OFTEN),
+		SendPropFloat(SENDINFO_VECTORELEM(m_vecVelocity, 2), 32, SPROP_NOSCALE | SPROP_CHANGES_OFTEN),
 
 		SendPropVector(SENDINFO(m_vecBaseVelocity), 20, 0, -1000, 1000),
 
@@ -4001,24 +3999,6 @@ void CBasePlayer::InputSetHealth( inputdata_t &inputdata )
 	else if ( iNewHealth < GetHealth() )
 	{
 		TakeDamage(CTakeDamageInfo(this, this, iDelta, DMG_GENERIC));
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Hides or displays the HUD
-// Input  : &inputdata -
-//-----------------------------------------------------------------------------
-void CBasePlayer::InputSetHUDVisibility( inputdata_t &inputdata )
-{
-	bool bEnable = inputdata.value.Bool();
-
-	if ( bEnable )
-	{
-		m_Local.m_iHideHUD &= ~HIDEHUD_ALL;
-	}
-	else
-	{
-		m_Local.m_iHideHUD |= HIDEHUD_ALL;
 	}
 }
 

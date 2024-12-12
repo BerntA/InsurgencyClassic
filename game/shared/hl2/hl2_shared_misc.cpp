@@ -713,7 +713,6 @@ void CPlayerPickupController::Init(CBasePlayer *pPlayer, CBaseEntity *pObject)
 
 	m_grabController.AttachEntity(pPlayer, pObject, pPhysics, false, vec3_origin, false);
 
-	m_pPlayer->m_Local.m_iHideHUD |= HIDEHUD_WEAPONSELECTION;
 	m_pPlayer->SetUseEntity(this);
 #endif
 }
@@ -748,8 +747,6 @@ void CPlayerPickupController::Shutdown(bool bThrown)
 		{
 			m_pPlayer->GetActiveWeapon()->Deploy();
 		}
-
-		m_pPlayer->m_Local.m_iHideHUD &= ~HIDEHUD_WEAPONSELECTION;
 	}
 	Remove();
 

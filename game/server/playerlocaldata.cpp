@@ -25,8 +25,6 @@ BEGIN_SEND_TABLE_NOBASE(CPlayerLocalData, DT_Local)
 SendPropArray3(SENDINFO_ARRAY3(m_chAreaBits), SendPropInt(SENDINFO_ARRAY(m_chAreaBits), 8, SPROP_UNSIGNED)),
 SendPropArray3(SENDINFO_ARRAY3(m_chAreaPortalBits), SendPropInt(SENDINFO_ARRAY(m_chAreaPortalBits), 8, SPROP_UNSIGNED)),
 
-SendPropInt(SENDINFO(m_iHideHUD), HIDEHUD_BITCOUNT, SPROP_UNSIGNED),
-
 SendPropInt(SENDINFO(m_iDefaultFOV), 8, SPROP_UNSIGNED),
 SendPropFloat(SENDINFO(m_flFOVRate), 0, SPROP_NOSCALE),
 SendPropFloat(SENDINFO(m_flViewmodelFOVRate), 0, SPROP_NOSCALE),

@@ -481,7 +481,6 @@ $Project
 			{		
 				$File "ins/c_client_gib.cpp"
 				$File "ins/c_client_gib.h"
-				$File "$SRCDIR\game\shared\ins\func_entity_block.cpp"
 				$File "ins/c_ins_ammobox.cpp"
 				$File "ins/c_ins_ammobox.h"
 				$File "ins/c_ins_combineball.cpp"

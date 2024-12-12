@@ -492,7 +492,6 @@ $Project
 				$File "ins\env_flare.h"
 				$File "ins\func_transition.cpp"
 				$File "ins\func_transition.h"
-				$File "$SRCDIR\game\shared\ins\func_entity_block.cpp"
 				$File "ins\ins_ammobox.cpp"
 				$File "ins\ins_ammobox.h"
 				$File "ins\ins_area.cpp"

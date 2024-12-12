@@ -47,8 +47,6 @@ public:
 	unsigned char			m_chAreaBits[MAX_AREA_STATE_BYTES];				// Area visibility flags.
 	unsigned char			m_chAreaPortalBits[MAX_AREA_PORTAL_STATE_BYTES];// Area portal visibility flags.
 
-	int						m_iHideHUD;			// bitfields containing sections of the HUD to hide
-
 	int						m_iDefaultFOV;
 	float					m_flFOVRate;
 	float					m_flViewmodelFOVRate;

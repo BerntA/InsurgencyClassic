@@ -531,7 +531,6 @@ public:
 	// Inputs
 	//---------------------------------
 	void	InputSetHealth( inputdata_t &inputdata );
-	void	InputSetHUDVisibility( inputdata_t &inputdata );
 
 	surfacedata_t *GetSurfaceData( void ) { return m_pSurfaceData; }
 

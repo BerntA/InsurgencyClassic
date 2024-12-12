@@ -116,8 +116,6 @@ BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	RecvPropArray3( RECVINFO_ARRAY(m_chAreaBits), RecvPropInt(RECVINFO(m_chAreaBits[0]))),
 	RecvPropArray3( RECVINFO_ARRAY(m_chAreaPortalBits), RecvPropInt(RECVINFO(m_chAreaPortalBits[0]))),
 
-	RecvPropInt(RECVINFO(m_iHideHUD)),
-
 	// View
 	RecvPropInt(RECVINFO(m_iDefaultFOV)),
 	RecvPropFloat(RECVINFO(m_flFOVRate)),
@@ -248,8 +246,6 @@ END_PREDICTION_DATA()
 BEGIN_PREDICTION_DATA_NO_BASE( CPlayerLocalData )
 
 	DEFINE_FIELD( m_nStepside, FIELD_INTEGER ),
-
-	DEFINE_PRED_FIELD( m_iHideHUD, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 
 	DEFINE_PRED_FIELD_TOL(m_vecPunchAngle, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f),
 	DEFINE_PRED_FIELD_TOL(m_vecPunchAngleVel, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.125f),
