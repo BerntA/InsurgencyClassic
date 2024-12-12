@@ -13,7 +13,7 @@
 #include "world.h"
 #include "tier0/icommandline.h"
 
-ConVar bb2_active_workshop_item("bb2_active_workshop_item", "0", FCVAR_REPLICATED | FCVAR_HIDDEN, "Fetch the active workshop map item ID running on the server.");
+ConVar ins_active_workshop_item("ins_active_workshop_item", "0", FCVAR_REPLICATED | FCVAR_HIDDEN, "Fetch the active workshop map item ID running on the server.");
 
 static CGameBaseServer gServerMode;
 CGameBaseServer* GameBaseServer()
@@ -36,7 +36,7 @@ void CGameBaseServer::SetCurrentMapAddon(const char* map)
 {
 	if (engine->IsDedicatedServer() == false)
 	{
-		bb2_active_workshop_item.SetValue(0);
+		ins_active_workshop_item.SetValue(0);
 		return;
 	}
 
@@ -59,7 +59,7 @@ void CGameBaseServer::SetCurrentMapAddon(const char* map)
 
 	workshopMaps.Purge();
 
-	bb2_active_workshop_item.SetValue(pchWorkshopID);
+	ins_active_workshop_item.SetValue(pchWorkshopID);
 }
 
 void CGameBaseServer::PostInit()

@@ -20,7 +20,7 @@
 #ifdef GLOWS_ENABLE
 
 ConVar glow_outline_effect_enable("glow_outline_effect_enable", "1", FCVAR_ARCHIVE, "Enable entity outline glow effects.");
-ConVar bb2_max_glow_effects("bb2_max_glow_effects", "5", FCVAR_ARCHIVE, "Maximum amount of glow render effects at once.", true, 1.0f, true, 20.0f);
+ConVar ins_max_glow_effects("ins_max_glow_effects", "5", FCVAR_ARCHIVE, "Maximum amount of glow render effects at once.", true, 1.0f, true, 20.0f);
 
 extern bool g_bDumpRenderTargets; // in viewpostprocess.cpp
 
@@ -98,7 +98,7 @@ void CGlowObjectManager::RenderGlowEffects(const CViewSetup *pSetup)
 
 				if (m_pGlowEntities[i]->GetGlowMode() == GLOW_MODE_RADIUS)
 				{
-					if (numRadiusObjects >= bb2_max_glow_effects.GetInt())
+					if (numRadiusObjects >= ins_max_glow_effects.GetInt())
 					{
 						m_pGlowEntities[i]->m_bGlowSuppressRender = true;
 						continue;

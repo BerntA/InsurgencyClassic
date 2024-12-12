@@ -300,7 +300,7 @@ bool C_BaseCombatWeapon::ShouldDraw(void)
 			return false;
 		}
 
-		if (bb2_render_client_in_mirrors.GetBool() || !ShouldDrawLocalPlayerViewModel())
+		if (ins_render_client_in_mirrors.GetBool() || !ShouldDrawLocalPlayerViewModel())
 			return true;
 
 		// don't draw active weapon if not in some kind of 3rd person mode, the viewmodel will do that
@@ -416,7 +416,7 @@ void C_BaseCombatWeapon::GetToolRecordingState(KeyValues* msg)
 // Prevents multiple animation events when using mirror rendering.
 bool C_BaseCombatWeapon::ShouldDoAnimEvents()
 {
-	if (!bb2_render_client_in_mirrors.GetBool())
+	if (!ins_render_client_in_mirrors.GetBool())
 		return true;
 
 	C_BasePlayer* localplayer = C_BasePlayer::GetLocalPlayer();
@@ -429,7 +429,7 @@ bool C_BaseCombatWeapon::ShouldDoAnimEvents()
 // Make sure we render the right model and play the right anim in the mirror.
 bool C_BaseCombatWeapon::EnsureCorrectRenderingModel()
 {
-	if (!bb2_render_client_in_mirrors.GetBool())
+	if (!ins_render_client_in_mirrors.GetBool())
 		return false;
 
 	C_BasePlayer* localplayer = C_BasePlayer::GetLocalPlayer();

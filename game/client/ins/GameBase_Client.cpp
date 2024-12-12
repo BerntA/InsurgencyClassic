@@ -55,8 +55,8 @@ void OnUpdateMulticoreState(IConVar* pConVar, char const* pOldString, float flOl
 		engine->ClientCmd_Unrestricted("mat_queue_mode 0\n");
 }
 
-ConVar bb2_render_client_in_mirrors("bb2_render_client_in_mirrors", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Render the player in mirrors.", true, 0, true, 1, OnUpdateMirrorRenderingState);
-ConVar bb2_enable_multicore("bb2_enable_multicore", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Enable or Disable multicore rendering, this feature is unstable but could increase performance!", true, 0, true, 1, OnUpdateMulticoreState);
+ConVar ins_render_client_in_mirrors("ins_render_client_in_mirrors", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Render the player in mirrors.", true, 0, true, 1, OnUpdateMirrorRenderingState);
+ConVar ins_enable_multicore("ins_enable_multicore", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Enable or Disable multicore rendering, this feature is unstable but could increase performance!", true, 0, true, 1, OnUpdateMulticoreState);
 
 static void VoiceThresholdChange(IConVar* pConVar, char const* pOldString, float flOldValue)
 {
@@ -207,7 +207,7 @@ void CGameBaseClient::PostInit(void)
 	//	if (MainMenu)
 	//	MainMenu->ActivateMainMenu();
 
-	if (bb2_enable_multicore.GetBool())
+	if (ins_enable_multicore.GetBool())
 		engine->ClientCmd_Unrestricted("exec multicore.cfg\n");
 	else
 		engine->ClientCmd_Unrestricted("mat_queue_mode 0\n");
@@ -258,7 +258,7 @@ void CGameBaseClient::OnLocalPlayerExternalRendering(void)
 	if (!pClient)
 		return;
 
-	if (bb2_render_client_in_mirrors.GetBool())
+	if (ins_render_client_in_mirrors.GetBool())
 	{
 		pClient->ThirdPersonSwitch(g_bShouldRenderLocalPlayerExternally);
 		C_BaseCombatWeapon* pWeapon = pClient->GetActiveWeapon();

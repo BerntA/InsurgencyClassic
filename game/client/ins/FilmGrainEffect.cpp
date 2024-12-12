@@ -11,7 +11,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-ConVar bb2_fx_filmgrain("bb2_fx_filmgrain", "0", FCVAR_ARCHIVE, "Enable or Disable film grain.", true, 0, true, 1);
+ConVar ins_fx_filmgrain("ins_fx_filmgrain", "0", FCVAR_ARCHIVE, "Enable or Disable film grain.", true, 0, true, 1);
 
 class CFilmGrainEffect : public IScreenSpaceEffect
 {
@@ -22,7 +22,7 @@ public:
 	void Shutdown(void);
 	void SetParameters(KeyValues* params);
 	void Enable(bool bEnable);
-	bool IsEnabled() { return bb2_fx_filmgrain.GetBool(); }
+	bool IsEnabled() { return ins_fx_filmgrain.GetBool(); }
 	void Render(int x, int y, int w, int h);
 
 private:

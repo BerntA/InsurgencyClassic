@@ -15,8 +15,8 @@
 #include <steam/steam_api.h>
 #include "steam/isteamapps.h"
 
-extern ConVar bb2_render_client_in_mirrors;
-extern ConVar bb2_enable_multicore;
+extern ConVar ins_render_client_in_mirrors;
+extern ConVar ins_enable_multicore;
 
 typedef struct IVoiceTweak_s IVoiceTweak;
 

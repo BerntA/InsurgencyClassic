@@ -3592,7 +3592,7 @@ void MaterialFootstepSound( C_BaseAnimating *pEnt, bool bLeftFoot, float flVolum
 //-----------------------------------------------------------------------------
 void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options )
 {
-	extern ConVar bb2_enable_particle_gunfx;
+	extern ConVar ins_enable_particle_gunfx;
 
 	Vector attachOrigin;
 	QAngle attachAngles; 
@@ -3766,7 +3766,7 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 	case AE_MUZZLEFLASH:
 		{
 			// Send out the effect for a player
-			if (!bb2_enable_particle_gunfx.GetBool())
+			if (!ins_enable_particle_gunfx.GetBool())
 				DispatchMuzzleEffect(options, true);
 			break;
 		}
@@ -3774,7 +3774,7 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 	case AE_NPC_MUZZLEFLASH:
 		{
 			// Send out the effect for an NPC
-			if (!bb2_enable_particle_gunfx.GetBool())
+			if (!ins_enable_particle_gunfx.GetBool())
 				DispatchMuzzleEffect(options, false);
 			break;
 		}

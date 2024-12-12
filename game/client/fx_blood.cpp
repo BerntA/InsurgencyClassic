@@ -505,7 +505,7 @@ void BloodImpactCallback( const CEffectData & data )
 	if (lastTime <= 0.1f)
 		return;
 
-	if (random->RandomInt(0, 100) > bb2_gibs_blood_chance.GetInt())
+	if (random->RandomInt(0, 100) > ins_gibs_blood_chance.GetInt())
 		return;
 
 	bool bFoundBlood = false;
@@ -585,7 +585,7 @@ void GibImpactCallback(const CEffectData & data)
 	if (!pVictim)
 		return;
 
-	if (random->RandomInt(0, 100) > bb2_gibs_blood_chance.GetInt())
+	if (random->RandomInt(0, 100) > ins_gibs_blood_chance.GetInt())
 		return;
 
 	// Use the new plr model, if a plr is taking dmg:

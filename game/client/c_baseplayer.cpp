@@ -1131,7 +1131,7 @@ bool C_BasePlayer::ShouldInterpolate()
 
 bool C_BasePlayer::ShouldDraw()
 {
-	if (bb2_render_client_in_mirrors.GetBool())
+	if (ins_render_client_in_mirrors.GetBool())
 		return BaseClass::ShouldDraw();
 	else
 		return ShouldDrawThisPlayer() && BaseClass::ShouldDraw();
@@ -1139,7 +1139,7 @@ bool C_BasePlayer::ShouldDraw()
 
 int C_BasePlayer::DrawModel( int flags )
 {
-	if (bb2_render_client_in_mirrors.GetBool() && IsLocalPlayer() && g_bShouldRenderLocalPlayerExternally)
+	if (ins_render_client_in_mirrors.GetBool() && IsLocalPlayer() && g_bShouldRenderLocalPlayerExternally)
 		return BaseClass::DrawModel(flags);
 
 	if (!ShouldDrawThisPlayer())
@@ -1589,7 +1589,7 @@ void C_BasePlayer::ThirdPersonSwitch( bool bThirdperson )
 //-----------------------------------------------------------------------------
 /*static*/ bool C_BasePlayer::ShouldDrawLocalPlayer()
 {
-	return (!LocalPlayerInFirstPersonView() || (bb2_render_client_in_mirrors.GetBool() && g_bShouldRenderLocalPlayerExternally));
+	return (!LocalPlayerInFirstPersonView() || (ins_render_client_in_mirrors.GetBool() && g_bShouldRenderLocalPlayerExternally));
 }
 
 //-----------------------------------------------------------------------------

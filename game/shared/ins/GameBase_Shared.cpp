@@ -108,7 +108,7 @@ KeyValues *CGameBaseShared::ReadEncryptedKeyValueFile(IFileSystem *filesystem, c
 		}
 	}
 
-	KeyValues *pKV = new KeyValues("BB2Data");
+	KeyValues *pKV = new KeyValues("ModData");
 
 	// If we're not going to read an encrypted file, read a regular one.
 	if (!bEncryption)

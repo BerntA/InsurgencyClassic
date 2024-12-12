@@ -13,7 +13,7 @@
 #include "util_shared.h"
 #include "input.h"
 
-ConVar bb2_enable_particle_gunfx("bb2_enable_particle_gunfx", "1", FCVAR_ARCHIVE, "Enable particle based gun effects like: Muzzleflashes, Bullet tracers and Smoke.", true, 0.0f, true, 1.0f);
+ConVar ins_enable_particle_gunfx("ins_enable_particle_gunfx", "1", FCVAR_ARCHIVE, "Enable particle based gun effects like: Muzzleflashes, Bullet tracers and Smoke.", true, 0.0f, true, 1.0f);
 
 class C_TEBulletShot : public C_BaseTempEntity
 {
@@ -49,7 +49,7 @@ void C_TEBulletShot::CreateEffects(void)
 	if (!pAmmoDef || !pWpn)
 		return;
 
-	bool bParticleGunFX = bb2_enable_particle_gunfx.GetBool();
+	bool bParticleGunFX = ins_enable_particle_gunfx.GetBool();
 
 	if (m_bDoTracers || m_bDoImpacts)
 	{

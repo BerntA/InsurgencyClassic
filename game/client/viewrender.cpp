@@ -97,6 +97,8 @@ extern bool g_bDumpRenderTargets;
 //-----------------------------------------------------------------------------
 static ConVar cl_maxrenderable_dist("cl_maxrenderable_dist", "3000", FCVAR_CHEAT, "Max distance from the camera at which things will be rendered" );
 
+static ConVar ins_suppress_render_fx("ins_suppress_render_fx", "0", 0, "Disable INS based render effects, such as pain, scopes, etc.");
+
 ConVar r_entityclips( "r_entityclips", "1" ); //FIXME: Nvidia drivers before 81.94 on cards that support user clip planes will have problems with this, require driver update? Detect and disable?
 
 // Matches the version in the engine
@@ -1709,7 +1711,9 @@ void CViewRender::SetupVis( const CViewSetup& view, unsigned int &visFlags, View
 void CViewRender::RenderPlayerSprites()
 {
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
-	GetINSHUDHelper()->DrawHUDMesh();
+
+	if (!ins_suppress_render_fx.GetBool())
+		GetINSHUDHelper()->DrawHUDMesh();
 }
 
 //-----------------------------------------------------------------------------
@@ -1766,6 +1770,9 @@ void CViewRender::DoMotionBlur(const CViewSetup& view)
 
 	if (!m_bPainEffectInitialized)
 		g_PainHelper.FudgeValues();
+
+	if (ins_suppress_render_fx.GetBool())
+		return;
 
 	CMatRenderContextPtr pRenderContext(materials);
 
@@ -1852,7 +1859,7 @@ void CViewRender::DrawMotionBlur(const CViewSetup& view, Rect_t actualRect, ITex
 
 void CViewRender::DrawScope(const CViewSetup& zoomedView)
 {
-	if (!g_pGameRules)
+	if (!g_pGameRules || ins_suppress_render_fx.GetBool())
 		return;
 
 	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();

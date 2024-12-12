@@ -21,12 +21,12 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-ConVar bb2_gibs_spawn_blood_puddle("bb2_gibs_spawn_blood_puddle", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Spawn blood puddles with ragdolls? Eventually this may decrease performance, if the level has a lot of puddles.", true, 0.0f, true, 1.0f);
-ConVar bb2_gibs_spawn_blood("bb2_gibs_spawn_blood", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "When a gib take damage/touch stuff should it spray/spawn blood?", true, 0.0f, true, 1.0f);
-ConVar bb2_gibs_max("bb2_gibs_max", "64", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set the max amount of gibs and ragdolls to be created on the client. When you reach the limit old gibs will fade out automatically.", true, 0.0f, true, 256.0f);
-ConVar bb2_gibs_enable_fade("bb2_gibs_enable_fade", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Should gibs and ragdolls fade out?", true, 0.0f, true, 1.0f);
-ConVar bb2_gibs_fadeout_time("bb2_gibs_fadeout_time", "4", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set the time in seconds before a ragdoll or gib will fade out.", true, 0.0f, true, 30.0f);
-ConVar bb2_gibs_blood_chance("bb2_gibs_blood_chance", "100", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set the chance in % to spawn blood when you attack an entity.", true, 0.0f, true, 100.0f);
+ConVar ins_gibs_spawn_blood_puddle("ins_gibs_spawn_blood_puddle", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Spawn blood puddles with ragdolls? Eventually this may decrease performance, if the level has a lot of puddles.", true, 0.0f, true, 1.0f);
+ConVar ins_gibs_spawn_blood("ins_gibs_spawn_blood", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "When a gib take damage/touch stuff should it spray/spawn blood?", true, 0.0f, true, 1.0f);
+ConVar ins_gibs_max("ins_gibs_max", "64", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set the max amount of gibs and ragdolls to be created on the client. When you reach the limit old gibs will fade out automatically.", true, 0.0f, true, 256.0f);
+ConVar ins_gibs_enable_fade("ins_gibs_enable_fade", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Should gibs and ragdolls fade out?", true, 0.0f, true, 1.0f);
+ConVar ins_gibs_fadeout_time("ins_gibs_fadeout_time", "4", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set the time in seconds before a ragdoll or gib will fade out.", true, 0.0f, true, 30.0f);
+ConVar ins_gibs_blood_chance("ins_gibs_blood_chance", "100", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set the chance in % to spawn blood when you attack an entity.", true, 0.0f, true, 100.0f);
 
 extern ConVar g_ragdoll_fadespeed;
 extern ConVar r_propsmaxdist;
@@ -49,7 +49,7 @@ int GetCurrentGibCount()
 
 bool ShouldFadeClientGib(int type)
 {
-	if (type != CLIENT_GIB_PROP && (!bb2_gibs_enable_fade.GetBool()))
+	if (type != CLIENT_GIB_PROP && (!ins_gibs_enable_fade.GetBool()))
 		return false;
 
 	return true;
@@ -165,7 +165,7 @@ void C_ClientSideGibBase::SetForceFade(bool value)
 	if (m_bForceFade)
 		m_flFadeOutDelay = gpGlobals->curtime + FORCE_FADE_TIME;
 	else
-		m_flFadeOutDelay = gpGlobals->curtime + (m_iGibType == CLIENT_GIB_PROP ? PROP_FADE_TIME : bb2_gibs_fadeout_time.GetFloat());
+		m_flFadeOutDelay = gpGlobals->curtime + (m_iGibType == CLIENT_GIB_PROP ? PROP_FADE_TIME : ins_gibs_fadeout_time.GetFloat());
 }
 
 void C_ClientSideGibBase::OnBecomeRagdoll(void)
@@ -194,7 +194,7 @@ void C_ClientSideGibBase::ClientThink(void)
 
 	FadeOut();
 
-	if (!m_bDispatchedBleedout && (m_iGibType == CLIENT_RAGDOLL) && IsClientRagdoll() && !IsGibFlagActive(GIB_RAGDOLL_SUICIDE) && bb2_gibs_spawn_blood_puddle.GetBool())
+	if (!m_bDispatchedBleedout && (m_iGibType == CLIENT_RAGDOLL) && IsClientRagdoll() && !IsGibFlagActive(GIB_RAGDOLL_SUICIDE) && ins_gibs_spawn_blood_puddle.GetBool())
 	{
 		IPhysicsObject* pPhysics = VPhysicsGetObject();
 		if (pPhysics == NULL)
@@ -252,7 +252,7 @@ void C_ClientSideGibBase::OnFullyInitialized(void)
 	if (GetGibType() != CLIENT_GIB_PROP)
 	{
 		int items = GetCurrentGibCount();
-		if (items > bb2_gibs_max.GetInt()) // Remove older gibs if we reached the limit!
+		if (items > ins_gibs_max.GetInt()) // Remove older gibs if we reached the limit!
 		{
 			for (int i = 0; i < s_ClientGibList.Count(); i++)
 			{
@@ -264,7 +264,7 @@ void C_ClientSideGibBase::OnFullyInitialized(void)
 				s_ClientGibList[i]->SetForceFade(true);
 				items--;
 
-				if (items > bb2_gibs_max.GetInt())
+				if (items > ins_gibs_max.GetInt())
 					continue;
 
 				break;
@@ -290,7 +290,7 @@ void C_ClientSideGibBase::StartTouch(C_BaseEntity *pOther)
 
 void C_ClientSideGibBase::HitSurface(C_BaseEntity *pOther)
 {
-	if (!bb2_gibs_spawn_blood.GetBool())
+	if (!ins_gibs_spawn_blood.GetBool())
 		return;
 
 	if (m_iGibType != CLIENT_GIB_PROP && m_iGibType != CLIENT_RAGDOLL)
@@ -304,7 +304,7 @@ void C_ClientSideGibBase::HitSurface(C_BaseEntity *pOther)
 
 void C_ClientSideGibBase::DoBloodSpray(trace_t *pTrace)
 {
-	if (!bb2_gibs_spawn_blood.GetBool() || (random->RandomInt(0, 100) > bb2_gibs_blood_chance.GetInt()))
+	if (!ins_gibs_spawn_blood.GetBool() || (random->RandomInt(0, 100) > ins_gibs_blood_chance.GetInt()))
 		return;
 
 	if (m_iGibType > CLIENT_GIB_PROP)
@@ -563,7 +563,7 @@ void C_ClientPhysicsGib::OnFullyInitialized(void)
 
 	if (m_iGibType > CLIENT_GIB_PROP)
 	{
-		if (!bb2_gibs_spawn_blood.GetBool())
+		if (!ins_gibs_spawn_blood.GetBool())
 			return;
 
 		DispatchParticleEffect(GameBaseShared()->GetSharedGameDetails()->GetBloodParticle(GameBaseClient->IsExtremeGore()), PATTACH_ABSORIGIN_FOLLOW, this);

@@ -28,6 +28,7 @@ public:
 	void Exit();
 	void Restart();
 	void Think();
+	bool HasLoadedModule() { return m_bLoaded; }
 
 	FMOD::System* GetFMODSystem();
 
@@ -40,6 +41,7 @@ private:
 	ConVar* m_pVarMusicVolume;
 	ConVar* m_pVarGameVolume;
 	ConVar* m_pVarMuteSoundFocus;
+	bool m_bLoaded;
 };
 
 extern CFMODManager* FMODManager();

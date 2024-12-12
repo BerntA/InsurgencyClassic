@@ -19,7 +19,7 @@ static CFMODManager gFMODMng;
 
 CFMODManager* FMODManager() { return &gFMODMng; }
 
-CFMODManager::CFMODManager() {}
+CFMODManager::CFMODManager() { m_bLoaded = false; }
 CFMODManager::~CFMODManager() {}
 
 void CFMODManager::Init(void)
@@ -37,10 +37,13 @@ void CFMODManager::Init(void)
 	m_pVarMusicVolume = cvar->FindVar("snd_musicvolume");
 	m_pVarGameVolume = cvar->FindVar("volume");
 	m_pVarMuteSoundFocus = cvar->FindVar("snd_mute_losefocus");
+	m_bLoaded = true;
 }
 
 void CFMODManager::Exit(void)
 {
+	m_bLoaded = false;
+
 	if (pSystem->release() != FMOD_OK)
 		Warning("FMOD ERROR: System did not terminate properly!\n");
 	else

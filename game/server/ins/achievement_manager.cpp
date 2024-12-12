@@ -11,8 +11,9 @@
 
 const char* pszGameSkills[] = // TODO
 {
-	"BBX_ST_AGI_SPEED",
-	"BBX_ST_AGI_ACROBATICS",
+	"INS_KI_AK47",
+	"INS_ST_KILLS",
+	"INS_ST_DEATHS",
 };
 
 void AchievementManager::AnnounceAchievement(int plIndex, const char* pcAchievement, int iAchievementType)
