@@ -125,6 +125,9 @@ void CMusicManager::Shutdown(void)
 
 void CMusicManager::Update(float flFrameTime)
 {	
+	if (m_iIngameMusicState == MUSIC_INGAME_OFF)
+		return;
+
 	// Music for menu
 	if (!m_fmodSound.IsPlaying() && m_iCurrentSoundGroup == 2 && !engine->IsInGame())
 	{

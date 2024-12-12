@@ -761,6 +761,9 @@ void Panel::Init( int x, int y, int wide, int tall )
 	m_LastNavDirection = ND_NONE;
 	m_bWorldPositionCurrentFrame = false;
 	m_bForceStereoRenderToFrameBuffer = false;
+
+	_sendSizeChanged = false;
+	memset(m_iBuildModeStorage, 0, sizeof(m_iBuildModeStorage));
 }
 
 //-----------------------------------------------------------------------------
@@ -953,6 +956,12 @@ void Panel::SetSize(int wide, int tall)
 {
 	Assert( abs(wide) < 32768 && abs(tall) < 32768 );
 	ipanel()->SetSize(GetVPanel(), wide, tall);
+
+	if (!UseTraverseSizing() || !GetParent())
+		return;
+
+	if (_sendSizeChanged)
+		OnSizeChanged();
 }
 
 //-----------------------------------------------------------------------------
@@ -1052,7 +1061,13 @@ void Panel::OnScreenSizeChanged(int nOldWide, int nOldTall)
 //-----------------------------------------------------------------------------
 void Panel::SetVisible(bool state)
 {
+	bool bOldVisible = IsVisible();
+
+	if (state == bOldVisible)
+		return;
+
 	ipanel()->SetVisible(GetVPanel(), state);
+	OnVisibilityChange(bOldVisible);
 }
 
 //-----------------------------------------------------------------------------
@@ -1499,11 +1514,52 @@ void Panel::OnChildAdded(VPANEL child)
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Screen size change notification handler
+//-----------------------------------------------------------------------------
+void Panel::OnSizeChanged(void)
+{
+	if ((!(_buildModeFlags & BUILDMODE_SAVE_XPOS_RIGHTALIGNED)) && (!(_buildModeFlags & BUILDMODE_SAVE_XPOS_CENTERALIGNED)) &&
+		(!(_buildModeFlags & BUILDMODE_SAVE_YPOS_BOTTOMALIGNED)) && (!(_buildModeFlags & BUILDMODE_SAVE_YPOS_CENTERALIGNED)))
+		goto SendChildren;
+
+	if (GetParent() == NULL)
+		goto SendChildren;
+
+	// update size
+	int iXPos, iYPos;
+	GetPos(iXPos, iYPos);
+
+	if (_buildModeFlags & BUILDMODE_SAVE_XPOS_RIGHTALIGNED)
+		iXPos = GetParent()->GetWide() - m_iBuildModeStorage[0];
+	else if (_buildModeFlags & BUILDMODE_SAVE_XPOS_CENTERALIGNED)
+		iXPos = (GetParent()->GetWide() / 2) + m_iBuildModeStorage[0];
+
+	// now correct the alignment of xpos, ypos
+	if (_buildModeFlags & BUILDMODE_SAVE_YPOS_BOTTOMALIGNED)
+		iYPos = GetParent()->GetTall() - m_iBuildModeStorage[1];
+	else if (_buildModeFlags & BUILDMODE_SAVE_YPOS_CENTERALIGNED)
+		iYPos = (GetParent()->GetTall() / 2) + m_iBuildModeStorage[1];
+
+	SetPos(iXPos, iYPos);
+
+SendChildren:
+	// post to all children
+	for (int i = 0; i < ipanel()->GetChildCount(GetVPanel()); i++)
+	{
+		VPANEL child = ipanel()->GetChild(GetVPanel(), i);
+		PostMessage(child, new KeyValues("OnSizeChanged"), NULL);
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: default message handler
 //-----------------------------------------------------------------------------
 void Panel::OnSizeChanged(int newWide, int newTall)
 {
 	InvalidateLayout(); // our size changed so force us to layout again
+
+	if (GetParent() && GetParent()->UseTraverseSizing())
+		OnSizeChanged();
 }
 
 //-----------------------------------------------------------------------------
@@ -3559,6 +3615,26 @@ VPANEL Panel::GetCurrentKeyFocus()
 	return NULL;
 }
 
+void Panel::OnVisibilityChange(int iOldVisible)
+{
+	// post to all children
+	for (int i = 0; i < ipanel()->GetChildCount(GetVPanel()); i++)
+	{
+		VPANEL child = ipanel()->GetChild(GetVPanel(), i);
+		PostMessage(child, new KeyValues("OnVisibilityChange"), iOldVisible);
+	}
+}
+
+void Panel::OnLevelInit(void)
+{
+	// post to all children
+	for (int i = 0; i < ipanel()->GetChildCount(GetVPanel()); i++)
+	{
+		VPANEL child = ipanel()->GetChild(GetVPanel(), i);
+		PostMessage(child, new KeyValues("OnLevelInit"));
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: returns true if the panel has focus
 //-----------------------------------------------------------------------------
@@ -4383,7 +4459,7 @@ int Panel::ComputeTall( KeyValues *inResourceData, int nParentWide, int nParentT
 	return tall;
 }
 
-int Panel::ComputePos( const char *pszInput, int &nPos, const int& nSize, const int& nParentSize, const bool& bX )
+int Panel::ComputePos(const char* pszInput, int& nPos, const int& nSize, const int& nParentSize, const bool& bX, bool& bPutInStorage)
 {
 	const int nFlagRightAlign = bX ? BUILDMODE_SAVE_XPOS_RIGHTALIGNED : BUILDMODE_SAVE_YPOS_BOTTOMALIGNED;
 	const int nFlagCenterAlign = bX ? BUILDMODE_SAVE_XPOS_CENTERALIGNED : BUILDMODE_SAVE_YPOS_CENTERALIGNED;
@@ -4399,11 +4475,13 @@ int Panel::ComputePos( const char *pszInput, int &nPos, const int& nSize, const 
 		{
 			nFlags |= nFlagRightAlign;
 			pszInput++;
+			bPutInStorage = true;
 		}
 		else if (pszInput[0] == 'c' || pszInput[0] == 'C')
 		{
 			nFlags |= nFlagCenterAlign;
 			pszInput++;
+			bPutInStorage = true;
 		}
 
 		if ( pszInput[0] == 's' || pszInput[0] == 'S' )
@@ -4443,12 +4521,14 @@ int Panel::ComputePos( const char *pszInput, int &nPos, const int& nSize, const 
 			nPosDelta = nPos;
 		}
 
+		const bool bCanAlign = !GetParent() || !GetParent()->UseTraverseSizing();
+
 		// now correct the alignment
-		if ( nFlags & nFlagRightAlign )
+		if (bCanAlign && (nFlags & nFlagRightAlign))
 		{
 			nPos = nParentSize - nPosDelta;
 		}
-		else if ( nFlags & nFlagCenterAlign )
+		else if (bCanAlign && (nFlags & nFlagCenterAlign))
 		{
 			nPos = (nParentSize / 2) + nPosDelta;
 		}
@@ -4522,6 +4602,8 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 						| BUILDMODE_SAVE_XPOS_PROPORTIONAL_SELF
 						| BUILDMODE_SAVE_YPOS_PROPORTIONAL_SELF );
 
+	memset(m_iBuildModeStorage, 0, sizeof(m_iBuildModeStorage));
+
 	// get the position
 	int alignScreenWide, alignScreenTall;	// screen dimensions used for pinning in splitscreen
 	surface()->GetScreenSize( alignScreenWide, alignScreenTall );
@@ -4558,14 +4640,15 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 	int wide = ComputeWide( inResourceData, alignScreenWide, alignScreenTall, false );
 	int tall = ComputeTall( inResourceData, alignScreenWide, alignScreenTall, false );
 
+	bool bXPutInStorage = false, bYPutInStorage = false;
+
 	int x, y;
 	GetPos(x, y);
 	const char *xstr = inResourceData->GetString( "xpos", NULL );
 	const char *ystr = inResourceData->GetString( "ypos", NULL );
-	_buildModeFlags |= ComputePos( xstr, x, wide, alignScreenWide, true );
-	_buildModeFlags |= ComputePos( ystr, y, tall, alignScreenTall, false );
+	_buildModeFlags |= ComputePos(xstr, x, wide, alignScreenWide, true, bXPutInStorage);
+	_buildModeFlags |= ComputePos(ystr, y, tall, alignScreenTall, false, bYPutInStorage);
 	
-
 	bool bUsesTitleSafeArea = false;
 	int titleSafeWide = 0;
 	int titleSafeTall = 0;
@@ -4658,6 +4741,7 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 			}
 		}
 	}
+
 	SetNavUp( inResourceData->GetString("navUp") );
 	SetNavDown( inResourceData->GetString("navDown") );
 	SetNavLeft( inResourceData->GetString("navLeft") );
@@ -4666,7 +4750,27 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 	SetNavActivate( inResourceData->GetString("navActivate") );
 	SetNavBack( inResourceData->GetString("navBack") );
 
-	SetPos(x, y);
+	if ((!bXPutInStorage && !bYPutInStorage) || !GetParent() || !GetParent()->UseTraverseSizing())
+	{
+		SetPos(x, y);
+	}
+	else
+	{
+		_sendSizeChanged = true;
+		GetParent()->_sendSizeChanged = true;
+
+		if (bXPutInStorage)
+		{
+			m_iBuildModeStorage[0] = x;
+			SetPos(0, y);
+		}
+
+		if (bYPutInStorage)
+		{
+			m_iBuildModeStorage[1] = y;
+			SetPos(x, 0);
+		}
+	}
 
 	if (inResourceData->FindKey( "zpos" ))
 	{
@@ -4726,6 +4830,9 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 
 	// tab order
 	SetTabPosition(inResourceData->GetInt("tabPosition", 0));
+
+	// set alpha
+	SetAlpha(inResourceData->GetInt("alpha", 255));
 
 	const char *tooltip = inResourceData->GetString("tooltiptext", NULL);
 	if (tooltip && *tooltip)
@@ -4862,14 +4969,14 @@ void Panel::GetSettings( KeyValues *outResourceData )
 	// correct for alignment
 	if (_buildModeFlags & BUILDMODE_SAVE_XPOS_RIGHTALIGNED)
 	{
-		x = screenWide - x;
+		x = GetWide() - x;
 		char xstr[32];
 		Q_snprintf(xstr, sizeof( xstr ), "r%d", x);
 		outResourceData->SetString( "xpos", xstr );
 	}
 	else if (_buildModeFlags & BUILDMODE_SAVE_XPOS_CENTERALIGNED)
 	{
-		x = (screenWide / 2) + x;
+		x = (GetWide() / 2) + x;
 		char xstr[32];
 		Q_snprintf(xstr, sizeof( xstr ), "c%d", x);
 		outResourceData->SetString( "xpos", xstr );
@@ -4880,14 +4987,14 @@ void Panel::GetSettings( KeyValues *outResourceData )
 	}
 	if (_buildModeFlags & BUILDMODE_SAVE_YPOS_BOTTOMALIGNED)
 	{
-		y = screenTall - y;
+		y = GetTall() - y;
 		char ystr[32];
 		Q_snprintf(ystr, sizeof( ystr ), "r%d", y);
 		outResourceData->SetString( "ypos", ystr );
 	}
 	else if (_buildModeFlags & BUILDMODE_SAVE_YPOS_CENTERALIGNED)
 	{
-		y = (screenTall / 2) + y;
+		y = (GetTall() / 2) + y;
 		char ystr[32];
 		Q_snprintf(ystr, sizeof( ystr ), "c%d", y);
 		outResourceData->SetString( "ypos", ystr );

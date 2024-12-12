@@ -220,8 +220,8 @@ void CBaseViewport::OnScreenSizeChanged(int iOldWide, int iOldTall)
 void CBaseViewport::CreateDefaultPanels( void )
 {
 	// Load Custom Schemes here!
-	vgui::scheme()->LoadSchemeFromFile("resource/BaseScheme.res", "BaseScheme");
-	vgui::scheme()->LoadSchemeFromFile("resource/LoadingScheme.res", "LoadingScheme");
+	//vgui::scheme()->LoadSchemeFromFile("resource/BaseScheme.res", "BaseScheme");
+	//vgui::scheme()->LoadSchemeFromFile("resource/LoadingScheme.res", "LoadingScheme");
 
 #ifndef _XBOX
 	AddNewPanel(CreatePanelByName(PANEL_SCOREBOARD), "PANEL_SCOREBOARD");
@@ -443,7 +443,12 @@ void CBaseViewport::ResetAllPanels(void)
 			continue;
 
 		pViewPanel->Reset();
-		pViewPanel->OnLevelInit(); // INS warn
+
+		Panel* pPanel = dynamic_cast<Panel*>(pViewPanel);
+		if (!pPanel)
+			continue;
+
+		pPanel->OnLevelInit();
 	}
 }
 

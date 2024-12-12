@@ -2015,16 +2015,6 @@ float C_BasePlayer::GetFOV( void )
 		{
 			float deltaTime = (float)( gpGlobals->curtime - m_flFOVTime ) / m_Local.m_flFOVRate;
 
-#if !defined( NO_ENTITY_PREDICTION )
-			if ( GetPredictable() )
-			{
-				// m_flFOVTime was set to a predicted time in the future, because the FOV change was predicted.
-				deltaTime = (float)( GetFinalPredictedTime() - m_flFOVTime );
-				deltaTime += ( gpGlobals->interpolation_amount * TICK_INTERVAL );
-				deltaTime /= m_Local.m_flFOVRate;
-			}
-#endif
-
 			if ( deltaTime >= 1.0f )
 			{
 				//If we're past the zoom time, just take the new value and stop lerping

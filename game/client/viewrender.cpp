@@ -1867,9 +1867,6 @@ void CViewRender::DrawScope(const CViewSetup& zoomedView)
 	if (pRenderTarget == NULL)
 		return;
 
-	if (pRenderTarget->IsRenderTarget() == false)
-		Msg("TEX is not render target?!\n"); // TODO REMOVE
-
 	CViewSetup monitorView = zoomedView;
 
 	Vector vecOrigin;

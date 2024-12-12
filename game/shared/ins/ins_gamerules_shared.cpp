@@ -211,7 +211,7 @@ bool CINSRules::CanChangeSquad( CINSPlayer *pPlayer )
 //=========================================================
 int CINSRules::DefaultFOV( void ) const
 {
-	return 85;	
+	return 90;	
 }
 
 //=========================================================
