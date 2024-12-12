@@ -757,6 +757,9 @@ private:
 	// Other
 	CNetworkVar( bool, m_bWalking );
 
+	Vector m_vecMuzzle;
+	QAngle m_angMuzzle;
+
 	CNetworkVar(bool, m_bIsCustomized);
 	float m_flLastFFAttack;
 	int m_iVoiceType;

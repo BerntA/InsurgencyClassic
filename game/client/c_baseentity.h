@@ -603,11 +603,6 @@ public:
 	static HSOUNDSCRIPTHANDLE PrecacheScriptSound(const char *soundname);
 	static void PrefetchScriptSound(const char *soundname);
 
-	// For each client who appears to be a valid recipient, checks the client has disabled CC and if so, removes them from 
-	//  the recipient list.
-	static void RemoveRecipientsIfNotCloseCaptioning(C_RecipientFilter& filter);
-	static void EmitCloseCaption(IRecipientFilter& filter, int entindex, char const *token, CUtlVector< Vector >& soundorigins, float duration, bool warnifmissing = false);
-
 	// Moves all aiments into their correct position for the frame
 	static void	MarkAimEntsDirty();
 	static void CalcAimEntPositions();

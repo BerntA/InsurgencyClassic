@@ -6032,20 +6032,6 @@ C_AI_BaseNPC *C_BaseEntity::MyNPCPointer(void)
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: For each client (only can be local client in client .dll ) checks the client has disabled CC and if so, removes them from 
-//  the recipient list.
-// Input  : filter - 
-//-----------------------------------------------------------------------------
-void C_BaseEntity::RemoveRecipientsIfNotCloseCaptioning(C_RecipientFilter& filter)
-{
-	extern ConVar closecaption;
-	if (!closecaption.GetBool())
-	{
-		filter.Reset();
-	}
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : recording - 
 // Output : inline void

@@ -62,7 +62,6 @@
 #include "c_world.h"
 #include "perfvisualbenchmark.h"	
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "hud_closecaption.h"
 #include "colorcorrectionmgr.h"
 #include "physpropclientside.h"
 #include "panelmetaclassmgr.h"
@@ -1963,31 +1962,10 @@ void CHLClient::WriteSaveGameScreenshot( const char *pFilename )
 //  the appropriate close caption if running with closecaption = 1
 void CHLClient::EmitSentenceCloseCaption( char const *tokenstream )
 {
-	extern ConVar closecaption;
-	
-	if ( !closecaption.GetBool() )
-		return;
-
-	CHudCloseCaption *hudCloseCaption = GET_HUDELEMENT( CHudCloseCaption );
-	if ( hudCloseCaption )
-	{
-		hudCloseCaption->ProcessSentenceCaptionStream( tokenstream );
-	}
 }
-
 
 void CHLClient::EmitCloseCaption( char const *captionname, float duration )
 {
-	extern ConVar closecaption;
-
-	if ( !closecaption.GetBool() )
-		return;
-
-	CHudCloseCaption *hudCloseCaption = GET_HUDELEMENT( CHudCloseCaption );
-	if ( hudCloseCaption )
-	{
-		hudCloseCaption->ProcessCaption( captionname, duration );
-	}
 }
 
 CStandardRecvProxies* CHLClient::GetStandardRecvProxies()

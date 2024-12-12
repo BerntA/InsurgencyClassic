@@ -290,8 +290,6 @@ private:
 	void			ParseOptions( CUtlBuffer& buf );
 	void			ParseCloseCaption( CUtlBuffer& buf );
 
-	void			ResetCloseCaptionAll( void );
-
 	friend class PhonemeEditor;
 };
 

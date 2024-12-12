@@ -613,7 +613,7 @@ struct EmitSound_t
 		m_pOrigin( 0 ),
 		m_flSoundTime( 0.0f ),
 		m_pflSoundDuration( 0 ),
-		m_bEmitCloseCaption( true ),
+		m_bEmitCloseCaption( false ),
 		m_bWarnOnMissingCloseCaption( false ),
 		m_bWarnOnDirectWaveReference( false ),
 		m_nSpeakerEntity( -1 ),

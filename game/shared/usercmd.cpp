@@ -145,6 +145,57 @@ void WriteUsercmd( bf_write *buf, const CUserCmd *to, const CUserCmd *from )
 	{
 		buf->WriteOneBit( 0 );
 	}
+
+	// INS Muzzle data
+	if (to->amuzzle[0] != from->amuzzle[0])
+	{
+		buf->WriteOneBit(1);
+		buf->WriteBitFloat(to->amuzzle[0]);
+	}
+	else
+	{
+		buf->WriteOneBit(0);
+	}
+
+	if (to->amuzzle[1] != from->amuzzle[1])
+	{
+		buf->WriteOneBit(1);
+		buf->WriteBitFloat(to->amuzzle[1]);
+	}
+	else
+	{
+		buf->WriteOneBit(0);
+	}
+
+	if (to->vmuzzle[0] != from->vmuzzle[0])
+	{
+		buf->WriteOneBit(1);
+		buf->WriteBitFloat(to->vmuzzle[0]);
+	}
+	else
+	{
+		buf->WriteOneBit(0);
+	}
+
+	if (to->vmuzzle[1] != from->vmuzzle[1])
+	{
+		buf->WriteOneBit(1);
+		buf->WriteBitFloat(to->vmuzzle[1]);
+	}
+	else
+	{
+		buf->WriteOneBit(0);
+	}
+
+	if (to->vmuzzle[2] != from->vmuzzle[2])
+	{
+		buf->WriteOneBit(1);
+		buf->WriteBitFloat(to->vmuzzle[2]);
+	}
+	else
+	{
+		buf->WriteOneBit(0);
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -234,5 +285,31 @@ void ReadUsercmd( bf_read *buf, CUserCmd *move, CUserCmd *from )
 	if ( buf->ReadOneBit() )
 	{
 		move->mousedy = buf->ReadShort();
+	}
+
+	// INS Muzzle data
+	if (buf->ReadOneBit())
+	{
+		move->amuzzle[0] = buf->ReadBitFloat();
+	}
+
+	if (buf->ReadOneBit())
+	{
+		move->amuzzle[1] = buf->ReadBitFloat();
+	}
+
+	if (buf->ReadOneBit())
+	{
+		move->vmuzzle[0] = buf->ReadBitFloat();
+	}
+
+	if (buf->ReadOneBit())
+	{
+		move->vmuzzle[1] = buf->ReadBitFloat();
+	}
+
+	if (buf->ReadOneBit())
+	{
+		move->vmuzzle[2] = buf->ReadBitFloat();
 	}
 }

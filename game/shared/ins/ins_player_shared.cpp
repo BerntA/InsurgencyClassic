@@ -1502,19 +1502,8 @@ bool CINSPlayer::IsUsingStats(void) const
 //=========================================================
 void CINSPlayer::GetMuzzle(Vector& vecMuzzle, QAngle& angMuzzle)
 {
-#ifdef CLIENT_DLL
-	C_BaseAnimating* pRenderedWeapon = GetRenderedWeaponModel();
-	if (pRenderedWeapon && pRenderedWeapon->GetAttachment(1, vecMuzzle, angMuzzle))
-		return;
-#else
-	CBaseViewModel* pVM = GetViewModel();
-	if (pVM && pVM->GetAttachment(1, vecMuzzle, angMuzzle))
-		return;
-#endif
-
-	// revert to default
-	vecMuzzle = Weapon_ShootPosition();
-	VectorAngles(Weapon_ShootDirection(), angMuzzle);
+	vecMuzzle = m_vecMuzzle;
+	angMuzzle = m_angMuzzle;
 }
 
 //=========================================================

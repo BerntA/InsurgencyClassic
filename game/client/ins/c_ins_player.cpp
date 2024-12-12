@@ -392,6 +392,9 @@ void C_INSPlayer::Initialize( void )
 //=========================================================
 bool C_INSPlayer::CreateMove(float flInputSampleTime, CUserCmd* pCmd, bool bFakeInput)
 {
+	pCmd->vmuzzle = m_vecMuzzle;
+	pCmd->amuzzle = m_angMuzzle;
+
 	return BaseClass::CreateMove(flInputSampleTime, pCmd, bFakeInput);
 }
 
@@ -930,7 +933,18 @@ C_Team *C_INSPlayer::GetTeam( void ) const
 
 void C_INSPlayer::HandleMuzzle( void )
 {
-	// moved to CINSPlayer::GetMuzzle
+	if (!IsLocalPlayer())
+		return;
+
+	QAngle angMuzzle;
+	Vector vecMuzzle;
+
+	C_BaseAnimating* pRenderedWeaponMode = GetRenderedWeaponModel();
+	if (pRenderedWeaponMode != NULL)
+		pRenderedWeaponMode->GetAttachment(1, vecMuzzle, angMuzzle);
+
+	m_angMuzzle = angMuzzle;
+	m_vecMuzzle = vecMuzzle;
 }
 
 //=========================================================

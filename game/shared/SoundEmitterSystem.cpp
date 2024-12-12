@@ -21,26 +21,19 @@
 #else
 #include <vgui_controls/Controls.h>
 #include <vgui/IVGui.h>
-#include "hud_closecaption.h"
 #define CRecipientFilter C_RecipientFilter
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-static ConVar sv_caption_distance("sv_caption_distance", "900", FCVAR_REPLICATED, "Set the max caption distance in multiplayer, if the local player is further away from the sound origin than this then the caption will be ignored.\n");
 static ConVar sv_soundemitter_trace( "sv_soundemitter_trace", "0", FCVAR_REPLICATED, "Show all EmitSound calls including their symbolic name and the actual wave file they resolved to\n" );
 #ifdef STAGING_ONLY
 static ConVar sv_snd_filter( "sv_snd_filter", "", FCVAR_REPLICATED, "Filters out all sounds not containing the specified string before being emitted\n" );
 #endif // STAGING_ONLY
 
 extern ISoundEmitterSystemBase *soundemitterbase;
-static ConVar *g_pClosecaption = NULL;
 
-#ifdef _XBOX
-int LookupStringFromCloseCaptionToken( char const *token );
-const wchar_t *GetStringForIndex( int index );
-#endif
 static bool g_bPermitDirectSoundPrecache = false;
 
 #if !defined( CLIENT_DLL )
@@ -48,38 +41,6 @@ static bool g_bPermitDirectSoundPrecache = false;
 void ClearModelSoundsCache();
 
 #endif // !CLIENT_DLL
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *token - 
-//			listener - 
-//			soundorigins - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool AttenuateCaption(const char *token, const Vector& listener, CUtlVector< Vector >& soundorigins)
-{
-	if (sv_caption_distance.GetFloat() <= 0.0f)	
-		return false;	
-
-	int c = soundorigins.Count();
-
-	if (c <= 0)
-	{
-		return false;
-	}
-
-	const float maxdistSqr = sv_caption_distance.GetFloat() * sv_caption_distance.GetFloat();
-	for (int i = 0; i < c; ++i)
-	{
-		const Vector& org = soundorigins[i];
-		float distSqr = (org - listener).LengthSqr();
-		if (distSqr <= maxdistSqr)		
-			return false;		
-	}
-
-	// All sound sources too far, don't show caption...
-	return true;
-}
 
 void WaveTrace( char const *wavname, char const *funcname )
 {
@@ -115,7 +76,7 @@ EmitSound_t::EmitSound_t( const CSoundParameters &src )
 	m_pOrigin = 0;
 	m_flSoundTime = ( src.delay_msec == 0 ) ? 0.0f : gpGlobals->curtime + ( (float)src.delay_msec / 1000.0f );
 	m_pflSoundDuration = 0;
-	m_bEmitCloseCaption = true;
+	m_bEmitCloseCaption = false;
 	m_bWarnOnMissingCloseCaption = false;
 	m_bWarnOnDirectWaveReference = false;
 	m_nSpeakerEntity = -1;
@@ -246,8 +207,6 @@ public:
 #if !defined( CLIENT_DLL )
 		m_bLogPrecache = CommandLine()->CheckParm( "-makereslists" ) ? true : false;
 #endif
-		g_pClosecaption = cvar->FindVar("closecaption");
-		Assert(g_pClosecaption);
 		return soundemitterbase->ModInit();
 	}
 
@@ -541,13 +500,6 @@ public:
 
 		TraceEmitSound( "EmitSound:  '%s' emitted as '%s' (ent %i)\n",
 			ep.m_pSoundName, params.soundname, entindex );
-
-
-		// Don't caption modulations to the sound
-		if ( !( ep.m_nFlags & ( SND_CHANGE_PITCH | SND_CHANGE_VOL ) ) )
-		{
-			EmitCloseCaption( filter, entindex, params, ep );
-		}
 	}
 
 	void EmitSound( IRecipientFilter& filter, int entindex, const EmitSound_t & ep )
@@ -630,187 +582,6 @@ public:
 		EmitSoundByHandle( filter, entindex, ep, ep.m_hSoundScriptHandle );
 	}
 
-	void EmitCloseCaption( IRecipientFilter& filter, int entindex, bool fromplayer, char const *token, CUtlVector< Vector >& originlist, float duration, bool warnifmissing /*= false*/ )
-	{
-		// No close captions in multiplayer...
-		if ( /*gpGlobals->maxClients > 1 || (gpGlobals->maxClients==1 &&*/ !g_pClosecaption->GetBool())
-		{
-			return;
-		}
-
-
-#ifdef CLIENT_DLL
-		// If the emitter is an npc or player and maxplayers is above 1 we will emit this according to the distance from this ent to any nearby players.
-		C_BaseEntity *pEmitter = ClientEntityList().GetEnt(entindex);
-		if (pEmitter && (gpGlobals->maxClients > 1))
-		{
-			Vector vecDist = pEmitter->GetAbsOrigin();
-			C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
-			if (pLocal)
-			{
-				float flMaxDistSqr = sv_caption_distance.GetFloat() * sv_caption_distance.GetFloat();
-				float flDist = (vecDist - pLocal->GetAbsOrigin()).LengthSqr();
-				if (flDist > flMaxDistSqr)
-					return;
-			}
-		}
-#endif
-
-		// A negative duration means fill it in from the wav file if possible
-		if ( duration < 0.0f )
-		{
-			char const *wav = soundemitterbase->GetWavFileForSound( token, GENDER_NONE );
-			if ( wav )
-			{
-				duration = enginesound->GetSoundDuration( wav );
-			}
-			else
-			{
-				duration = 2.0f;
-			}
-		}
-
-		char lowercase[ 256 ];
-		Q_strncpy( lowercase, token, sizeof( lowercase ) );
-		Q_strlower( lowercase );
-		if ( Q_strstr( lowercase, "\\" ) )
-		{
-			Hack_FixEscapeChars( lowercase );
-		}
-
-		// NOTE:  We must make a copy or else if the filter is owned by a SoundPatch, we'll end up destructively removing
-		//  all players from it!!!!
-		CRecipientFilter filterCopy;
-		filterCopy.CopyFrom( (CRecipientFilter &)filter );
-
-		// Remove any players who don't want close captions
-		CBaseEntity::RemoveRecipientsIfNotCloseCaptioning( (CRecipientFilter &)filterCopy );
-
-#if !defined( CLIENT_DLL )
-		{
-			if ( filterCopy.GetRecipientCount() > 0 )
-			{
-				int c = filterCopy.GetRecipientCount();
-				for ( int i = c - 1 ; i >= 0; --i )
-				{
-					CBasePlayer *player = UTIL_PlayerByIndex( filterCopy.GetRecipientIndex( i ) );
-					if ( !player )
-						continue;
-
-					Vector playerOrigin = player->GetAbsOrigin();
-
-					if ( AttenuateCaption( lowercase, playerOrigin, originlist ) )
-					{
-						filterCopy.RemoveRecipient( player );
-					}
-				}
-			}
-		}
-#endif
-		// Anyone left?
-		if ( filterCopy.GetRecipientCount() > 0 )
-		{
-
-#if !defined( CLIENT_DLL )
-
-			byte byteflags = 0;
-			if ( warnifmissing )
-			{
-				byteflags |= CLOSE_CAPTION_WARNIFMISSING;
-			}
-			if ( fromplayer )
-			{
-				byteflags |= CLOSE_CAPTION_FROMPLAYER;
-			}
-
-			CBaseEntity *pActor = CBaseEntity::Instance( entindex );
-			if ( pActor )
-			{
-				char const *pszActorModel = STRING( pActor->GetModelName() );
-				gender_t gender = soundemitterbase->GetActorGender( pszActorModel );
-
-				if ( gender == GENDER_MALE )
-				{
-					byteflags |= CLOSE_CAPTION_GENDER_MALE;
-				}
-				else if ( gender == GENDER_FEMALE )
-				{ 
-					byteflags |= CLOSE_CAPTION_GENDER_FEMALE;
-				}
-			}
-
-			// Send caption and duration hint down to client
-			UserMessageBegin( filterCopy, "CloseCaption" );
-				WRITE_STRING( lowercase );
-				WRITE_SHORT( MIN( 255, (int)( duration * 10.0f ) ) ),
-				WRITE_BYTE( byteflags ),
-			MessageEnd();
-#else
-			// Direct dispatch
-			CHudCloseCaption *cchud = GET_HUDELEMENT( CHudCloseCaption );
-			if ( cchud )
-			{
-				cchud->ProcessCaption( lowercase, duration, fromplayer );
-			}
-#endif
-		}
-	}
-
-	void EmitCloseCaption( IRecipientFilter& filter, int entindex, const CSoundParameters & params, const EmitSound_t & ep )
-	{
-		// No close captions in multiplayer...
-		if ( /*gpGlobals->maxClients > 1 || (gpGlobals->maxClients==1 &&*/ !g_pClosecaption->GetBool())
-		{
-			return;
-		}
-
-		if ( !ep.m_bEmitCloseCaption )
-		{
-			return;
-		}
-
-		// NOTE:  We must make a copy or else if the filter is owned by a SoundPatch, we'll end up destructively removing
-		//  all players from it!!!!
-		CRecipientFilter filterCopy;
-		filterCopy.CopyFrom( (CRecipientFilter &)filter );
-
-		// Remove any players who don't want close captions
-		CBaseEntity::RemoveRecipientsIfNotCloseCaptioning( (CRecipientFilter &)filterCopy );
-
-		// Anyone left?
-		if ( filterCopy.GetRecipientCount() <= 0 )
-		{
-			return;
-		}
-
-		float duration = 0.0f;
-		if ( ep.m_pflSoundDuration )
-		{
-			duration = *ep.m_pflSoundDuration;
-		}
-		else
-		{
-			duration = enginesound->GetSoundDuration( params.soundname );
-		}
-
-		bool fromplayer = false;
-		CBaseEntity *ent = CBaseEntity::Instance( entindex );
-		if ( ent )
-		{
-			while ( ent )
-			{
-				if ( ent->IsPlayer() )
-				{
-					fromplayer = true;
-					break;
-				}
-
-				ent = ent->GetOwnerEntity();
-			}
-		}
-		EmitCloseCaption( filter, entindex, fromplayer, ep.m_pSoundName, ep.m_UtlVecSoundOrigin, duration, ep.m_bWarnOnMissingCloseCaption );
-	}
-
 	void EmitAmbientSound( int entindex, const Vector& origin, const char *soundname, float flVolume, int iFlags, int iPitch, float soundtime /*= 0.0f*/, float *duration /*=NULL*/ )
 	{
 		// Pull data from parameters
@@ -844,33 +615,8 @@ public:
 		engine->EmitAmbientSound(entindex, origin, params.soundname, params.volume, params.soundlevel, iFlags, params.pitch, soundtime );
 #endif
 
-		bool needsCC = !( iFlags & ( SND_STOP | SND_CHANGE_VOL | SND_CHANGE_PITCH ) );
-
-		float soundduration = 0.0f;
-		
-		if ( duration || needsCC )
-		{
-			soundduration = enginesound->GetSoundDuration( params.soundname );
-			if ( duration )
-			{
-				*duration = soundduration;
-			}
-		}
-
-		TraceEmitSound( "EmitAmbientSound:  '%s' emitted as '%s' (ent %i)\n",
-			soundname, params.soundname, entindex );
-
-		// We only want to trigger the CC on the start of the sound, not on any changes or halting of the sound
-		if ( needsCC )
-		{
-			CRecipientFilter filter;
-			filter.AddAllPlayers();
-			filter.MakeReliable();
-
-			CUtlVector< Vector > dummy;
-			EmitCloseCaption( filter, entindex, false, soundname, dummy, soundduration, false );
-		}
-
+		TraceEmitSound("EmitAmbientSound:  '%s' emitted as '%s' (ent %i)\n",
+			soundname, params.soundname, entindex);
 	}
 
 	void StopSoundByHandle( int entindex, const char *soundname, HSOUNDSCRIPTHANDLE& handle )
@@ -1436,30 +1182,6 @@ void CBaseEntity::PrefetchScriptSound( const char *soundname )
 float CBaseEntity::GetSoundDuration( const char *soundname, char const *actormodel )
 {
 	return enginesound->GetSoundDuration( PSkipSoundChars( UTIL_TranslateSoundName( soundname, actormodel ) ) );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : filter - 
-//			*token - 
-//			duration - 
-//			warnifmissing - 
-//-----------------------------------------------------------------------------
-void CBaseEntity::EmitCloseCaption( IRecipientFilter& filter, int entindex, char const *token, CUtlVector< Vector >& soundorigin, float duration, bool warnifmissing /*= false*/ )
-{
-	bool fromplayer = false;
-	CBaseEntity *ent = CBaseEntity::Instance( entindex );
-	while ( ent )
-	{
-		if ( ent->IsPlayer() )
-		{
-			fromplayer = true;
-			break;
-		}
-		ent = ent->GetOwnerEntity();
-	}
-
-	g_SoundEmitterSystem.EmitCloseCaption( filter, entindex, fromplayer, token, soundorigin, duration, warnifmissing );
 }
 
 //-----------------------------------------------------------------------------

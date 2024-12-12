@@ -474,6 +474,9 @@ private:
 	// Custom Data Management
 	static LoadPlayerData_t m_CustomData;
 
+	Vector m_vecMuzzle;
+	QAngle m_angMuzzle;
+
 	int m_iPerferredFireMode;
 	bool m_bIsCustomized;
 

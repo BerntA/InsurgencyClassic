@@ -46,6 +46,9 @@ public:
 		mousedx = 0;
 		mousedy = 0;
 
+		vmuzzle.Init();
+		amuzzle.Init();
+
 		hasbeenpredicted = false;
 	}
 
@@ -68,6 +71,9 @@ public:
 #endif
 		mousedx				= src.mousedx;
 		mousedy				= src.mousedy;
+
+		amuzzle = src.amuzzle;
+		vmuzzle = src.vmuzzle;
 
 		hasbeenpredicted	= src.hasbeenpredicted;
 
@@ -95,6 +101,8 @@ public:
 		CRC32_ProcessBuffer( &crc, &random_seed, sizeof( random_seed ) );
 		CRC32_ProcessBuffer( &crc, &mousedx, sizeof( mousedx ) );
 		CRC32_ProcessBuffer( &crc, &mousedy, sizeof( mousedy ) );
+		CRC32_ProcessBuffer(&crc, &amuzzle, sizeof(amuzzle));
+		CRC32_ProcessBuffer(&crc, &vmuzzle, sizeof(vmuzzle));
 		CRC32_Final( &crc );
 
 		return crc;
@@ -137,6 +145,9 @@ public:
 
 	short	mousedx;		// mouse accum in x from create move
 	short	mousedy;		// mouse accum in y from create move
+
+	QAngle amuzzle;
+	Vector vmuzzle;
 
 	// Client only, tracks whether we've predicted this command at least once
 	bool	hasbeenpredicted;

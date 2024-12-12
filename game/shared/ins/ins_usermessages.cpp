@@ -28,7 +28,6 @@ void RegisterUserMessages(void)
 	usermessages->Register("Fade", 10);	// fade HUD in/out
 	usermessages->Register("VGUIMenu", -1);	// Show VGUI menu
 	usermessages->Register("Rumble", 3);	// Send a rumble to a controller
-	usermessages->Register("CloseCaption", -1); // Show a caption (by string id number)(duration in 10th of a second)
 
 	usermessages->Register("SendAudio", -1);	// play radion command
 
