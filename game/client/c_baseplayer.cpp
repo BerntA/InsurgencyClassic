@@ -62,8 +62,8 @@ extern ConVar mp_forcecamera; // in gamevars_shared.h
 
 #define FLASHLIGHT_DISTANCE		1000
 
-static Vector WALL_MIN(-WALL_OFFSET,-WALL_OFFSET,-WALL_OFFSET);
-static Vector WALL_MAX(WALL_OFFSET,WALL_OFFSET,WALL_OFFSET);
+Vector WALL_MIN(-WALL_OFFSET,-WALL_OFFSET,-WALL_OFFSET);
+Vector WALL_MAX(WALL_OFFSET,WALL_OFFSET,WALL_OFFSET);
 
 extern ConVar default_fov;
 extern ConVar sensitivity;

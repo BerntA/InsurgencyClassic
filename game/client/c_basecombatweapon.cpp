@@ -124,6 +124,9 @@ void C_BaseCombatWeapon::OnDataChanged(DataUpdateType_t updateType)
 	UpdateVisibility();
 
 	m_iOldState = m_iState;
+
+	if (GetPredictable() && !ShouldPredict())
+		ShutdownPredictable();
 }
 
 //-----------------------------------------------------------------------------
@@ -250,6 +253,13 @@ bool C_BaseCombatWeapon::GetShootPosition(Vector& vOrigin, QAngle& vAngles)
 	return false;
 }
 
+bool C_BaseCombatWeapon::ShouldPredict()
+{
+	if (GetOwner() && GetOwner() == C_BasePlayer::GetLocalPlayer())
+		return true;
+
+	return BaseClass::ShouldPredict();
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -434,4 +444,17 @@ bool C_BaseCombatWeapon::EnsureCorrectRenderingModel()
 		SetSequence(0);
 
 	return true;
+}
+
+void C_BaseCombatWeapon::BoneMergeFastCullBloat(Vector& localMins, Vector& localMaxs, const Vector& thisEntityMins, const Vector& thisEntityMaxs) const
+{
+	// The default behavior pushes it out by BONEMERGE_FASTCULL_BBOX_EXPAND in all directions, but we can do better
+	// since we know the weapon will never point behind him.
+
+	localMaxs.x += 20;	// Leaves some space in front for long weapons.
+
+	localMins.y -= 20;	// Fatten it to his left and right since he can rotate that way.
+	localMaxs.y += 20;
+
+	localMaxs.z += 15;	// Leave some space at the top.
 }

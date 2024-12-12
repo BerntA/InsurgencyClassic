@@ -98,9 +98,6 @@ public:
 	virtual		void		CAM_ToOrthographic();
 	virtual		bool		CAM_IsOrthographic() const;
 	virtual		void		CAM_OrthographicSize( float& w, float& h ) const;
-
-	virtual		float		CAM_CapYaw( float fVal ) const { return fVal; }
-	virtual		float		CAM_CapPitch( float fVal ) const { return fVal; }
 	
 	virtual		void		LevelInit( void );
 

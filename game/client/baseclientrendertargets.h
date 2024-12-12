@@ -24,7 +24,6 @@
 #include "game/client/iclientrendertargets.h"		// base class with interfaces called by the engine
 #include "materialsystem/imaterialsystem.h"		// for material system classes and interfaces
 
-
 // Externs
 class IMaterialSystem;
 class IMaterialSystemHardwareConfig;
@@ -32,15 +31,15 @@ class IMaterialSystemHardwareConfig;
 class CBaseClientRenderTargets : public IClientRenderTargets
 {
 	// no networked vars
-	DECLARE_CLASS_GAMEROOT( CBaseClientRenderTargets, IClientRenderTargets );
+	DECLARE_CLASS_GAMEROOT(CBaseClientRenderTargets, IClientRenderTargets);
 public:
 	// Interface called by engine during material system startup.
-	virtual void InitClientRenderTargets ( IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* pHardwareConfig, int iWaterTextureSize = 1024, int iCameraTextureSize = 256 );
+	virtual void InitClientRenderTargets(IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* pHardwareConfig, int iWaterTextureSize = 1024, int iCameraTextureSize = 256);
 	// Shutdown all custom render targets here.
-	virtual void ShutdownClientRenderTargets ( void );
+	virtual void ShutdownClientRenderTargets(void);
 
 protected:
-	
+
 	// Standard render textures used by most mods-- Classes inheriting from
 	// this can choose to init these or not depending on their needs.
 
@@ -51,14 +50,17 @@ protected:
 	// Used for monitors
 	CTextureReference		m_CameraTexture;
 
+	// Used for scopes
+	CTextureReference		m_ScopeTexture;
+
 	// Used for the HUD in stereo and head tracking mode
 	CTextureReference		m_UITexture;
 
 	// Init functions for the common render targets
-	ITexture* CreateWaterReflectionTexture( IMaterialSystem* pMaterialSystem, int iSize = 1024 );
-	ITexture* CreateWaterRefractionTexture( IMaterialSystem* pMaterialSystem, int iSize = 1024 );
-	ITexture* CreateCameraTexture( IMaterialSystem* pMaterialSystem, int iSize = 256 );
-
+	ITexture* CreateWaterReflectionTexture(IMaterialSystem* pMaterialSystem, int iSize = 1024);
+	ITexture* CreateWaterRefractionTexture(IMaterialSystem* pMaterialSystem, int iSize = 1024);
+	ITexture* CreateCameraTexture(IMaterialSystem* pMaterialSystem, int iSize = 256);
+	ITexture* CreateScopeTexture(IMaterialSystem* pMaterialSystem);
 };
 
 #endif // CLIENTRENDERTARTETS_H_

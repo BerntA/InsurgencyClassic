@@ -306,6 +306,9 @@ void CViewRender::LevelInit( void )
 	}
 	m_flFreezeFrameUntil = 0;
 
+	m_flMotionBlurDrawTime = 0.0f;
+	m_bPainEffectInitialized = false;
+
 	// Clear our overlay materials
 	m_ScreenOverlayMaterial.Init( NULL );
 
@@ -634,7 +637,7 @@ void CViewRender::SetUpViews()
 			// If we are looking through another entities eyes, then override the angles/origin for view
 			int viewentity = render->GetViewEntity();
 
-			if ( pPlayer->entindex() != viewentity )
+			if (!g_nKillCamMode && (pPlayer->entindex() != viewentity))
 			{
 				C_BaseEntity *ve = cl_entitylist->GetEnt( viewentity );
 				if ( ve )
@@ -678,11 +681,10 @@ void CViewRender::SetUpViews()
 	}
 
 	//Find the offset our current FOV is from the default value
-	float fDefaultFov = default_fov.GetFloat();
-	float flFOVOffset = fDefaultFov - view.fov;
+	float flFOVOffset = (g_pGameRules == NULL) ? 0.0f : (g_pGameRules->DefaultFOV() - view.fov);
 
 	//Adjust the viewmodel's FOV to move with any FOV offsets on the viewer's end
-	view.fovViewmodel = abs(g_pClientMode->GetViewModelFOV() - flFOVOffset);
+	view.fovViewmodel = (g_pClientMode->GetViewModelFOV() - flFOVOffset);
 
 	// left and right stereo views should default to being the same as the mono/middle view
 	m_ViewLeft = m_View;
@@ -734,9 +736,6 @@ void CViewRender::SetUpViews()
 	s_DbgSetupAngles = view.angles;
 #endif
 }
-
-
-
 
 void CViewRender::WriteSaveGameScreenshotOfSize( const char *pFilename, int width, int height, bool bCreatePowerOf2Padded/*=false*/,
 												 bool bWriteVTF/*=false*/ )
@@ -901,7 +900,6 @@ void CViewRender::WriteSaveGameScreenshot( const char *pFilename )
 {
 	WriteSaveGameScreenshotOfSize( pFilename, SAVEGAME_SCREENSHOT_WIDTH, SAVEGAME_SCREENSHOT_HEIGHT );
 }
-
 
 float ScaleFOVByWidthRatio( float fovDegrees, float ratio )
 {
@@ -1125,9 +1123,6 @@ void CViewRender::Render( vrect_t *rect )
 	render->PopView(GetFrustum());
 }
 
-
-
-
 static void GetPos( const CCommand &args, Vector &vecOrigin, QAngle &angles )
 {
 	vecOrigin = MainViewOrigin();
@@ -1169,4 +1164,3 @@ CON_COMMAND( getpos, "dump position and angles to the console" )
 	Warning( "%s %f %f %f;", pCommand1, vecOrigin.x, vecOrigin.y, vecOrigin.z );
 	Warning( "%s %f %f %f\n", pCommand2, angles.x, angles.y, angles.z );
 }
-

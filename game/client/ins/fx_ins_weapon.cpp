@@ -401,7 +401,7 @@ public:
 	float m_flNextWhizTime;
 };
 
-CBulletWhizTimer g_BulletWhiz("CBulletWhizTimer");
+static CBulletWhizTimer g_BulletWhiz("CBulletWhizTimer");
 
 #define LISTENER_HEIGHT 24
 #define BULLET_SUPERSONIC 288 // about 24ft

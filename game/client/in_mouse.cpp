@@ -28,6 +28,7 @@
 #include "tier1/convar_serverbounded.h"
 #include "cam_thirdperson.h"
 #include "inputsystem/iinputsystem.h"
+#include "c_ins_player.h"
 
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
@@ -75,7 +76,6 @@ ConVar_ServerBounded *m_pitch = &cvar_m_pitch;
 
 extern ConVar cam_idealyaw;
 extern ConVar cam_idealpitch;
-extern ConVar thirdperson_platformer;
 
 static ConVar m_filter( "m_filter","0", FCVAR_ARCHIVE, "Mouse filtering (set this to 1 to average the mouse over 2 frames)." );
 ConVar sensitivity( "sensitivity","3", FCVAR_ARCHIVE, "Mouse sensitivity.", true, 0.0001f, true, 10000000 );
@@ -397,6 +397,10 @@ void CInput::ScaleMouse( float *x, float *y )
 	float mouse_sensitivity = ( gHUD.GetSensitivity() != 0 ) 
 		?  gHUD.GetSensitivity() : sensitivity.GetFloat();
 
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	if (pPlayer && pPlayer->IsProned())
+		mouse_sensitivity = clamp(mouse_sensitivity, 0.0f, 3.5f);
+
 	if ( m_customaccel.GetInt() == 1 ||  m_customaccel.GetInt() == 2 ) 
 	{ 
 		float raw_mouse_movement_distance = sqrt( mx * mx + my * my );
@@ -446,94 +450,138 @@ void CInput::ScaleMouse( float *x, float *y )
 //			mouse_x - 
 //			mouse_y - 
 //-----------------------------------------------------------------------------
+
+#define BIPOD_YAW_LIMIT   60
+#define BIPOD_PITCH_LIMIT_MIN 35
+#define BIPOD_PITCH_LIMIT_MAX 20
+#define PRONE_PITCH_LIMIT_MIN 30
+#define WEAPON_WEIGHT_LIMIT 8
+
 void CInput::ApplyMouse( QAngle& viewangles, CUserCmd *cmd, float mouse_x, float mouse_y )
 {
-	if ( !((in_strafe.state & 1) || lookstrafe.GetInt()) )
+	C_INSPlayer* pPlayer = C_INSPlayer::GetLocalPlayer();
+	if (!pPlayer)
+		return;
+
+	if (pPlayer->IsPlayerDead())
 	{
-		{
-			if ( CAM_IsThirdPerson() && thirdperson_platformer.GetInt() )
-			{
-				if ( mouse_x )
-				{
-					Vector vTempOffset = g_ThirdPersonManager.GetCameraOffsetAngles();
-
-					// use the mouse to orbit the camera around the player, and update the idealAngle
-					vTempOffset[ YAW ] -= m_yaw.GetFloat() * mouse_x;
-					cam_idealyaw.SetValue( vTempOffset[ YAW ] - viewangles[ YAW ] );
-
-					g_ThirdPersonManager.SetCameraOffsetAngles( vTempOffset );
-
-					// why doesn't this work??? CInput::AdjustYaw is why
-					//cam_idealyaw.SetValue( cam_idealyaw.GetFloat() - m_yaw.GetFloat() * mouse_x );
-				}
-			}
-			else
-			{
-				// Otherwize, use mouse to spin around vertical axis
-				viewangles[YAW] -= CAM_CapYaw( m_yaw.GetFloat() * mouse_x );
-			}
-		}
+		viewangles[PITCH] += mouse_y * m_pitch->GetFloat();
+		viewangles[YAW] -= mouse_x * m_yaw.GetFloat();
 	}
 	else
 	{
-		// If holding strafe key or mlooking and have lookstrafe set to true, then apply
-		//  horizontal mouse movement to sidemove.
-		cmd->sidemove += m_side.GetFloat() * mouse_x;
-	}
+		CBaseCombatWeapon* pWeapon = pPlayer->GetActiveWeapon();
 
-	// If mouselooking and not holding strafe key, then use vertical mouse
-	//  to adjust view pitch.
-	if (!(in_strafe.state & 1))
-	{
+		if (pPlayer->GetPlayerFlags() & FL_PLAYER_BIPOD)
 		{
-			if ( CAM_IsThirdPerson() && thirdperson_platformer.GetInt() )
+			QAngle bipod = pPlayer->GetSupportedFireAngles();
+
+			viewangles[PITCH] += mouse_y * m_pitch->GetFloat();
+			viewangles[PITCH] = clamp(viewangles[PITCH], bipod[PITCH] - BIPOD_PITCH_LIMIT_MIN, bipod[PITCH] + BIPOD_PITCH_LIMIT_MAX);
+
+			viewangles[YAW] -= (mouse_x * m_yaw.GetFloat()) * 0.5f;
+
+			if (!pPlayer->IsMoving())
 			{
-				if ( mouse_y )
+				// clamp our view to min/max angles
+				viewangles[YAW] = clamp(viewangles[YAW], bipod[YAW] - BIPOD_YAW_LIMIT, bipod[YAW] + BIPOD_YAW_LIMIT);
+
+				// and now as viewangles € [180;-180] let's change the values to get it right
+				if (viewangles[YAW] > 180.0f)
 				{
-					Vector vTempOffset = g_ThirdPersonManager.GetCameraOffsetAngles();
+					viewangles[YAW] -= 360.0f;
 
-					// use the mouse to orbit the camera around the player, and update the idealAngle
-					vTempOffset[ PITCH ] += m_pitch->GetFloat() * mouse_y;
-					cam_idealpitch.SetValue( vTempOffset[ PITCH ] - viewangles[ PITCH ] );
-
-					g_ThirdPersonManager.SetCameraOffsetAngles( vTempOffset );
-
-					// why doesn't this work??? CInput::AdjustYaw is why
-					//cam_idealpitch.SetValue( cam_idealpitch.GetFloat() + m_pitch->GetFloat() * mouse_y );
+					if (bipod[YAW] + BIPOD_YAW_LIMIT > 180.0f)
+						bipod[YAW] -= 360.0f;
 				}
+
+				if (viewangles[YAW] < -180.0f)
+				{
+					viewangles[YAW] += 360.0f;
+
+					if (bipod[YAW] - BIPOD_YAW_LIMIT < -180.0f)
+						bipod[YAW] += 360.0f;
+				}
+
+				pPlayer->SetSupportedFireAngles(bipod);
+			}
+		}
+		else
+		{
+			QAngle angFreeaim = vec3_angle;
+
+			if (!pPlayer->IsFreeaimEnabled())
+			{
+				viewangles[PITCH] += mouse_y * m_pitch->GetFloat();
+				viewangles[YAW] -= mouse_x * m_yaw.GetFloat();
 			}
 			else
 			{
-				viewangles[PITCH] += CAM_CapPitch( m_pitch->GetFloat() * mouse_y );
-			}
+				// freeaim
+				float flFreeaim = pPlayer->GetFreeaimDistance();
+				float flWepWeight = (pWeapon ? pWeapon->GetWeight() : 4.0f);
 
-			// Check pitch bounds
-			if (viewangles[PITCH] > cl_pitchdown.GetFloat())
-			{
-				viewangles[PITCH] = cl_pitchdown.GetFloat();
-			}
-			if (viewangles[PITCH] < -cl_pitchup.GetFloat())
-			{
-				viewangles[PITCH] = -cl_pitchup.GetFloat();
+				angFreeaim = pPlayer->GetFreeAimAngles();
+
+				float pitch = viewangles[PITCH];
+				pitch = pitch - clamp(viewangles[PITCH], -cl_pitchup.GetFloat(), cl_pitchdown.GetFloat());
+
+				float flMouseFraction = 0.5f + min(1.0f - (flWepWeight / WEAPON_WEIGHT_LIMIT), 0.5f);
+
+				angFreeaim[PITCH] += mouse_y * m_pitch->GetFloat() * flMouseFraction;
+				angFreeaim[YAW] -= mouse_x * m_yaw.GetFloat() * flMouseFraction;
+
+				float flWeaponScreenRelation = pPlayer->GetFreeaimScreenWeaponRelation();
+				float flFALength = angFreeaim.Length();
+
+				bool bSmoothFreeaim = (flWeaponScreenRelation > 0.0f);
+
+				if (bSmoothFreeaim || flFALength >= flFreeaim)
+				{
+					float flAimAngle = atan2f(angFreeaim[PITCH], angFreeaim[YAW]);
+
+					float flFAMaxPitch = abs(flFreeaim * sin(flAimAngle));
+					float flFAMaxYaw = abs(flFreeaim * cos(flAimAngle));
+
+					float flFAPitch = abs(flFALength * sin(flAimAngle));
+					float flFAYaw = abs(flFALength * cos(flAimAngle));
+
+					float flPitchChange = mouse_y * m_pitch->GetFloat();
+
+					float flLengthFraction = 1.0f;
+
+					if (pPlayer->UseFreeaimSWRFraction() && flFALength >= 0.0f)
+						flLengthFraction = flFALength / flFreeaim;
+
+					if (flFAPitch > flFAMaxPitch)
+					{
+						angFreeaim[PITCH] = clamp(angFreeaim[PITCH], -flFAMaxPitch, flFAMaxPitch);
+						viewangles[PITCH] += flPitchChange;
+					}
+					else if (bSmoothFreeaim)
+					{
+						viewangles[PITCH] += flPitchChange * (flWeaponScreenRelation * flLengthFraction);
+					}
+
+					float flYawChange = mouse_x * m_yaw.GetFloat();
+
+					if (flFAYaw > flFAMaxPitch)
+					{
+						angFreeaim[YAW] = clamp(angFreeaim[YAW], -flFAMaxYaw, flFAMaxYaw);
+						viewangles[YAW] -= flYawChange;
+					}
+					else if (bSmoothFreeaim)
+					{
+						viewangles[YAW] -= flYawChange * (flWeaponScreenRelation * flLengthFraction);
+					}
+				}
+
+				pPlayer->SetFreeAimAngles(angFreeaim);
 			}
 		}
 	}
-	else
-	{
-		// Otherwise if holding strafe key and noclipping, then move upward
-/*		if ((in_strafe.state & 1) && IsNoClipping() )
-		{
-			cmd->upmove -= m_forward.GetFloat() * mouse_y;
-		} 
-		else */
-		{
-			// Default is to apply vertical mouse movement as a forward key press.
-			cmd->forwardmove -= m_forward.GetFloat() * mouse_y;
-		}
-	}
 
-	// Finally, add mouse state to usercmd.
-	// NOTE:  Does rounding to int cause any issues?  ywb 1/17/04
+	viewangles[PITCH] = clamp(viewangles[PITCH], -cl_pitchup.GetFloat(), cl_pitchdown.GetFloat());
 	cmd->mousedx = (int)mouse_x;
 	cmd->mousedy = (int)mouse_y;
 }
@@ -641,10 +689,13 @@ void CInput::MouseMove( CUserCmd *cmd )
 	// Don't drift pitch at all while mouselooking.
 	view->StopPitchDrift ();
 
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+
 	//jjb - this disables normal mouse control if the user is trying to 
 	//      move the camera, or if the mouse cursor is visible 
-	if ( !m_fCameraInterceptingMouse && 
-		 !vgui::surface()->IsCursorVisible() )
+	if (!m_fCameraInterceptingMouse &&
+		!vgui::surface()->IsCursorVisible() &&
+		!(pPlayer && (pPlayer->GetFlags() & FL_FROZEN)))
 	{
 		// Sample mouse one more time
 		AccumulateMouse();

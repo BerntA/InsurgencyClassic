@@ -297,21 +297,17 @@ void ClientModeShared::Init()
 	HOOK_MESSAGE(Rumble);
 
 	CLoadIMCHelper::CreateAllElements();
-	GetZoomTexture();
 }
-
 
 void ClientModeShared::InitViewport()
 {
 }
-
 
 void ClientModeShared::VGui_Shutdown()
 {
 	delete m_pViewport;
 	m_pViewport = NULL;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -488,8 +484,6 @@ void ClientModeShared::AdjustEngineViewport( int& x, int& y, int& width, int& he
 //-----------------------------------------------------------------------------
 void ClientModeShared::PreRender( CViewSetup *pSetup )
 {
-	materials->BeginRenderTargetAllocation(); // INS warn?
-	GetZoomTexture();
 }
 
 //-----------------------------------------------------------------------------

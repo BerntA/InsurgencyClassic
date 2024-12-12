@@ -198,7 +198,7 @@ public:
 };
 
 // Client-side tracking for whiz noises
-CBulletWhizTimer g_BulletWhiz( "CBulletWhizTimer" );
+static CBulletWhizTimer g_BulletWhiz( "CBulletWhizTimer" );
 
 //-----------------------------------------------------------------------------
 // Purpose: 

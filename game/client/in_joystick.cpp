@@ -108,8 +108,6 @@ extern ConVar cl_pitchspeed;
 
 extern ConVar cam_idealpitch;
 extern ConVar cam_idealyaw;
-extern ConVar thirdperson_platformer;
-extern ConVar thirdperson_screenspace;
 
 //-----------------------------------------------------------------
 // Purpose: Returns true if there's an active joystick connected.
@@ -714,43 +712,6 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 		m_flPreviousJoystickPitch *= -1.0f;
 	}
 
-	// drive yaw, pitch and move like a screen relative platformer game
-	if ( CAM_IsThirdPerson() && thirdperson_platformer.GetInt() )
-	{
-		if ( m_flPreviousJoystickForward || m_flPreviousJoystickSide )
-		{
-			// apply turn control [ YAW ]
-			// factor in the camera offset, so that the move direction is relative to the thirdperson camera
-			viewangles[ YAW ] = RAD2DEG(atan2(-m_flPreviousJoystickSide, -m_flPreviousJoystickForward)) + g_ThirdPersonManager.GetCameraOffsetAngles()[ YAW ];
-			engine->SetViewAngles( viewangles );
-
-			// apply movement
-			Vector2D moveDir( m_flPreviousJoystickForward, m_flPreviousJoystickSide );
-			cmd->forwardmove += moveDir.Length() * cl_forwardspeed.GetFloat();
-		}
-
-		if ( m_flPreviousJoystickPitch || m_flPreviousJoystickYaw )
-		{
-			Vector vTempOffset = g_ThirdPersonManager.GetCameraOffsetAngles();
-
-			// look around with the camera
-			vTempOffset[ PITCH ] += m_flPreviousJoystickPitch * joy_pitchsensitivity.GetFloat();
-			vTempOffset[ YAW ]   += m_flPreviousJoystickYaw * joy_yawsensitivity.GetFloat();
-
-			g_ThirdPersonManager.SetCameraOffsetAngles( vTempOffset );
-		}
-
-		if ( m_flPreviousJoystickForward || m_flPreviousJoystickSide || m_flPreviousJoystickPitch || m_flPreviousJoystickYaw )
-		{
-			const Vector& vTempOffset = g_ThirdPersonManager.GetCameraOffsetAngles();
-
-			// update the ideal pitch and yaw
-			cam_idealpitch.SetValue( vTempOffset[ PITCH ] - viewangles[ PITCH ] );
-			cam_idealyaw.SetValue( vTempOffset[ YAW ] - viewangles[ YAW ] );
-		}
-		return;
-	}
-
 	float	joySideMove = 0.f;
 	float	joyForwardMove = 0.f;
 	float   aspeed = frametime * gHUD.GetFOVSensitivityAdjust();
@@ -807,22 +768,8 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 		}
 	}
 
-	// apply player motion relative to screen space
-	if ( CAM_IsThirdPerson() && thirdperson_screenspace.GetInt() )
-	{
-		float ideal_yaw = cam_idealyaw.GetFloat();
-		float ideal_sin = sin(DEG2RAD(ideal_yaw));
-		float ideal_cos = cos(DEG2RAD(ideal_yaw));
-		float side_movement = ideal_cos*joySideMove - ideal_sin*joyForwardMove;
-		float forward_movement = ideal_cos*joyForwardMove + ideal_sin*joySideMove;
-		cmd->forwardmove += forward_movement;
-		cmd->sidemove += side_movement;
-	}
-	else
-	{
-		cmd->forwardmove += joyForwardMove;
-		cmd->sidemove += joySideMove;
-	}
+	cmd->forwardmove += joyForwardMove;
+	cmd->sidemove += joySideMove;
 
 	if ( IsPC() )
 	{

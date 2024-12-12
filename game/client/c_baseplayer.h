@@ -251,7 +251,6 @@ public:
 	virtual bool				Weapon_ShouldSelectItem( C_BaseCombatWeapon *pWeapon );
 	virtual	bool				Weapon_Switch(C_BaseCombatWeapon *pWeapon, bool bForce = false);		// Switch to given weapon if has ammo (false if failed)
 	virtual	void				Weapon_SwitchToNext(void);
-	virtual bool				Weapon_CanSwitchTo(C_BaseCombatWeapon* pWeapon);
 	virtual C_BaseCombatWeapon *GetLastWeapon( void ) { return m_hLastWeapon.Get(); }
 
 	virtual void 				SelectItem(int iWeaponID);

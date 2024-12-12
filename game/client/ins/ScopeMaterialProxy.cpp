@@ -119,7 +119,7 @@ void CScopeMaterialProxy::OnBind(void* pC_BaseEntity)
 		}
 	}
 
-	m_pTextureRT->SetTextureValue(GetZoomTexture());
+	m_pTextureRT->SetTextureValue(GetScopeTexture());
 
 	if (m_pTextureScrollVar->GetType() == MATERIAL_VAR_TYPE_MATRIX)
 	{

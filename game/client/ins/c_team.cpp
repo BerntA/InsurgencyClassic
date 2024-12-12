@@ -102,9 +102,3 @@ C_Team* GetPlayersTeam(C_BasePlayer* pPlayer)
 	Assert(pPlayer);
 	return GetPlayersTeam(pPlayer->entindex());
 }
-
-C_Team* GetLocalTeam(void)
-{
-	C_BasePlayer* player = C_BasePlayer::GetLocalPlayer();
-	return (player ? GetPlayersTeam(player->index) : NULL);
-}
