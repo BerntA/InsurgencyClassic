@@ -110,6 +110,15 @@ static	kbutton_t	in_duck;
 static	kbutton_t	in_reload;
 static	kbutton_t	in_score;
 static	kbutton_t	in_break;
+static	kbutton_t	in_sprint;
+static	kbutton_t	in_prone;
+static	kbutton_t	in_special1;
+static	kbutton_t	in_special2;
+static	kbutton_t	in_firemode;
+static	kbutton_t	in_leanright;
+static	kbutton_t	in_leanleft;
+static	kbutton_t	in_showmap;
+static	kbutton_t	in_showindicators;
 
 /*
 ===========
@@ -438,6 +447,49 @@ void IN_ReloadUp( const CCommand &args ) {KeyUp(&in_reload, args[1] );}
 void IN_GraphDown( const CCommand &args ) {KeyDown(&in_graph, args[1] );}
 void IN_GraphUp( const CCommand &args ) {KeyUp(&in_graph, args[1] );}
 void IN_XboxStub( const CCommand &args ) { /*do nothing*/ }
+
+void IN_SprintDown(const CCommand& args) { KeyDown(&in_sprint, args[1]); }
+void IN_SprintUp(const CCommand& args) { KeyUp(&in_sprint, args[1]); }
+void IN_ProneDown(const CCommand& args) { KeyDown(&in_prone, args[1]); }
+void IN_ProneUp(const CCommand& args) { KeyUp(&in_prone, args[1]); }
+void IN_Special1Down(const CCommand& args) { KeyDown(&in_special1, args[1]); }
+void IN_Special1Up(const CCommand& args) { KeyUp(&in_special1, args[1]); }
+void IN_Special2Down(const CCommand& args) { KeyDown(&in_special2, args[1]); }
+void IN_Special2Up(const CCommand& args) { KeyUp(&in_special2, args[1]); }
+void IN_FiremodeDown(const CCommand& args) { KeyDown(&in_firemode, args[1]); }
+void IN_FiremodeUp(const CCommand& args) { KeyUp(&in_firemode, args[1]); }
+void IN_LeanRightDown(const CCommand& args) { KeyDown(&in_leanright, args[1]); }
+void IN_LeanRightUp(const CCommand& args) { KeyUp(&in_leanright, args[1]); }
+void IN_LeanLeftDown(const CCommand& args) { KeyDown(&in_leanleft, args[1]); }
+void IN_LeanLeftUp(const CCommand& args) { KeyUp(&in_leanleft, args[1]); }
+
+void IN_ShowMapDown(const CCommand& args)
+{
+	KeyDown(&in_showmap, args[1]);
+	if (gViewPortInterface)
+	{
+		gViewPortInterface->ShowPanel(PANEL_OVERVIEW, true);
+	}
+}
+
+void IN_ShowMapUp(const CCommand& args)
+{
+	KeyUp(&in_showmap, args[1]);
+	if (gViewPortInterface)
+	{
+		gViewPortInterface->ShowPanel(PANEL_OVERVIEW, false);
+	}
+}
+
+void IN_ShowIndicatorsDown(const CCommand& args)
+{
+	KeyDown(&in_showindicators, args[1]);
+}
+
+void IN_ShowIndicatorsUp(const CCommand& args)
+{
+	KeyUp(&in_showindicators, args[1]);
+}
 
 void IN_AttackDown( const CCommand &args )
 {
@@ -1158,6 +1210,13 @@ int CInput::GetButtonBits( int bResetState )
 	CalcButtonBits( bits, IN_MOVELEFT, s_ClearInputState, &in_moveleft, bResetState );
 	CalcButtonBits( bits, IN_MOVERIGHT, s_ClearInputState, &in_moveright, bResetState );
 	CalcButtonBits( bits, IN_RELOAD, s_ClearInputState, &in_reload, bResetState );
+	CalcButtonBits(bits, IN_SPRINT, s_ClearInputState, &in_sprint, bResetState);
+	CalcButtonBits(bits, IN_PRONE, s_ClearInputState, &in_prone, bResetState);
+	CalcButtonBits(bits, IN_SPECIAL1, s_ClearInputState, &in_special1, bResetState);
+	CalcButtonBits(bits, IN_SPECIAL2, s_ClearInputState, &in_special2, bResetState);
+	CalcButtonBits(bits, IN_FIREMODE, s_ClearInputState, &in_firemode, bResetState);
+	CalcButtonBits(bits, IN_LEAN_RIGHT, s_ClearInputState, &in_leanright, bResetState);
+	CalcButtonBits(bits, IN_LEAN_LEFT, s_ClearInputState, &in_leanleft, bResetState);
 
 	// Cancel is a special flag
 	if (in_cancel)
@@ -1255,6 +1314,25 @@ static ConCommand startbreak("+break",IN_BreakDown);
 static ConCommand endbreak("-break",IN_BreakUp);
 static ConCommand force_centerview("force_centerview", IN_CenterView_f);
 static ConCommand joyadvancedupdate("joyadvancedupdate", IN_Joystick_Advanced_f, "", FCVAR_CLIENTCMD_CAN_EXECUTE);
+
+static ConCommand startsprint("+sprint", IN_SprintDown);
+static ConCommand endsprint("-sprint", IN_SprintUp);
+static ConCommand startprone("+prone", IN_ProneDown);
+static ConCommand endprone("-prone", IN_ProneUp);
+static ConCommand startspecial1("+special1", IN_Special1Down);
+static ConCommand endspecial1("-special1", IN_Special1Up);
+static ConCommand startspecial2("+special2", IN_Special2Down);
+static ConCommand endspecial2("-special2", IN_Special2Up);
+static ConCommand startfiremode("+firemode", IN_FiremodeDown);
+static ConCommand endfiremode("-firemode", IN_FiremodeUp);
+static ConCommand startleanright("+leanright", IN_LeanRightDown);
+static ConCommand endleanright("-leanright", IN_LeanRightUp);
+static ConCommand startleanleft("+leanleft", IN_LeanLeftDown);
+static ConCommand endleanleft("-leanleft", IN_LeanLeftUp);
+static ConCommand startshowmap("+showmap", IN_ShowMapDown);
+static ConCommand endshowmap("-showmap", IN_ShowMapUp);
+static ConCommand startshowindicators("+showindicators", IN_ShowIndicatorsDown);
+static ConCommand endshowindicators("-showindicators", IN_ShowIndicatorsUp);
 
 // Xbox 360 stub commands
 static ConCommand xboxmove("xmove", IN_XboxStub);

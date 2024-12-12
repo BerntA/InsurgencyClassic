@@ -31,11 +31,6 @@ class C_FuncLadder;
 class CFlashlightEffect;
 class C_EconWearable;
 
-extern int g_nKillCamMode;
-extern int g_nKillCamTarget1;
-extern int g_nKillCamTarget2;
-extern int g_nUsedPrediction;
-
 extern bool g_bShouldRenderLocalPlayerExternally;
 
 class C_CommandContext

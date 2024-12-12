@@ -51,11 +51,6 @@
 #undef CBasePlayer	
 #endif
 
-int g_nKillCamMode = OBS_MODE_NONE;
-int g_nKillCamTarget1 = 0;
-int g_nKillCamTarget2 = 0;
-int g_nUsedPrediction = 1;
-
 bool g_bShouldRenderLocalPlayerExternally = false;
 
 extern ConVar mp_forcecamera; // in gamevars_shared.h
@@ -609,10 +604,6 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 		// Make sure s_pLocalPlayer is correct
 
 		int iLocalPlayerIndex = engine->GetLocalPlayer();
-
-		if (g_nKillCamMode)
-			iLocalPlayerIndex = g_nKillCamTarget1;
-
 		if ( iLocalPlayerIndex == index )
 		{
 			Assert( s_pLocalPlayer == NULL );
