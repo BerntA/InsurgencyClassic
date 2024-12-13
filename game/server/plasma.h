@@ -15,7 +15,6 @@
 // CPlasma
 //==================================================
 
-//NOTENOTE: Mirrored in cl_dll/c_plasma.cpp
 #define	bitsPLASMA_FREE		0x00000002
 
 class CPlasma : public CBaseFire

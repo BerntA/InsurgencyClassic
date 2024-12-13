@@ -30,7 +30,6 @@
 #include "engine/ishadowmgr.h"
 #include "engine/IStaticPropMgr.h"
 #include "hud_basechat.h"
-#include "hud_crosshair.h"
 #include "view_shared.h"
 #include "env_wind_shared.h"
 #include "detailobjectsystem.h"
@@ -63,7 +62,6 @@
 #include "c_world.h"
 #include "perfvisualbenchmark.h"	
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "hud_closecaption.h"
 #include "colorcorrectionmgr.h"
 #include "physpropclientside.h"
 #include "panelmetaclassmgr.h"
@@ -81,7 +79,6 @@
 #include "appframework/IAppSystemGroup.h"
 #include "tier2/tier2dm.h"
 #include "tier3/tier3.h"
-#include "ihudlcd.h"
 #include "toolframework_client.h"
 #include "hltvcamera.h"
 #include "vgui/ILocalize.h"
@@ -99,8 +96,6 @@
 #include "GameBase_Client.h"
 #include "GameBase_Shared.h"
 #include "c_client_gib.h"
-#include "c_client_attachment.h"
-#include "c_playermodel.h"
 
 #include "hud_macros.h"
 
@@ -181,7 +176,6 @@ INetworkStringTable *g_pStringTableParticleEffectNames = NULL;
 INetworkStringTable *g_StringTableEffectDispatch = NULL;
 INetworkStringTable *g_StringTableVguiScreen = NULL;
 INetworkStringTable *g_pStringTableMaterials = NULL;
-INetworkStringTable *g_pStringTableInfoPanel = NULL;
 INetworkStringTable *g_pStringTableServerMapCycle = NULL;
 
 static CGlobalVarsBase dummyvars( true );
@@ -1019,9 +1013,6 @@ void CHLClient::HudUpdate( bool bActive )
 	// run vgui animations
 	vgui::GetAnimationController()->UpdateAnimations( engine->Time() );
 
-	hudlcd->SetGlobalStat( "(time_int)", VarArgs( "%d", (int)gpGlobals->curtime ) );
-	hudlcd->SetGlobalStat( "(time_float)", VarArgs( "%.2f", gpGlobals->curtime ) );
-
 	// I don't think this is necessary any longer, but I will leave it until
 	// I can check into this further.
 	C_BaseTempEntity::CheckDynamicTempEnts();
@@ -1297,8 +1288,6 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 	modemanager->LevelInit( pMapName );
 	ParticleMgr()->LevelInit();
 
-	hudlcd->SetGlobalStat( "(mapname)", pMapName );
-
 	C_BaseTempEntity::ClearDynamicTempEnts();
 	clienteffects->Flush();
 	view->LevelInit();
@@ -1350,7 +1339,6 @@ void CHLClient::ResetStringTablePointers()
 	g_StringTableEffectDispatch = NULL;
 	g_StringTableVguiScreen = NULL;
 	g_pStringTableMaterials = NULL;
-	g_pStringTableInfoPanel = NULL;
 	g_pStringTableServerMapCycle = NULL;
 }
 
@@ -1373,10 +1361,7 @@ void CHLClient::LevelShutdown( void )
 	IGameSystem::LevelShutdownPreEntityAllSystems();
 
 	C_PhysPropClientside::DestroyAll();
-	C_HL2MP_Player::ResetAllClientEntities();
 	RemoveAllClientGibs();
-	RemoveAllClientAttachments();
-	RemoveAllClientPlayermodels();
 
 	modemanager->LevelShutdown();
 
@@ -1416,18 +1401,12 @@ void CHLClient::LevelShutdown( void )
 	ResetStringTablePointers();
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Engine received crosshair offset ( autoaim )
 // Input  : angle - 
 //-----------------------------------------------------------------------------
 void CHLClient::SetCrosshairAngle( const QAngle& angle )
 {
-	CHudCrosshair *crosshair = GET_HUDELEMENT( CHudCrosshair );
-	if ( crosshair )
-	{
-		crosshair->SetCrosshairAngle( angle );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1519,42 +1498,37 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 	if (!Q_strcasecmp(tableName, "VguiScreen"))
 	{
 		// Look up the id 
-		g_StringTableVguiScreen = networkstringtable->FindTable( tableName );
+		g_StringTableVguiScreen = networkstringtable->FindTable(tableName);
 
 		// When the material list changes, we need to know immediately
-		g_StringTableVguiScreen->SetStringChangedCallback( NULL, OnVguiScreenTableChanged );
+		g_StringTableVguiScreen->SetStringChangedCallback(NULL, OnVguiScreenTableChanged);
 	}
 	else if (!Q_strcasecmp(tableName, "Materials"))
 	{
 		// Look up the id 
-		g_pStringTableMaterials = networkstringtable->FindTable( tableName );
+		g_pStringTableMaterials = networkstringtable->FindTable(tableName);
 
 		// When the material list changes, we need to know immediately
-		g_pStringTableMaterials->SetStringChangedCallback( NULL, OnMaterialStringTableChanged );
+		g_pStringTableMaterials->SetStringChangedCallback(NULL, OnMaterialStringTableChanged);
 	}
-	else if ( !Q_strcasecmp( tableName, "EffectDispatch" ) )
+	else if (!Q_strcasecmp(tableName, "EffectDispatch"))
 	{
-		g_StringTableEffectDispatch = networkstringtable->FindTable( tableName );
+		g_StringTableEffectDispatch = networkstringtable->FindTable(tableName);
 	}
-	else if ( !Q_strcasecmp( tableName, "InfoPanel" ) )
+	else if (!Q_strcasecmp(tableName, "ParticleEffectNames"))
 	{
-		g_pStringTableInfoPanel = networkstringtable->FindTable( tableName );
-	}
-	else if ( !Q_strcasecmp( tableName, "ParticleEffectNames" ) )
-	{
-		g_pStringTableParticleEffectNames = networkstringtable->FindTable( tableName );
-		networkstringtable->SetAllowClientSideAddString( g_pStringTableParticleEffectNames, true );
+		g_pStringTableParticleEffectNames = networkstringtable->FindTable(tableName);
+		networkstringtable->SetAllowClientSideAddString(g_pStringTableParticleEffectNames, true);
 		// When the particle system list changes, we need to know immediately
-		g_pStringTableParticleEffectNames->SetStringChangedCallback( NULL, OnParticleSystemStringTableChanged );
+		g_pStringTableParticleEffectNames->SetStringChangedCallback(NULL, OnParticleSystemStringTableChanged);
 	}
-	else if ( !Q_strcasecmp( tableName, "ServerMapCycle" ) )
+	else if (!Q_strcasecmp(tableName, "ServerMapCycle"))
 	{
-		g_pStringTableServerMapCycle = networkstringtable->FindTable( tableName );
+		g_pStringTableServerMapCycle = networkstringtable->FindTable(tableName);
 	}
-
-	InstallStringTableCallback_GameRules();
+	else
+		InstallStringTableCallback_GameRules(tableName);
 }
-
 
 //-----------------------------------------------------------------------------
 // Material precache
@@ -1988,31 +1962,10 @@ void CHLClient::WriteSaveGameScreenshot( const char *pFilename )
 //  the appropriate close caption if running with closecaption = 1
 void CHLClient::EmitSentenceCloseCaption( char const *tokenstream )
 {
-	extern ConVar closecaption;
-	
-	if ( !closecaption.GetBool() )
-		return;
-
-	CHudCloseCaption *hudCloseCaption = GET_HUDELEMENT( CHudCloseCaption );
-	if ( hudCloseCaption )
-	{
-		hudCloseCaption->ProcessSentenceCaptionStream( tokenstream );
-	}
 }
-
 
 void CHLClient::EmitCloseCaption( char const *captionname, float duration )
 {
-	extern ConVar closecaption;
-
-	if ( !closecaption.GetBool() )
-		return;
-
-	CHudCloseCaption *hudCloseCaption = GET_HUDELEMENT( CHudCloseCaption );
-	if ( hudCloseCaption )
-	{
-		hudCloseCaption->ProcessCaption( captionname, duration );
-	}
 }
 
 CStandardRecvProxies* CHLClient::GetStandardRecvProxies()
@@ -2106,10 +2059,6 @@ CMouthInfo *CHLClient::GetClientUIMouthInfo()
 
 void CHLClient::FileReceived( const char * fileName, unsigned int transferID )
 {
-	if ( g_pGameRules )
-	{
-		g_pGameRules->OnFileReceived( fileName, transferID );
-	}
 }
 
 void CHLClient::ClientAdjustStartSoundParams( StartSoundParams_t& params )
@@ -2118,10 +2067,7 @@ void CHLClient::ClientAdjustStartSoundParams( StartSoundParams_t& params )
 
 const char* CHLClient::TranslateEffectForVisionFilter( const char *pchEffectType, const char *pchEffectName )
 {
-	if ( !GameRules() )
-		return pchEffectName;
-
-	return GameRules()->TranslateEffectForVisionFilter( pchEffectType, pchEffectName );
+	return pchEffectName;
 }
 
 bool CHLClient::DisconnectAttempt( void )
@@ -2133,7 +2079,7 @@ bool CHLClient::DisconnectAttempt( void )
 
 bool CHLClient::IsConnectedUserInfoChangeAllowed( IConVar *pCvar )
 {
-	return GameRules() ? GameRules()->IsConnectedUserInfoChangeAllowed( NULL ) : true;
+	return true;
 }
 
 #ifndef NO_STEAM

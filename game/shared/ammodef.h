@@ -1,72 +1,87 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose:		Holds defintion for game ammo types
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
 //=============================================================================//
 
-#ifndef AI_AMMODEF_H
-#define AI_AMMODEF_H
+#ifndef AMMODEF_H
+#define AMMODEF_H
 
 #ifdef _WIN32
 #pragma once
 #endif
 
-class ConVar;
+#include "weapon_defines.h"
+#include "weapon_parse.h"
 
-struct Ammo_t
+//=========================================================
+//=========================================================
+class IAmmoData
 {
-	char 				*pName;
-	int					nDamageType;
-	int					eTracerType;
-	float				physicsForceImpulse;
-	int					nMinSplashSize;
-	int					nMaxSplashSize;
-};
-
-enum AmmoTracer_t
-{
-	TRACER_NONE,
-	TRACER_LINE,
-	TRACER_RAIL,
-	TRACER_BEAM,
-	TRACER_LINE_AND_WHIZ,
-};
-
-#include "shareddefs.h"
-
-//=============================================================================
-//	>> CAmmoDef
-//=============================================================================
-class CAmmoDef
-{
-
 public:
-	int					m_nAmmoIndex;
+	virtual void Parse(KeyValues* pData) = 0;
 
-	Ammo_t				m_AmmoType[MAX_AMMO_TYPES];
+	virtual void Precache(void) {}
+	virtual void LevelInit(void) {}
+};
 
-	Ammo_t				*GetAmmoOfIndex(int nAmmoIndex);
-	int					Index(const char *psz);
-	int					DamageType(int nAmmoIndex);
-	int					TracerType(int nAmmoIndex);
-	float				DamageForce(int nAmmoIndex);
-	int					MinSplashSize(int nAmmoIndex);
-	int					MaxSplashSize(int nAmmoIndex);
+//=========================================================
+//=========================================================
+class IAmmoType
+{
+public:
+	virtual const char* GetHeader(void) const = 0;
 
-	void				AddAmmoType(char const* name, int damageType, int tracerType, float physicsForceImpulse, int minSplashSize = 4, int maxSplashSize = 8);
+	virtual int ConvertID(const char* pszID) const = 0;
 
-	CAmmoDef(void);
-	virtual ~CAmmoDef(void);
+	virtual int GetDataCount(void) const = 0;
+	virtual IAmmoData* GetData(int iID) = 0;
+};
+
+//=========================================================
+//=========================================================
+class CAmmoDef : public CAutoGameSystem
+{
+public:
+	static CAmmoDef* GetAmmoDef(void);
+
+	IAmmoType* GetAmmoType(int iType) const;
+
+	void Precache(void);
 
 private:
-	bool				AddAmmoTypeInternal(char const* name, int damageType, int tracerType, int minSplashSize, int maxSplashSize);
+	CAmmoDef();
+
+	bool Init(void);
+	bool Load(void);
+
+	void LevelInitPostEntity(void);
+
+private:
+	static CAmmoDef m_AmmoDef;
+
+	IAmmoType* m_pAmmoTypes[AMMOTYPE_COUNT];
 };
 
-// Get the global ammodef object. This is usually implemented in each mod's game rules file somewhere,
-// so the mod can setup custom ammo types.
-CAmmoDef* GetAmmoDef();
+//=========================================================
+//=========================================================
+extern CAmmoDef* GetAmmoDef(void);
 
-#endif // AI_AMMODEF_H
+//=========================================================
+//=========================================================
+typedef IAmmoType* (*AmmoTypeCreator_t)(void);
+extern AmmoTypeCreator_t g_AmmoTypeCreators[AMMOTYPE_COUNT];
+
+class CAmmoTypeHelper
+{
+public:
+	CAmmoTypeHelper(int iID, AmmoTypeCreator_t AmmoTypeCreator)
+	{
+		g_AmmoTypeCreators[iID] = AmmoTypeCreator;
+	}
+};
+
+#define DECLARE_AMMOTYPE( id, ammotype ) \
+	IAmmoType *CreateAmmoType__##id( void ) { \
+	return new ammotype; } \
+	CAmmoTypeHelper g_AmmoTypeHelper__##id( id, CreateAmmoType__##id );
+
+#endif // AMMODEF_H

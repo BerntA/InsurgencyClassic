@@ -196,11 +196,10 @@ CEntityDissolve *CEntityDissolve::Create( CBaseEntity *pTarget, const char *pMat
 		pMaterialName = DISSOLVE_SPRITE_NAME;
 	}
 
-	if ( pTarget->IsPlayer() )
+	if (pTarget->IsPlayer() && pTarget->IsAlive())
 	{
 		// Simply immediately kill the player.
 		CBasePlayer *pPlayer = assert_cast< CBasePlayer* >( pTarget );
-		pPlayer->SetArmorValue( 0 );
 		CTakeDamageInfo info( pPlayer, pPlayer, pPlayer->GetHealth(), DMG_GENERIC | DMG_REMOVENORAGDOLL | DMG_PREVENT_PHYSICS_FORCE );
 		pPlayer->TakeDamage( info );
 		return NULL;
@@ -223,7 +222,7 @@ CEntityDissolve *CEntityDissolve::Create( CBaseEntity *pTarget, const char *pMat
 			// Necessary to cause it to do the appropriate death cleanup
 			if ( pTarget->m_lifeState == LIFE_ALIVE )
 			{
-				CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+				CBasePlayer* pPlayer = UTIL_GetNearestPlayer(pTarget->WorldSpaceCenter());
 				CTakeDamageInfo ragdollInfo( pPlayer, pPlayer, 10000.0, DMG_SHOCK | DMG_REMOVENORAGDOLL | DMG_PREVENT_PHYSICS_FORCE );
 				pTarget->TakeDamage( ragdollInfo );
 			}
@@ -329,9 +328,8 @@ void CEntityDissolve::DissolveThink( void )
 		// Necessary to cause it to do the appropriate death cleanup
 		// Yeah, the player may have nothing to do with it, but
 		// passing NULL to TakeDamage causes bad things to happen
-		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin());
-		int iNoPhysicsDamage = g_pGameRules->Damage_GetNoPhysicsForce();
-		CTakeDamageInfo info( pPlayer, pPlayer, 10000.0, DMG_GENERIC | DMG_REMOVENORAGDOLL | iNoPhysicsDamage );
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(pTarget->GetAbsOrigin());
+		CTakeDamageInfo info(pPlayer, pPlayer, 10000.0, DMG_GENERIC | DMG_REMOVENORAGDOLL | DMG_PREVENT_PHYSICS_FORCE);
 		pTarget->TakeDamage( info );
 
 		if ( pTarget != pPlayer )

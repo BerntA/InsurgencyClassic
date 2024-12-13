@@ -50,7 +50,6 @@
 #include <ctype.h>
 #include "datacache/imdlcache.h"
 #include "ModelSoundsCache.h"
-#include "env_debughistory.h"
 #include "tier1/utlstring.h"
 #include "utlhashtable.h"
 #include "waterbullet.h"
@@ -249,13 +248,7 @@ void SendProxy_Angles( const SendProp *pProp, const void *pStruct, const void *p
 IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
 	SendPropDataTable( "AnimTimeMustBeFirst", 0, &REFERENCE_SEND_TABLE(DT_AnimTimeMustBeFirst), SendProxy_ClientSideAnimation ),
 	SendPropInt			(SENDINFO(m_flSimulationTime),	SIMULATION_TIME_WINDOW_BITS, SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, SendProxy_SimulationTime),
-
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
-#else
-	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_COORD|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
-#endif
-
+	SendPropVector(SENDINFO(m_vecOrigin), -1, SPROP_COORD | SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin),
 	SendPropInt		(SENDINFO( m_ubInterpolationFrame ), NOINTERP_PARITY_MAX_BITS, SPROP_UNSIGNED ),
 	SendPropModelIndex(SENDINFO(m_nModelIndex)),
 	SendPropDataTable( SENDINFO_DT( m_Collision ), &REFERENCE_SEND_TABLE(DT_CollisionProperty) ),
@@ -263,7 +256,6 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
 	SendPropInt		(SENDINFO(m_nRenderMode),	8, SPROP_UNSIGNED ),
 	SendPropInt		(SENDINFO(m_fEffects),		EF_MAX_BITS, SPROP_UNSIGNED),
 	SendPropInt		(SENDINFO(m_clrRender),	32, SPROP_UNSIGNED),
-	SendPropInt		(SENDINFO(m_iTeamNum),		TEAMNUM_NUM_BITS, 0),
 	SendPropInt		(SENDINFO(m_CollisionGroup), 5, SPROP_UNSIGNED),
 	SendPropFloat	(SENDINFO(m_flElasticity), 0, SPROP_COORD),
 	SendPropFloat	(SENDINFO(m_flShadowCastDistance), 12, SPROP_UNSIGNED ),
@@ -271,15 +263,9 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
 	SendPropEHandle (SENDINFO(m_hEffectEntity)),
 	SendPropEHandle (SENDINFO_NAME(m_hMoveParent, moveparent)),
 	SendPropInt		(SENDINFO(m_iParentAttachment), NUM_PARENTATTACHMENT_BITS, SPROP_UNSIGNED),
-
 	SendPropInt		(SENDINFO_NAME( m_MoveType, movetype ), MOVETYPE_MAX_BITS, SPROP_UNSIGNED ),
 	SendPropInt		(SENDINFO_NAME( m_MoveCollide, movecollide ), MOVECOLLIDE_MAX_BITS, SPROP_UNSIGNED ),
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-	SendPropVector	(SENDINFO(m_angRotation), -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0, HIGH_DEFAULT, SendProxy_Angles ),
-#else
-	SendPropQAngles	(SENDINFO(m_angRotation), 13, SPROP_CHANGES_OFTEN, SendProxy_Angles ),
-#endif
-
+	SendPropQAngles(SENDINFO(m_angRotation), 13, SPROP_CHANGES_OFTEN, SendProxy_Angles),
 	SendPropInt		( SENDINFO( m_iTextureFrameIndex ),		8, SPROP_UNSIGNED ),
 
 #if !defined( NO_ENTITY_PREDICTION )
@@ -376,7 +362,6 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 	m_flElasticity   = 1.0f;
 	m_flShadowCastDistance = m_flDesiredShadowCastDistance = 0;
 	SetRenderColor( 255, 255, 255, 255 );
-	m_iTeamNum = m_iInitialTeamNum = TEAM_UNASSIGNED;
 	m_nLastThinkTick = gpGlobals->tickcount;
 	m_nSimulationTick = -1;
 	SetIdentityMatrix( m_rgflCoordinateFrame );
@@ -1248,13 +1233,6 @@ void CBaseEntity::Activate( void )
 	g_bReceivedChainedActivate = true;
 #endif
 
-	// NOTE: This forces a team change so that stuff in the level
-	// that starts out on a team correctly changes team
-	if (m_iInitialTeamNum)
-	{
-		ChangeTeam( m_iInitialTeamNum );
-	}	
-
 	// Get a handle to my damage filter entity if there is one.
 	if ( m_iszDamageFilterName != NULL_STRING )
 	{
@@ -1323,9 +1301,8 @@ int CBaseEntity::OnTakeDamage( const CTakeDamageInfo &info )
 		}
 		else
 		{
-			bool bNoForceLimit = info.IsMiscFlagActive(TAKEDMGINFO_DISABLE_FORCELIMIT);
 			if ( info.GetInflictor() && (GetMoveType() == MOVETYPE_WALK || GetMoveType() == MOVETYPE_STEP) && 
-				(!info.GetAttacker()->IsSolidFlagSet(FSOLID_TRIGGER) || bNoForceLimit))
+				!info.GetAttacker()->IsSolidFlagSet(FSOLID_TRIGGER))
 			{
 				Vector vecDir, vecInflictorCentroid;
 				vecDir = WorldSpaceCenter( );
@@ -1337,7 +1314,8 @@ int CBaseEntity::OnTakeDamage( const CTakeDamageInfo &info )
 				
 				if (flForce > 1000.0) 
 					flForce = 1000.0;
-				ApplyAbsVelocityImpulse(vecDir * flForce, bNoForceLimit);
+
+				ApplyAbsVelocityImpulse(vecDir * flForce, false);
 			}
 		}
 	}
@@ -1364,8 +1342,7 @@ int CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 	if ( !g_pGameRules )
 		return 0;
 
-	bool bHasPhysicsForceDamage = !g_pGameRules->Damage_NoPhysicsForce( inputInfo.GetDamageType() );
-	if ( bHasPhysicsForceDamage && inputInfo.GetDamageType() != DMG_GENERIC )
+	if (!(inputInfo.GetDamageType() & DMG_NO_PHYSICS_FORCE) && (inputInfo.GetDamageType() != DMG_GENERIC))
 	{
 		// If you hit this assert, you've called TakeDamage with a damage type that requires a physics damage
 		// force & position without specifying one or both of them. Decide whether your damage that's causing 
@@ -1393,11 +1370,6 @@ int CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 
 	// Make sure our damage filter allows the damage.
 	if ( !PassesDamageFilter( inputInfo ))
-	{
-		return 0;
-	}
-
-	if( !g_pGameRules->AllowDamage(this, inputInfo) )
 	{
 		return 0;
 	}
@@ -1466,8 +1438,7 @@ float CBaseEntity::GetReceivedDamageScale( CBaseEntity *pAttacker )
 int CBaseEntity::VPhysicsTakeDamage( const CTakeDamageInfo &info )
 {
 	// don't let physics impacts or fire cause objects to move (again)
-	bool bNoPhysicsForceDamage = g_pGameRules->Damage_NoPhysicsForce( info.GetDamageType() );
-	if ( bNoPhysicsForceDamage || info.GetDamageType() == DMG_GENERIC )
+	if (info.GetDamageType() & DMG_NO_PHYSICS_FORCE || info.GetDamageType() == DMG_GENERIC)
 		return 1;
 
 	Assert(VPhysicsGetObject() != NULL);
@@ -1613,8 +1584,6 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 
 	DEFINE_KEYFIELD( m_flShadowCastDistance, FIELD_FLOAT, "shadowcastdist" ),
 
-	DEFINE_INPUT( m_iInitialTeamNum, FIELD_INTEGER, "TeamNum" ),
-
 	DEFINE_GLOBAL_KEYFIELD( m_ModelName, FIELD_MODELNAME, "model" ),
 	
 	DEFINE_KEYFIELD( m_vecBaseVelocity, FIELD_VECTOR, "basevelocity" ),
@@ -1675,8 +1644,6 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 	DEFINE_OUTPUT( m_OnUser2, "OnUser2" ),
 	DEFINE_OUTPUT( m_OnUser3, "OnUser3" ),
 	DEFINE_OUTPUT( m_OnUser4, "OnUser4" ),
-	DEFINE_OUTPUT(m_OnInventoryObjectiveItemUsed, "OnInventoryObjectiveSuccess"),
-	DEFINE_OUTPUT(m_OnInventoryObjectiveItemFail, "OnInventoryObjectiveFail"),
 
 	// Function Pointers
 	DEFINE_FUNCTION( SUB_Remove ),
@@ -3016,26 +2983,6 @@ int CBaseEntity::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 		return FL_EDICT_DONTSEND;
 	}
 
-//	if ( IsToolRecording() )
-//	{
-//		return FL_EDICT_ALWAYS;
-//	}
-
-	CBaseEntity *pRecipientEntity = CBaseEntity::Instance( pInfo->m_pClientEnt );
-
-	Assert( pRecipientEntity->IsPlayer() );
-	
-	CBasePlayer *pRecipientPlayer = static_cast<CBasePlayer*>( pRecipientEntity );
-
-
-	// FIXME: Refactor once notion of "team" is moved into HL2 code
-	// Team rules may tell us that we should
-	if ( pRecipientPlayer->GetTeam() ) 
-	{
-		if ( pRecipientPlayer->GetTeam()->ShouldTransmitToPlayer( pRecipientPlayer, this ))
-			return FL_EDICT_ALWAYS;
-	}
-
 	// by default do a PVS check
 
 	return FL_EDICT_PVSCHECK;
@@ -3327,7 +3274,6 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 						Q_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) input <NULL>: %s.%s(%s)\n", gpGlobals->curtime, GetDebugName(), szInputName, Value.String() );
 					}
 					DevMsg( 2, "%s", szBuffer );
-					ADD_DEBUG_HISTORY( HISTORY_ENTITY_IO, szBuffer );
 
 					if (m_debugOverlays & OVERLAY_MESSAGE_BIT)
 					{
@@ -3510,64 +3456,6 @@ void CBaseEntity::TraceAttackToTriggers(const CTakeDamageInfo& info, const Vecto
 	enginetrace->EnumerateEntities(ray, true, &triggerTraceEnum);
 }
 
-void CBaseEntity::UpdateShotStatistics(const trace_t& tr)
-{
-}
-
-//-----------------------------------------------------------------------------
-// Handle shot entering water
-//-----------------------------------------------------------------------------
-#define	MAX_GLASS_PENETRATION_DEPTH	16.0f
-
-void CBaseEntity::HandleShotImpactingGlass(const FireBulletsInfo_t& info,
-	const trace_t& tr, const Vector& vecDir, ITraceFilter* pTraceFilter)
-{
-	// Move through the glass until we're at the other side
-	Vector	testPos = tr.endpos + (vecDir * MAX_GLASS_PENETRATION_DEPTH);
-
-	CEffectData	data;
-
-	data.m_vNormal = tr.plane.normal;
-	data.m_vOrigin = tr.endpos;
-
-	DispatchEffect("GlassImpact", data);
-
-	trace_t	penetrationTrace;
-
-	// Re-trace as if the bullet had passed right through
-	UTIL_TraceLine(testPos, tr.endpos, MASK_SHOT, pTraceFilter, &penetrationTrace);
-
-	// See if we found the surface again
-	if (penetrationTrace.startsolid || tr.fraction == 0.0f || penetrationTrace.fraction == 1.0f)
-		return;
-
-	//FIXME: This is technically frustrating MultiDamage, but multiple shots hitting multiple targets in one call
-	//		 would do exactly the same anyway...
-
-	// Impact the other side (will look like an exit effect)
-	DoImpactEffect(penetrationTrace, GetAmmoDef()->DamageType(info.m_iAmmoType));
-
-	data.m_vNormal = penetrationTrace.plane.normal;
-	data.m_vOrigin = penetrationTrace.endpos;
-
-	DispatchEffect("GlassImpact", data);
-
-	// Refire the round, as if starting from behind the glass
-	FireBulletsInfo_t behindGlassInfo;
-	behindGlassInfo.m_iShots = 1;
-	behindGlassInfo.m_vecSrc = penetrationTrace.endpos;
-	behindGlassInfo.m_vecDirShooting = vecDir;
-	behindGlassInfo.m_vecSpread = vec3_origin;
-	behindGlassInfo.m_flDistance = info.m_flDistance * (1.0f - tr.fraction);
-	behindGlassInfo.m_iAmmoType = info.m_iAmmoType;
-	behindGlassInfo.m_iTracerFreq = info.m_iTracerFreq;
-	behindGlassInfo.m_flDamage = info.m_flDamage;
-	behindGlassInfo.m_pAttacker = info.m_pAttacker ? info.m_pAttacker : this;
-	behindGlassInfo.m_nFlags = info.m_nFlags;
-
-	FireBullets(behindGlassInfo);
-}
-
 //-----------------------------------------------------------------------------
 // Computes the tracer start position
 //-----------------------------------------------------------------------------
@@ -3608,7 +3496,6 @@ void CBaseEntity::InputDisableDamageForces( inputdata_t &inputdata )
 	AddEFlags( EFL_NO_DAMAGE_FORCES );
 }
 
-	
 //-----------------------------------------------------------------------------
 // Purpose: Sets the damage filter on the object
 //-----------------------------------------------------------------------------
@@ -3874,8 +3761,6 @@ void CBaseEntity::InputSetTeam( inputdata_t &inputdata )
 void CBaseEntity::ChangeTeam( int iTeamNum )
 {
 	RemoveGlowEffect();
-
-	m_iTeamNum = iTeamNum;
 }
 
 //-----------------------------------------------------------------------------
@@ -3883,38 +3768,7 @@ void CBaseEntity::ChangeTeam( int iTeamNum )
 //-----------------------------------------------------------------------------
 CTeam *CBaseEntity::GetTeam( void ) const
 {
-	return GetGlobalTeam( m_iTeamNum );
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true if these players are both in at least one team together
-//-----------------------------------------------------------------------------
-bool CBaseEntity::InSameTeam( CBaseEntity *pEntity ) const
-{
-	if ( !pEntity )
-		return false;
-
-	return ( pEntity->GetTeam() == GetTeam() );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns the string name of the players team
-//-----------------------------------------------------------------------------
-const char *CBaseEntity::TeamID( void ) const
-{
-	if ( GetTeam() == NULL )
-		return "";
-
-	return GetTeam()->GetName();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true if the player is on the same team
-//-----------------------------------------------------------------------------
-bool CBaseEntity::IsInTeam( CTeam *pTeam ) const
-{
-	return ( GetTeam() == pTeam );
+	return GetGlobalTeam(GetTeamNumber());
 }
 
 //-----------------------------------------------------------------------------
@@ -3922,15 +3776,7 @@ bool CBaseEntity::IsInTeam( CTeam *pTeam ) const
 //-----------------------------------------------------------------------------
 int CBaseEntity::GetTeamNumber( void ) const
 {
-	return m_iTeamNum;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CBaseEntity::IsInAnyTeam( void ) const
-{
-	return ( GetTeam() != NULL );
+	return TEAM_UNASSIGNED;
 }
 
 //-----------------------------------------------------------------------------
@@ -5787,28 +5633,6 @@ void CBaseEntity::SetPredictionEligible( bool canpredict )
 // Nothing in game code	m_bPredictionEligible = canpredict;
 }
 
-//-----------------------------------------------------------------------------
-// These could be virtual, but only the player is overriding them
-// NOTE: If you make any of these virtual, remove this implementation!!!
-//-----------------------------------------------------------------------------
-void CBaseEntity::AddPoints( int score, bool bAllowNegativeScore )
-{
-	CBasePlayer *pPlayer = ToBasePlayer(this);
-	if ( pPlayer )
-	{
-		pPlayer->CBasePlayer::AddPoints( score, bAllowNegativeScore );
-	}
-}
-
-void CBaseEntity::AddPointsToTeam( int score, bool bAllowNegativeScore )
-{
-	CBasePlayer *pPlayer = ToBasePlayer(this);
-	if ( pPlayer )
-	{
-		pPlayer->CBasePlayer::AddPointsToTeam( score, bAllowNegativeScore );
-	}
-}
-
 void CBaseEntity::ViewPunch( const QAngle &angleOffset )
 {
 	CBasePlayer *pPlayer = ToBasePlayer(this);
@@ -5826,8 +5650,6 @@ void CBaseEntity::VelocityPunch( const Vector &vecForce )
 		pPlayer->CBasePlayer::VelocityPunch( vecForce );
 	}
 }
-//-----------------------------------------------------------------------------
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Tell clients to remove all decals from this entity
@@ -5909,16 +5731,6 @@ void CBaseEntity::InputFireUser3( inputdata_t& inputdata )
 void CBaseEntity::InputFireUser4( inputdata_t& inputdata )
 {
 	m_OnUser4.FireOutput( inputdata.pActivator, this );
-}
-
-void CBaseEntity::InputFireInventoryObjectiveSuccess(inputdata_t& inputdata)
-{
-	m_OnInventoryObjectiveItemUsed.FireOutput(inputdata.pActivator, this);
-}
-
-void CBaseEntity::InputFireInventoryObjectiveFail(inputdata_t& inputdata)
-{
-	m_OnInventoryObjectiveItemFail.FireOutput(inputdata.pActivator, this);
 }
 
 //-----------------------------------------------------------------------------
@@ -6213,49 +6025,6 @@ QAngle CBaseEntity::GetStepAngles( void ) const
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: For each client who appears to be a valid recipient, checks the client has disabled CC and if so, removes them from 
-//  the recipient list.
-// Input  : filter - 
-//-----------------------------------------------------------------------------
-void CBaseEntity::RemoveRecipientsIfNotCloseCaptioning( CRecipientFilter& filter )
-{
-	int c = filter.GetRecipientCount();
-	for ( int i = c - 1; i >= 0; --i )
-	{
-		int playerIndex = filter.GetRecipientIndex( i );
-
-		CBasePlayer *player = static_cast< CBasePlayer * >( CBaseEntity::Instance( playerIndex ) );
-		if ( !player )
-			continue;
-#if !defined( _XBOX )
-		const char *cvarvalue = engine->GetClientConVarValue( playerIndex, "closecaption" );
-		Assert( cvarvalue );
-		if ( !cvarvalue[ 0 ] )
-			continue;
-
-		int value = atoi( cvarvalue );
-#else
-		static ConVar *s_pCloseCaption = NULL;
-		if ( !s_pCloseCaption )
-		{
-			s_pCloseCaption = cvar->FindVar( "closecaption" );
-			if ( !s_pCloseCaption )
-			{
-				Error( "XBOX couldn't find closecaption convar!!!" );
-			}
-		}
-
-		int value = s_pCloseCaption->GetInt();
-#endif
-		// No close captions?
-		if ( value == 0 )
-		{
-			filter.RemoveRecipient( player );
-		}
-	}
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Wrapper to emit a sentence and also a close caption token for the sentence as appropriate.
 // Input  : filter - 
 //			iEntIndex - 
@@ -6427,7 +6196,7 @@ bool CBaseEntity::SUB_AllowedToFade( void )
 {
 	if( VPhysicsGetObject() )
 	{
-		if( VPhysicsGetObject()->GetGameFlags() & FVPHYSICS_PLAYER_HELD || GetEFlags() & EFL_IS_BEING_LIFTED_BY_BARNACLE )
+		if( VPhysicsGetObject()->GetGameFlags() & FVPHYSICS_PLAYER_HELD )
 			return false;
 	}
 

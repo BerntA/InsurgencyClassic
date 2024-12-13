@@ -23,6 +23,7 @@
 #include <KeyValues.h>
 #include "filesystem.h"
 #include "matsys_controls/matsyscontrols.h"
+#include "gameuipanel.h"
 
 // BB2
 #include "GameBase_Client.h"
@@ -209,6 +210,8 @@ void VGui_CreateGlobalPanels( void )
 #endif
 	netgraphpanel->Create( toolParent );
 	debugoverlaypanel->Create( gameToolParent );
+
+	g_pGameUIPanel = new CGameUIPanel(enginevgui->GetPanel(PANEL_GAMEUIDLL));
 }
 
 void VGui_Shutdown()

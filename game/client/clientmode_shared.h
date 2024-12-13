@@ -17,7 +17,6 @@
 #include <baseviewport.h>
 
 class CBaseHudChat;
-class CBaseHudWeaponSelection;
 class CViewSetup;
 class C_BaseEntity;
 class C_BasePlayer;
@@ -132,9 +131,9 @@ public:
 	virtual void	DisplayReplayMessage( const char *pLocalizeName, float flDuration, bool bUrgent,
 										  const char *pSound, bool bDlg );
 
-	virtual bool	IsInfoPanelAllowed() OVERRIDE { return true; }
+	virtual bool	IsInfoPanelAllowed() OVERRIDE { return false; }
 	virtual void	InfoPanelDisplayed() OVERRIDE { }
-	virtual bool	IsHTMLInfoPanelAllowed() OVERRIDE { return true; }
+	virtual bool	IsHTMLInfoPanelAllowed() OVERRIDE { return false; }
 
 protected:
 	CBaseViewport			*m_pViewport;
@@ -150,7 +149,6 @@ private:
 	// All modes share a common chat interface
 	CBaseHudChat			*m_pChatElement;
 	vgui::HCursor			m_CursorNone;
-	CBaseHudWeaponSelection *m_pWeaponSelection;
 	int						m_nRootSize[2];
 };
 

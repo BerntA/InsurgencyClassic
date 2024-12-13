@@ -8,6 +8,7 @@
 
 #ifndef C_PLAYERLOCALDATA_H
 #define C_PLAYERLOCALDATA_H
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -23,43 +24,55 @@ class CPlayerLocalData
 {
 public:
 	DECLARE_PREDICTABLE();
-	DECLARE_CLASS_NOBASE( CPlayerLocalData );
+	DECLARE_CLASS_NOBASE(CPlayerLocalData);
 	DECLARE_EMBEDDED_NETWORKVAR();
 
 	CPlayerLocalData() :
-		m_iv_vecPunchAngle( "CPlayerLocalData::m_iv_vecPunchAngle" ),
-		m_iv_vecPunchAngleVel( "CPlayerLocalData::m_iv_vecPunchAngleVel" )
+		m_iv_vecPunchAngle("CPlayerLocalData::m_iv_vecPunchAngle"),
+		m_iv_vecPunchAngleVel("CPlayerLocalData::m_iv_vecPunchAngleVel"),
+		m_iv_vecRecoilPunchAngle("CPlayerLocalData::m_iv_vecRecoilPunchAngle"),
+		m_iv_vecRecoilPunchAngleVel("CPlayerLocalData::m_iv_vecRecoilPunchAngleVel")
 	{
-		m_iv_vecPunchAngle.Setup( &m_vecPunchAngle.m_Value, LATCH_SIMULATION_VAR );
-		m_iv_vecPunchAngleVel.Setup( &m_vecPunchAngleVel.m_Value, LATCH_SIMULATION_VAR );
-		m_flFOVRate = 0;
+		m_iv_vecPunchAngle.Setup(&m_vecPunchAngle.m_Value, LATCH_SIMULATION_VAR);
+		m_iv_vecPunchAngleVel.Setup(&m_vecPunchAngleVel.m_Value, LATCH_SIMULATION_VAR);
+
+		m_iv_vecRecoilPunchAngle.Setup(&m_vecRecoilPunchAngle.m_Value, LATCH_SIMULATION_VAR);
+		m_iv_vecRecoilPunchAngleVel.Setup(&m_vecRecoilPunchAngleVel.m_Value, LATCH_SIMULATION_VAR);
+
+		m_iDefaultFOV = 0;
+		m_iScopeFOV = 0;
+		m_flFOVRate = m_flViewmodelFOVRate = 0.0f;
 	}
 
 	unsigned char			m_chAreaBits[MAX_AREA_STATE_BYTES];				// Area visibility flags.
 	unsigned char			m_chAreaPortalBits[MAX_AREA_PORTAL_STATE_BYTES];// Area portal visibility flags.
 
-	int						m_iHideHUD;			// bitfields containing sections of the HUD to hide
-	
-	float					m_flFOVRate;		// rate at which the FOV changes
-	
+	int						m_iDefaultFOV;
+	float					m_flFOVRate;
+	float					m_flViewmodelFOVRate;
+	int						m_iScopeFOV;
 
-	bool					m_bDucked;
-	bool					m_bDucking;
-	bool					m_bInDuckJump;
-	float					m_flDucktime;
-	float					m_flDuckJumpTime;
 	float					m_flJumpTime;
 	int						m_nStepside;
 	float					m_flFallVelocity;
 	int						m_nOldButtons;
+
 	// Base velocity that was passed in to server physics so 
 	//  client can predict conveyors correctly.  Server zeroes it, so we need to store here, too.
-	Vector					m_vecClientBaseVelocity;  
-	CNetworkQAngle( m_vecPunchAngle );		// auto-decaying view angle adjustment
+	Vector					m_vecClientBaseVelocity;
+
+	CNetworkQAngle(m_vecPunchAngle);		// auto-decaying view angle adjustment
 	CInterpolatedVar< QAngle >	m_iv_vecPunchAngle;
 
-	CNetworkQAngle( m_vecPunchAngleVel );		// velocity of auto-decaying view angle adjustment
+	CNetworkQAngle(m_vecPunchAngleVel);		// velocity of auto-decaying view angle adjustment
 	CInterpolatedVar< QAngle >	m_iv_vecPunchAngleVel;
+
+	CNetworkQAngle(m_vecRecoilPunchAngle);
+	CInterpolatedVar<QAngle> m_iv_vecRecoilPunchAngle;
+
+	CNetworkQAngle(m_vecRecoilPunchAngleVel);
+	CInterpolatedVar< QAngle >	m_iv_vecRecoilPunchAngleVel;
+
 	float					m_flStepSize;
 	bool					m_bAllowAutoMovement;
 	bool					m_bIsInOtherView;
@@ -70,9 +83,6 @@ public:
 	fogplayerparams_t		m_PlayerFog;
 	// audio environment
 	audioparams_t			m_audio;
-
-	bool					m_bSlowMovement;
-
 };
 
 #endif // C_PLAYERLOCALDATA_H

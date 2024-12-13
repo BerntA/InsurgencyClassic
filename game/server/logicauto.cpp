@@ -18,7 +18,6 @@
 const int SF_AUTO_FIREONCE		= 0x01;
 const int SF_AUTO_FIREONRELOAD	= 0x02;
 
-
 class CLogicAuto : public CBaseEntity
 {
 public:
@@ -39,12 +38,9 @@ private:
 	COutputEvent m_OnLoadGame;
 	COutputEvent m_OnMapTransition;
 	COutputEvent m_OnBackgroundMap;
-	COutputEvent m_OnMultiNewMap;
-	COutputEvent m_OnMultiNewRound;
 };
 
 LINK_ENTITY_TO_CLASS(logic_auto, CLogicAuto);
-
 
 BEGIN_DATADESC( CLogicAuto )
 
@@ -54,11 +50,8 @@ BEGIN_DATADESC( CLogicAuto )
 	DEFINE_OUTPUT(m_OnLoadGame, "OnLoadGame"),
 	DEFINE_OUTPUT(m_OnMapTransition, "OnMapTransition"),
 	DEFINE_OUTPUT(m_OnBackgroundMap, "OnBackgroundMap"),
-	DEFINE_OUTPUT(m_OnMultiNewMap, "OnMultiNewMap" ),
-	DEFINE_OUTPUT(m_OnMultiNewRound, "OnMultiNewRound" ),
 
 END_DATADESC()
-
 
 //------------------------------------------------------------------------------
 // Purpose : Fire my outputs here if I fire on map reload
@@ -68,7 +61,6 @@ void CLogicAuto::Activate(void)
 	BaseClass::Activate();
 	SetNextThink( gpGlobals->curtime + 0.2 );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Called shortly after level spawn. Checks the global state and fires
@@ -95,19 +87,6 @@ void CLogicAuto::Think(void)
 	}
 
 	m_OnMapSpawn.FireOutput(NULL, this);
-
-	if (g_pGameRules->IsMultiplayer())
-	{
-		// In multiplayer, fire the new map / round events.
-		if (g_pGameRules->InRoundRestart())
-		{
-			m_OnMultiNewRound.FireOutput(NULL, this);
-		}
-		else
-		{
-			m_OnMultiNewMap.FireOutput(NULL, this);
-		}
-	}
 
 	if (m_spawnflags & SF_AUTO_FIREONCE)
 		UTIL_Remove(this);

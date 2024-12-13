@@ -74,7 +74,6 @@ public:
 
 	CBaseEntity *GetTouchedEntityOfType( const char *sClassName );
 
-	virtual bool IsEnoughPlayersInVolume(int iTeam);
 	virtual bool IsFilterPassing(CBaseEntity *pOther);
 
 	int	 DrawDebugTextOverlays(void);
@@ -101,8 +100,6 @@ protected:
 	// Entities currently being touched by this trigger
 	CUtlVector< EHANDLE >	m_hTouchingEntities;
 
-	// Activate if enough players of a certain team is inside the volume.
-	float m_flPercentRequired;
 	// Do not do filter check in PassesTriggerFilters.
 	bool m_bSkipFilterCheck;
 
@@ -183,7 +180,6 @@ public:
 	DECLARE_CLASS( CTriggerHurt, CBaseTrigger );
 
 	void Spawn( void );
-	void RadiationThink( void );
 	void HurtThink( void );
 	void Touch( CBaseEntity *pOther );
 	void EndTouch( CBaseEntity *pOther );

@@ -304,6 +304,56 @@ int CBreakableSurface::OnTakeDamage( const CTakeDamageInfo &info )
 	{
 		// physics will kill me now
 		Die( info.GetAttacker(), info.GetDamageForce() );
+
+		if (info.GetAttacker() && info.GetAttacker()->GetCollisionGroup() == COLLISION_GROUP_PROJECTILE)
+		{
+			QAngle vAngles;
+			VectorAngles(-1 * m_vNormal, vAngles);
+			Vector vWidthDir, vHeightDir;
+			AngleVectors(vAngles, NULL, &vWidthDir, &vHeightDir);
+
+			for (int width = 0; width < m_nNumWide; width++)
+			{
+				int height;
+				int nHCount = 0;
+				for (height = 0; height < m_nNumHigh; height++)
+				{
+					// Keep count of how many panes
+					if (!IsBroken(width, height))
+					{
+						nHCount++;
+					}
+					// Shatter the strip and start counting again
+					else if (nHCount > 0)
+					{
+						Vector vBreakPos = m_vCorner +
+							(width * vWidthDir * m_flPanelWidth) +
+							((height - nHCount) * vHeightDir * m_flPanelHeight);
+
+						CreateShards(vBreakPos, vAngles,
+							info.GetDamageForce(), info.GetDamagePosition(),
+							m_flPanelWidth, nHCount * m_flPanelHeight,
+							WINDOW_LARGE_SHARD_SIZE);
+
+						nHCount = 0;
+					}
+				}
+				if (nHCount)
+				{
+					Vector vBreakPos = m_vCorner +
+						(width * vWidthDir * m_flPanelWidth) +
+						((height - nHCount) * vHeightDir * m_flPanelHeight);
+
+					CreateShards(vBreakPos, vAngles,
+						info.GetDamageForce(), info.GetDamagePosition(),
+						m_flPanelWidth, nHCount * m_flPanelHeight,
+						WINDOW_LARGE_SHARD_SIZE);
+				}
+			}
+
+			BreakAllPanes();
+		}
+
 		return 0;
 	}
 
@@ -322,7 +372,6 @@ int CBreakableSurface::OnTakeDamage( const CTakeDamageInfo &info )
 		return 0;
 	}
 	
-
 	return 0;
 }
 
@@ -330,7 +379,7 @@ int CBreakableSurface::OnTakeDamage( const CTakeDamageInfo &info )
 //------------------------------------------------------------------------------
 // Purpose: Accepts damage and breaks if health drops below zero.
 //------------------------------------------------------------------------------
-void CBreakableSurface::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator )
+void CBreakableSurface::TraceAttack(const CTakeDamageInfo& info, const Vector& vecDir, trace_t* ptr)
 {
 	// Decrease health
 	m_iHealth -= info.GetDamage();
@@ -343,7 +392,7 @@ void CBreakableSurface::TraceAttack( const CTakeDamageInfo &info, const Vector &
 		Die( info.GetAttacker(), vSurfDir );
 	}
 
-	if (info.GetDamageType() & (DMG_BULLET | DMG_CLUB))
+	if (info.GetDamageType() & (DMG_BULLET | DMG_CLUB | DMG_PLASMA))
 	{
 		// Figure out which panel has taken the damage and break it
 		float flWidth,flHeight;
@@ -402,7 +451,7 @@ void CBreakableSurface::TraceAttack( const CTakeDamageInfo &info, const Vector &
 			}
 		}
 	}
-	else if (info.GetDamageType() & (DMG_SONIC | DMG_BLAST))
+	else if (info.GetDamageType() & DMG_BLAST)
 	{
 		// ----------------------------------------
 		// If it's tile blow out nearby tiles
@@ -1169,7 +1218,7 @@ void CBreakableSurface::VPhysicsCollision( int index, gamevcollisionevent_t *pEv
 		if ( damage > 10 )
 		{
 			// HACKHACK: Reset mass to get correct collision response for the object breaking this
-			pEvent->pObjects[index]->SetMass( 2.0f );
+			pEvent->pObjects[index]->SetMass(10.0f);
 
 			Vector normal, damagePos;
 			pEvent->pInternalData->GetSurfaceNormal( normal );

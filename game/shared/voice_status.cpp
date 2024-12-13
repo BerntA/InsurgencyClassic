@@ -110,20 +110,11 @@ CVoiceStatus::CVoiceStatus()
 #endif // VOICE_VOX_ENABLE
 
 	m_bServerModEnable = -1;
-
-	m_pHeadLabelMaterial = NULL;
-
-	m_bHeadLabelsDisabled = false;
 }
 
 
 CVoiceStatus::~CVoiceStatus()
-{
-	if ( m_pHeadLabelMaterial )
-	{
-		m_pHeadLabelMaterial->DecrementReferenceCount();
-	}
-
+{	
 	g_pInternalVoiceStatus = NULL;			
 
 	const char *pGameDir = engine->GetGameDirectory();
@@ -150,10 +141,6 @@ int CVoiceStatus::Init(
 	Assert(!g_pInternalVoiceStatus);
 	g_pInternalVoiceStatus = this;
 
-
-	m_pHeadLabelMaterial = materials->FindMaterial( "voice/icntlk_pl", TEXTURE_GROUP_VGUI );
-	m_pHeadLabelMaterial->IncrementReferenceCount();
-
 	m_bInSquelchMode = false;
 
 	m_pHelper = pHelper;
@@ -165,17 +152,14 @@ int CVoiceStatus::Init(
 	return 1;
 }
 
-
 BitmapImage* vgui_LoadMaterial( vgui::VPANEL pParent, const char *pFilename )
 {
 	return new BitmapImage( pParent, pFilename );
 }
 
-
 void CVoiceStatus::VidInit()
 {
 }
-
 
 void CVoiceStatus::Frame(double frametime)
 {
@@ -183,90 +167,6 @@ void CVoiceStatus::Frame(double frametime)
 	if (gpGlobals->curtime - m_LastUpdateServerState > 1)
 	{
 		UpdateServerState(false);
-	}
-}
-
-
-float g_flHeadOffset = 35;
-float g_flHeadIconSize = 8;
-
-
-void CVoiceStatus::SetHeadLabelOffset( float offset )
-{
-	g_flHeadOffset = offset;
-}
-
-float CVoiceStatus::GetHeadLabelOffset( void ) const
-{
-	return g_flHeadOffset;
-}
-
-void CVoiceStatus::DrawHeadLabels()
-{
-	if (m_bHeadLabelsDisabled || !m_pHeadLabelMaterial || (GameRules() && (GameRules()->ShouldDrawHeadLabels() == false)))
-		return;
-
-	// Align it so it never points up or down.
-	Vector vUp(0, 0, 1);
-	Vector vRight = CurrentViewRight();
-	if (fabs(vRight.z) > 0.95)	// don't draw it edge-on
-		return;
-
-	vRight.z = 0;
-	VectorNormalize(vRight);
-	const float flSize = g_flHeadIconSize;
-	CMatRenderContextPtr pRenderContext(materials);
-
-	for (int i = 0; i < VOICE_MAX_PLAYERS; i++)
-	{
-		if (!m_VoicePlayers[i])
-			continue;
-
-		IClientNetworkable *pClient = cl_entitylist->GetClientEntity(i + 1);
-
-		// Don't show an icon if the player is not in our PVS.
-		if (!pClient || pClient->IsDormant())
-			continue;
-
-		C_BasePlayer *pPlayer = dynamic_cast<C_BasePlayer*>(pClient);
-		if (!pPlayer)
-			continue;
-
-		// Don't show an icon for dead or spectating players (ie: invisible entities).
-		if (pPlayer->IsPlayerDead())
-			continue;
-
-		// Place it 20 units above his head.
-		Vector vOrigin = pPlayer->WorldSpaceCenter();
-		vOrigin.z += g_flHeadOffset;
-
-		pRenderContext->Bind(pPlayer->GetHeadLabelMaterial());
-		IMesh *pMesh = pRenderContext->GetDynamicMesh();
-		CMeshBuilder meshBuilder;
-		meshBuilder.Begin(pMesh, MATERIAL_QUADS, 1);
-
-		meshBuilder.Color3f(1.0, 1.0, 1.0);
-		meshBuilder.TexCoord2f(0, 0, 0);
-		meshBuilder.Position3fv((vOrigin + (vRight * -flSize) + (vUp * flSize)).Base());
-		meshBuilder.AdvanceVertex();
-
-		meshBuilder.Color3f(1.0, 1.0, 1.0);
-		meshBuilder.TexCoord2f(0, 1, 0);
-		meshBuilder.Position3fv((vOrigin + (vRight * flSize) + (vUp * flSize)).Base());
-		meshBuilder.AdvanceVertex();
-
-		meshBuilder.Color3f(1.0, 1.0, 1.0);
-		meshBuilder.TexCoord2f(0, 1, 1);
-		meshBuilder.Position3fv((vOrigin + (vRight * flSize) + (vUp * -flSize)).Base());
-		meshBuilder.AdvanceVertex();
-
-		meshBuilder.Color3f(1.0, 1.0, 1.0);
-		meshBuilder.TexCoord2f(0, 0, 1);
-		meshBuilder.Position3fv((vOrigin + (vRight * -flSize) + (vUp * -flSize)).Base());
-		meshBuilder.AdvanceVertex();
-
-		meshBuilder.End();
-		pMesh->Draw();
 	}
 }
 
@@ -562,19 +462,4 @@ void CVoiceStatus::SetPlayerBlockedState(int iPlayer, bool blocked)
 
 	m_BanMgr.SetPlayerBan(pi.guid, !m_BanMgr.GetPlayerBan(pi.guid));
 	UpdateServerState(false);
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CVoiceStatus::SetHeadLabelMaterial( const char *pszMaterial )
-{
-	if ( m_pHeadLabelMaterial )
-	{
-		m_pHeadLabelMaterial->DecrementReferenceCount();
-		m_pHeadLabelMaterial = NULL;
-	}
-
-	m_pHeadLabelMaterial = materials->FindMaterial( pszMaterial, TEXTURE_GROUP_VGUI );
-	m_pHeadLabelMaterial->IncrementReferenceCount();
 }

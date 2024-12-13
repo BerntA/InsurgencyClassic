@@ -41,6 +41,7 @@ public:
 	virtual vgui::VPANEL GetVPanel( void ) = 0; // returns VGUI panel handle
 	virtual bool IsVisible() = 0;  // true if panel is visible
 	virtual void SetParent( vgui::VPANEL parent ) = 0;
+	virtual void OnLevelInit(void) { }
 };
 
 abstract_class IViewPort
@@ -53,9 +54,9 @@ public:
 	virtual IViewPortPanel* FindPanelByName(const char *szPanelName) = 0;
 	virtual IViewPortPanel* GetActivePanel( void ) = 0;
 	virtual void PostMessageToPanel( const char *pName, KeyValues *pKeyValues ) = 0;
+	virtual void HideAllPanels(void) = 0;
 };
 
 extern IViewPort *gViewPortInterface;
-
 
 #endif // IVIEWPORT_H

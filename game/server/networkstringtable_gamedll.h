@@ -30,6 +30,4 @@ extern INetworkStringTableContainer *networkstringtable;
 extern INetworkStringTable *g_pStringTableVguiScreen;
 extern INetworkStringTable *g_pStringTableEffectDispatch;
 
-#define MAX_INFOPANEL_STRINGS			128
-
 #endif // NETWORKSTRINGTABLE_GAMEDLL_H

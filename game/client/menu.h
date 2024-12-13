@@ -14,13 +14,14 @@
 #include "utlvector.h"
 #include "hudelement.h"
 #include <vgui_controls/Panel.h>
+#include "inshud.h"
 
 #define MENU_SELECTION_TIMEOUT	5.0f
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CHudMenu : public CHudElement, public vgui::Panel
+class CHudMenu : public CHudElement, public vgui::Panel, public IINSControlListener
 {
 	DECLARE_CLASS_SIMPLE( CHudMenu, vgui::Panel );
 public:
@@ -36,6 +37,11 @@ public:
 
 	bool IsMenuOpen( void );
 	void SelectMenuItem( int menu_item );
+
+	bool IsControlActive(void);
+	void Number(int iNumber);
+	void DoControlClose(void);
+	void ShowMenu(void);
 
 private:
 	virtual void OnThink();

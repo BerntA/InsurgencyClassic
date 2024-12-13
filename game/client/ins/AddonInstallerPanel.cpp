@@ -232,7 +232,6 @@ void CAddonInstallerPanel::OnWorkshopItemInstalled(ItemInstalled_t* pParam)
 
 	m_ulWorkshopItemID = 0;
 	ShowAddonPanel(false, 0);
-	GameBaseClient->Changelevel(pszMapToEnter);
 	engine->ClientCmd_Unrestricted("retry\n");
 }
 

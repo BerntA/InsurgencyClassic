@@ -50,14 +50,7 @@ SendProp SendPropIntWithMinusOneFlag(
 	int bits=-1,
 	SendVarProxyFn proxyFn=SendProxy_IntAddOne );
 
-
 // Send a string_t as a string property.
 SendProp SendPropStringT( const char *pVarName, int offset, int sizeofVar );
-
-//-----------------------------------------------------------------------------
-// Purpose: Proxy that only sends data to team members
-//-----------------------------------------------------------------------------
-void* SendProxy_OnlyToTeam( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID );
-
 
 #endif // SENDPROXY_H

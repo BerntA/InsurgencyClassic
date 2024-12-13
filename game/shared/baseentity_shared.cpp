@@ -23,14 +23,12 @@
 
 #ifdef CLIENT_DLL
 	#include "c_te_effect_dispatch.h"
-    #include "c_hl2mp_player.h"
 #else
 	#include "te_effect_dispatch.h"
 	#include "soundent.h"
 	#include "player_pickup.h"
 	#include "waterbullet.h"
 	#include "func_break.h"
-    #include "hl2mp_player.h"
     #include "te_bullet_shot.h"
 	#include "ilagcompensationmanager.h"
 #endif
@@ -668,15 +666,8 @@ char const *CBaseEntity::DamageDecal( int bitsDamageType, int gameMaterial ) // 
 	if ( m_nRenderMode != kRenderNormal && gameMaterial == 'G' )
 		return "BulletProof";
 
-	if ( bitsDamageType == DMG_SLASH )
-		return "ManhackCut";
-
-	if (bitsDamageType == DMG_ZOMBIE)
-		return "BigScratch";
-
-	// what do we do when we get a sledgehammer?? :|
-	if (bitsDamageType == DMG_CLUB)
-		return "HandPunch";
+	if (bitsDamageType & DMG_RICOCHET)
+		return "Ricochet";
 
 	// This will get translated at a lower layer based on game material
 	return "Impact.Concrete";
@@ -1542,13 +1533,15 @@ CBulletsTraceFilter::CBulletsTraceFilter(const IHandleEntity *passentity, int co
 
 bool CBulletsTraceFilter::ShouldHitEntity(IHandleEntity *pHandleEntity, int contentsMask)
 {
+	extern ConVar friendlyfire;
+
 	CBaseEntity *pEntity = EntityFromEntityHandle(pHandleEntity);
 	if (pEntity)
 	{
 		if ((pEntity->GetCollisionGroup() == COLLISION_GROUP_WEAPON) || pEntity->IsBaseCombatWeapon()) // Don't hit items, armor, etc...
 			return false;
 
-		if ((m_iTeamLink != TEAM_INVALID) && pEntity->IsPlayer() && (pEntity->GetTeamNumber() == m_iTeamLink) && HL2MPRules() && HL2MPRules()->IsTeamplay() && !friendlyfire.GetBool())
+		if ((m_iTeamLink != TEAM_INVALID) && pEntity->IsPlayer() && (pEntity->GetTeamNumber() == m_iTeamLink) && !friendlyfire.GetBool())
 			return false; // Bullets shouldn't trace against teammates. (plrs)
 
 		if (dynamic_cast<CBaseViewModel*>(pEntity) != NULL) // Don't hit viewmodel!
@@ -1574,418 +1567,15 @@ bool CBulletsTraceFilter::ShouldHitEntity(IHandleEntity *pHandleEntity, int cont
 
 void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 {
-	static int	tracerCount;
-	trace_t		tr;
-	CAmmoDef*	pAmmoDef = GetAmmoDef();
-	int			nDamageType = pAmmoDef->DamageType(info.m_iAmmoType);
-
-#if defined( GAME_DLL )
-	CBasePlayer* pPlayerFirer = ToBasePlayer(this);
-	if (pPlayerFirer && !info.m_bIgnoreSkills)
-	{
-		CBaseCombatWeapon* pPlayerWeapon = pPlayerFirer->GetActiveWeapon();
-		if (pPlayerWeapon)
-		{
-			int rumbleEffect = pPlayerWeapon->GetRumbleEffect();
-			if (rumbleEffect != RUMBLE_INVALID)
-			{
-				if (rumbleEffect == RUMBLE_SHOTGUN_SINGLE)
-				{
-					if (info.m_iShots >= 6) // Upgrade to double barrel rumble effect										
-						rumbleEffect = RUMBLE_SHOTGUN_DOUBLE;					
-				}
-				pPlayerFirer->RumbleEffect(rumbleEffect, 0, RUMBLE_FLAG_RESTART);
-			}
-		}
-	}
-#endif// GAME_DLL
-
-	int iPlayerDamage = info.m_iPlayerDamage;
-
-	// the default attacker is ourselves
-	CBaseEntity *pAttacker = info.m_pAttacker ? info.m_pAttacker : this;
-
-#ifdef GAME_DLL
-	CBaseCombatWeapon *pInflictorWeapon = NULL;
-	CBaseCombatCharacter *pProperAttacker = ToBaseCombatCharacter(pAttacker);
-	if (pProperAttacker)
-		pInflictorWeapon = pProperAttacker->GetActiveWeapon();
-#endif
-
-	// Make sure we don't have a dangling damage target from a recursive call
-	if (g_MultiDamage.GetTarget() != NULL)
-		ApplyMultiDamage();
-	  
-	ClearMultiDamage();
-	g_MultiDamage.SetDamageType( nDamageType | DMG_NEVERGIB );
-
-	Vector vecDir;
-	Vector vecEnd;
-	
-	// Skip multiple entities when tracing
-	CBulletsTraceFilter traceFilter(this, COLLISION_GROUP_NONE, (IsPlayer() ? GetTeamNumber() : TEAM_INVALID)); // Standard pass entity for THIS so that it can be easily removed from the list after passing through a portal
-	traceFilter.AddEntityToIgnore(info.m_pAdditionalIgnoreEnt);
-
-	bool bUnderwaterBullets = ShouldDrawUnderwaterBulletBubbles();
-	bool bStartedInWater = false;
-	if (bUnderwaterBullets)
-		bStartedInWater = (enginetrace->GetPointContents(info.m_vecSrc) & (CONTENTS_WATER | CONTENTS_SLIME)) != 0;
-
-	// Prediction is only usable on players
-	int iSeed = 0;
-	if (IsPlayer())
-		iSeed = CBaseEntity::GetPredictionRandomSeed(info.m_bUseServerRandomSeed) & 255;
-
-	//-----------------------------------------------------
-	// Set up our shot manipulator.
-	//-----------------------------------------------------
-	CShotManipulator Manipulator(info.m_vecDirShooting);
-
-	bool bDoImpacts = false;
-	bool bDoTracers = false;
-	bool bDoMuzzleflash = true;
-	
-	float flCumulativeDamage = 0.0f;
-
-	for (int iShot = 0; iShot < info.m_iShots; iShot++)
-	{
-		bool bHitWater = false;
-		bool bHitGlass = false;
-		bool bUseHullTrace = false;
-
-		// Prediction is only usable on players
-		if (IsPlayer())		
-			RandomSeed(iSeed);	// init random system with this seed		
-
-		// If we're firing multiple shots, and the first shot has to be bang on target, ignore spread
-		if (iShot == 0 && info.m_iShots > 1 && (info.m_nFlags & FIRE_BULLETS_FIRST_SHOT_ACCURATE))
-			vecDir = Manipulator.GetShotDirection();
-		else // Don't run the biasing code for the player at the moment.			
-			vecDir = Manipulator.ApplySpread(info.m_vecSpread);
-
-		vecEnd = info.m_vecSrc + vecDir * info.m_flDistance;
-
-#ifndef CLIENT_DLL
-		if (pPlayerFirer && !pPlayerFirer->IsBot())
-		{
-			lagcompensation->TraceRealtime(pPlayerFirer, info.m_vecSrc, vecEnd, -Vector(3, 3, 3), Vector(3, 3, 3), NULL);
-			Vector vecNewDir = pPlayerFirer->GetLagCompPos();
-			if (vecNewDir != vec3_invalid)
-			{
-				VectorNormalize(vecNewDir);
-				vecEnd = info.m_vecSrc + vecNewDir * info.m_flDistance;
-				vecDir = vecNewDir;
-			}
-		}
-#endif
-
-		if( IsPlayer() && info.m_iShots > 1 && iShot % 2 )
-		{
-			// Half of the shotgun pellets are hulls that make it easier to hit targets with the shotgun.
-			AI_TraceHull( info.m_vecSrc, vecEnd, Vector( -3, -3, -3 ), Vector( 3, 3, 3 ), MASK_SHOT_HULL, &traceFilter, &tr );
-			bUseHullTrace = true;
-		}
-		else
-		{
-			AI_TraceLine(info.m_vecSrc, vecEnd, MASK_SHOT, &traceFilter, &tr);
-		}
-
-		// Tracker 70354/63250:  ywb 8/2/07
-		// Fixes bug where trace from turret with attachment point outside of Vcollide
-		//  starts solid so doesn't hit anything else in the world and the final coord 
-		//  is outside of the MAX_COORD_FLOAT range.  This cause trying to send the end pos
-		//  of the tracer down to the client with an origin which is out-of-range for networking
-		if ( tr.startsolid )
-		{
-			tr.endpos = tr.startpos;
-			tr.fraction = 0.0f;
-		}
-
-#ifdef GAME_DLL
-		if ( ai_debug_shoot_positions.GetBool() )
-			NDebugOverlay::Line(info.m_vecSrc, vecEnd, 255, 255, 255, false, .1 );
-#endif
-
-		if ( bStartedInWater )
-		{
-#ifdef GAME_DLL
-			Vector vBubbleStart = info.m_vecSrc;
-			Vector vBubbleEnd = tr.endpos;
-
-			CreateBubbleTrailTracer( vBubbleStart, vBubbleEnd, vecDir );	
-#endif //#ifdef GAME_DLL
-			bHitWater = true;
-		}
-
-		// Now hit all triggers along the ray that respond to shots...
-		// Clip the ray to the first collided solid returned from traceline
-		CTakeDamageInfo triggerInfo( pAttacker, pAttacker, info.m_flDamage, nDamageType );
-		CalculateBulletDamageForce( &triggerInfo, info.m_iAmmoType, vecDir, tr.endpos );
-		triggerInfo.ScaleDamageForce( info.m_flDamageForceScale );
-		triggerInfo.SetAmmoType( info.m_iAmmoType );
-#ifdef GAME_DLL
-		TraceAttackToTriggers( triggerInfo, tr.startpos, tr.endpos, vecDir );
-#endif
-
-		// Make sure given a valid bullet type
-		if (info.m_iAmmoType == -1)
-		{
-			DevMsg("ERROR: Undefined ammo type!\n");
-			return;
-		}
-
-		Vector vecTracerDest = tr.endpos;
-
-		// do damage, paint decals
-		if (tr.fraction != 1.0)
-		{
-#ifdef GAME_DLL
-			UpdateShotStatistics( tr );
-
-			// For shots that don't need persistance
-			int soundEntChannel = ( info.m_nFlags&FIRE_BULLETS_TEMPORARY_DANGER_SOUND ) ? SOUNDENT_CHANNEL_BULLET_IMPACT : SOUNDENT_CHANNEL_UNSPECIFIED;
-
-			CSoundEnt::InsertSound( SOUND_BULLET_IMPACT, tr.endpos, 200, 0.5, this, soundEntChannel );
-#endif
-
-			// See if the bullet ended up underwater + started out of the water
-			if ( !bHitWater && ( enginetrace->GetPointContents( tr.endpos ) & (CONTENTS_WATER|CONTENTS_SLIME) ) )
-				bHitWater = HandleShotImpactingWater( info, vecEnd, &traceFilter, &vecTracerDest );
-
-			float flActualDamage = info.m_flDamage;
-
-			// If we hit a player, and we have player damage specified, use that instead
-			if ( iPlayerDamage )
-			{
-				if (tr.m_pEnt->IsPlayer())
-					flActualDamage = iPlayerDamage;
-			}
-
-			int nActualDamageType = nDamageType;
-			if (flActualDamage <= 0.0f)
-				flActualDamage = 4.0f;
-			else
-				nActualDamageType = nDamageType | ((flActualDamage > 10.0f) ? DMG_ALWAYSGIB : DMG_NEVERGIB);
-
-			if ( !bHitWater || ((info.m_nFlags & FIRE_BULLETS_DONT_HIT_UNDERWATER) == 0) )
-			{
-				float flProperDamage = GameBaseShared()->GetDropOffDamage(info.m_vecFirstStartPos, tr.endpos, flActualDamage, info.m_flDropOffDist);
-
-				// Damage specified by function parameter
-				CTakeDamageInfo dmgInfo(this, pAttacker, flProperDamage, nActualDamageType);
-				ModifyFireBulletsDamage( &dmgInfo );
-				CalculateBulletDamageForce( &dmgInfo, info.m_iAmmoType, vecDir, tr.endpos );
-				dmgInfo.ScaleDamageForce( info.m_flDamageForceScale );
-				dmgInfo.SetAmmoType( info.m_iAmmoType );
-				dmgInfo.SetSkillFlags(info.m_nPlayerSkillFlags);
-				tr.m_pEnt->DispatchTraceAttack( dmgInfo, vecDir, &tr );
-			
-				if ( ToBaseCombatCharacter( tr.m_pEnt ) )
-				{
-					flCumulativeDamage += dmgInfo.GetDamage();
-				}
-
-				if ( bStartedInWater || !bHitWater || (info.m_nFlags & FIRE_BULLETS_ALLOW_WATER_SURFACE_IMPACTS) )
-				{
-					bDoImpacts = true;
-				}
-				else
-				{
-					// We may not impact, but we DO need to affect ragdolls on the client
-					CEffectData data;
-					data.m_vStart = tr.startpos;
-					data.m_vOrigin = tr.endpos;
-					data.m_nDamageType = nDamageType;				
-					DispatchEffect( "RagdollImpact", data );
-				}
-	
-				CBaseEntity *pHitEnt = tr.m_pEnt;
-				if (!bStartedInWater && !bHitWater && pAttacker && pAttacker->IsPlayer() && pHitEnt && (pHitEnt->IsPlayer() || pHitEnt->IsNPC()))
-				{
-					if (info.m_nPlayerSkillFlags & SKILL_FLAG_EMPOWERED_BULLETS)
-					{
-						flCumulativeDamage += FirePenetrativeBullet(info, tr.endpos, vecDir, pAttacker, pHitEnt, nActualDamageType);
-#ifdef GAME_DLL
-						if (pPlayerFirer)
-							pPlayerFirer->PlaySkillSoundCue(SKILL_SOUND_CUE_AMMO_PENETRATE);
-#endif
-					}
-				}
-				else if (!bStartedInWater && !bHitWater && pAttacker && pAttacker->IsPlayer() && tr.DidHitWorld() && !tr.IsDispSurface()) // world bullet penetration.
-				{
-					Vector vecNewStart = TryPenetrateSurface(&tr, &traceFilter);
-					if (vecNewStart != vec3_invalid)
-						flCumulativeDamage += FirePenetrativeBullet(info, vecNewStart, vecDir, pAttacker, NULL, nActualDamageType);
-				}
-			}
-		}
-
-		// See if we hit glass
-		if ( tr.m_pEnt != NULL )
-		{
-#ifdef GAME_DLL
-			surfacedata_t *psurf = physprops->GetSurfaceData( tr.surface.surfaceProps );
-			if ( ( psurf != NULL ) && ( psurf->game.material == CHAR_TEX_GLASS ) && ( tr.m_pEnt->ClassMatches( "func_breakable" ) ) )
-			{
-				// Query the func_breakable for whether it wants to allow for bullet penetration
-				if ( tr.m_pEnt->HasSpawnFlags( SF_BREAK_NO_BULLET_PENETRATION ) == false )
-				{
-					bHitGlass = true;
-				}
-			}
-#endif
-		}
-
-		if ( ( info.m_iTracerFreq != 0 ) && ( tracerCount++ % info.m_iTracerFreq ) == 0 && ( bHitGlass == false ) )
-			bDoTracers = true;
-
-		//NOTENOTE: We could expand this to a more general solution for various material penetration types (wood, thin metal, etc)
-		// See if we should pass through glass
-#ifdef GAME_DLL
-		if ( bHitGlass )
-			HandleShotImpactingGlass( info, tr, vecDir, &traceFilter );
-
-		if (pInflictorWeapon)
-			TE_HL2MPFireBullets(pInflictorWeapon->entindex(), pAttacker->WorldSpaceCenter(), tr.startpos, vecDir, info.m_iAmmoType, bDoTracers, bDoImpacts, false, bUseHullTrace, true, bDoMuzzleflash, info.m_bPrimaryAttack);
-#endif
-
-		bDoMuzzleflash = false;
-		iSeed++;
-	}
-
-#ifdef GAME_DLL
-	ApplyMultiDamage();
-#endif
+	// TODO
 }
-
-float CBaseEntity::FirePenetrativeBullet(const FireBulletsInfo_t &info, Vector &vecStart, Vector &vecDir, CBaseEntity *pAttacker, CBaseEntity *pIgnore, int dmgType)
-{
-	trace_t tr;
-	CBulletsTraceFilter traceFilter(this, COLLISION_GROUP_NONE, (IsPlayer() ? GetTeamNumber() : TEAM_INVALID));
-	traceFilter.AddEntityToIgnore(info.m_pAdditionalIgnoreEnt);
-
-	if (pIgnore != NULL)
-		traceFilter.AddEntityToIgnore(pIgnore);
-
-	Vector vecEnd = vecStart + vecDir * MAX_TRACE_LENGTH;
-	AI_TraceLine(vecStart, vecEnd, MASK_SHOT, &traceFilter, &tr);
-
-#ifdef GAME_DLL
-	CTakeDamageInfo triggerInfo(pAttacker, pAttacker, info.m_flDamage, dmgType);
-	CalculateBulletDamageForce(&triggerInfo, info.m_iAmmoType, vecDir, tr.endpos);
-	triggerInfo.ScaleDamageForce(info.m_flDamageForceScale);
-	triggerInfo.SetAmmoType(info.m_iAmmoType);
-	TraceAttackToTriggers(triggerInfo, tr.startpos, tr.endpos, vecDir);
-#endif
-
-	float dmgDone = 0.0f;
-	CBaseEntity *pEntHit = tr.m_pEnt;
-	if ((tr.fraction != 1.0) && tr.DidHitNonWorldEntity() && pEntHit)
-	{
-		float flActualDamage = info.m_flDamage;
-		int iPlayerDamage = info.m_iPlayerDamage;
-		if (iPlayerDamage)
-		{
-			if (pEntHit->IsPlayer())
-				flActualDamage = iPlayerDamage;
-		}
-
-		float flProperDamage = GameBaseShared()->GetDropOffDamage(info.m_vecFirstStartPos, tr.endpos, flActualDamage, info.m_flDropOffDist);
-		CTakeDamageInfo dmgInfo(this, pAttacker, flProperDamage, dmgType);
-		ModifyFireBulletsDamage(&dmgInfo);
-		CalculateBulletDamageForce(&dmgInfo, info.m_iAmmoType, vecDir, tr.endpos);
-		dmgInfo.ScaleDamageForce(info.m_flDamageForceScale);
-		dmgInfo.SetAmmoType(info.m_iAmmoType);
-		dmgInfo.SetSkillFlags(info.m_nPlayerSkillFlags);
-		pEntHit->DispatchTraceAttack(dmgInfo, vecDir, &tr);
-		dmgDone += dmgInfo.GetDamage();
-	}
-
-#ifdef GAME_DLL
-	CBaseCombatWeapon *pInflictorWeapon = NULL;
-	CBaseCombatCharacter *pOwnerAttacker = ToBaseCombatCharacter(pAttacker);
-	if (pOwnerAttacker)
-		pInflictorWeapon = pOwnerAttacker->GetActiveWeapon();
-	if (pInflictorWeapon)
-		TE_HL2MPFireBullets(pInflictorWeapon->entindex(), pAttacker->WorldSpaceCenter(), tr.startpos, vecDir, info.m_iAmmoType, false, true, true, false, true, false, info.m_bPrimaryAttack);
-#endif
-
-	return dmgDone;
-}
-
-//-----------------------------------------------------------------------------
-// Should we draw bubbles underwater?
-//-----------------------------------------------------------------------------
-bool CBaseEntity::ShouldDrawUnderwaterBulletBubbles()
-{
-#if defined( HL2_DLL ) && defined( GAME_DLL )
-	CBaseEntity *pPlayer = UTIL_GetNearestVisiblePlayer(this);
-	return (pPlayer && (pPlayer->GetWaterLevel() == 3));
-#else
-	return false;
-#endif
-}
-
-
-//-----------------------------------------------------------------------------
-// Handle shot entering water
-//-----------------------------------------------------------------------------
-bool CBaseEntity::HandleShotImpactingWater( const FireBulletsInfo_t &info, 
-	const Vector &vecEnd, ITraceFilter *pTraceFilter, Vector *pVecTracerDest )
-{
-	trace_t	waterTrace;
-
-	// Trace again with water enabled
-	AI_TraceLine( info.m_vecSrc, vecEnd, (MASK_SHOT|CONTENTS_WATER|CONTENTS_SLIME), pTraceFilter, &waterTrace );
-	
-	// See if this is the point we entered
-	if ( ( enginetrace->GetPointContents( waterTrace.endpos - Vector(0,0,0.1f) ) & (CONTENTS_WATER|CONTENTS_SLIME) ) == 0 )
-		return false;
-
-	if ( ShouldDrawWaterImpacts() )
-	{
-		int	nMinSplashSize = GetAmmoDef()->MinSplashSize(info.m_iAmmoType);
-		int	nMaxSplashSize = GetAmmoDef()->MaxSplashSize(info.m_iAmmoType);
-
-		CEffectData	data;
- 		data.m_vOrigin = waterTrace.endpos;
-		data.m_vNormal = waterTrace.plane.normal;
-		data.m_flScale = random->RandomFloat( nMinSplashSize, nMaxSplashSize );
-		if ( waterTrace.contents & CONTENTS_SLIME )
-		{
-			data.m_fFlags |= FX_WATER_IN_SLIME;
-		}
-		DispatchEffect( "gunshotsplash", data );
-	}
-
-#ifdef GAME_DLL
-	if ( ShouldDrawUnderwaterBulletBubbles() )
-	{
-		CWaterBullet *pWaterBullet = ( CWaterBullet * )CreateEntityByName( "waterbullet" );
-		if ( pWaterBullet )
-		{
-			pWaterBullet->Spawn( waterTrace.endpos, info.m_vecDirShooting );
-					 
-			CEffectData tracerData;
-			tracerData.m_vStart = waterTrace.endpos;
-			tracerData.m_vOrigin = waterTrace.endpos + info.m_vecDirShooting * 400.0f;
-			tracerData.m_fFlags = TRACER_TYPE_WATERBULLET;
-			DispatchEffect( "TracerSound", tracerData );
-		}
-	}
-#endif
-
-	*pVecTracerDest = waterTrace.endpos;
-	return true;
-}
-
 
 ITraceFilter* CBaseEntity::GetBeamTraceFilter( void )
 {
 	return NULL;
 }
 
-void CBaseEntity::DispatchTraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator )
+void CBaseEntity::DispatchTraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr)
 {
 #ifdef GAME_DLL
 	// Make sure our damage filter allows the damage.
@@ -1995,28 +1585,18 @@ void CBaseEntity::DispatchTraceAttack( const CTakeDamageInfo &info, const Vector
 	}
 #endif
 
-	TraceAttack( info, vecDir, ptr, pAccumulator );
+	TraceAttack( info, vecDir, ptr );
 }
 
-void CBaseEntity::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator )
+void CBaseEntity::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	Vector vecOrigin = ptr->endpos - vecDir * 4;
 
 	if ( m_takedamage )
 	{
-#ifdef GAME_DLL
-		if ( pAccumulator )
-		{
-			pAccumulator->AccumulateMultiDamage( info, this );
-		}
-		else
-#endif // GAME_DLL
-		{
-			AddMultiDamage( info, this );
-		}
+		AddMultiDamage(info, this);
 
-		int blood = BloodColor();
-		
+		int blood = BloodColor();		
 		if ( blood != DONT_BLEED )
 		{
 			SpawnBlood( vecOrigin, vecDir, blood, info.GetDamage(), ptr->hitgroup);// a little surface blood.
@@ -2040,17 +1620,7 @@ void CBaseEntity::DoImpactEffect( trace_t &tr, int nDamageType )
 // Computes the tracer start position
 //-----------------------------------------------------------------------------
 void CBaseEntity::ComputeTracerStartPosition( const Vector &vecShotSrc, Vector *pVecTracerStart )
-{
-#ifndef HL2MP
-	if ( g_pGameRules->IsMultiplayer() )
-	{
-		// NOTE: we do this because in MakeTracer, we force it to use the attachment position
-		// in multiplayer, so the results from this function should never actually get used.
-		pVecTracerStart->Init( 999, 999, 999 );
-		return;
-	}
-#endif
-	
+{	
 	if ( IsPlayer() )
 	{
 		// adjust tracer position for player
@@ -2096,22 +1666,22 @@ void CBaseEntity::ComputeTracerStartPosition( const Vector &vecShotSrc, Vector *
 //-----------------------------------------------------------------------------
 void CBaseEntity::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
 {
-	const char *pszTracerName = GetTracerType();
+	//const char *pszTracerName = GetTracerType();
 
-	Vector vNewSrc = vecTracerSrc;
+	//Vector vNewSrc = vecTracerSrc;
 
-	int iAttachment = GetTracerAttachment();
+	//int iAttachment = GetTracerAttachment();
 
-	switch ( iTracerType )
-	{
-	case TRACER_LINE:
-		UTIL_Tracer( vNewSrc, tr.endpos, entindex(), iAttachment, 0.0f, false, pszTracerName );
-		break;
+	//switch ( iTracerType )
+	//{
+	//case TRACER_LINE:
+	//	UTIL_Tracer( vNewSrc, tr.endpos, entindex(), iAttachment, 0.0f, false, pszTracerName );
+	//	break;
 
-	case TRACER_LINE_AND_WHIZ:
-		UTIL_Tracer( vNewSrc, tr.endpos, entindex(), iAttachment, 0.0f, true, pszTracerName );
-		break;
-	}
+	//case TRACER_LINE_AND_WHIZ:
+	//	UTIL_Tracer( vNewSrc, tr.endpos, entindex(), iAttachment, 0.0f, true, pszTracerName );
+	//	break;
+	//}
 }
 
 //-----------------------------------------------------------------------------
@@ -2142,7 +1712,7 @@ void CBaseEntity::TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr
 	if ((BloodColor() == DONT_BLEED) || (BloodColor() == BLOOD_COLOR_MECH) || (flDamage == 0))
 		return;
 
-	if (!(bitsDamageType & (DMG_CRUSH | DMG_BULLET | DMG_SLASH | DMG_ZOMBIE | DMG_BLAST | DMG_CLUB | DMG_AIRBOAT | DMG_BUCKSHOT)))
+	if (!(bitsDamageType & (DMG_CRUSH | DMG_BULLET | DMG_SLASH | DMG_BLAST | DMG_CLUB | DMG_BUCKSHOT)))
 		return;
 
 #ifdef GAME_DLL
@@ -2172,12 +1742,6 @@ const char* CBaseEntity::GetTracerType()
 
 void CBaseEntity::ModifyEmitSoundParams( EmitSound_t &params )
 {
-#ifdef CLIENT_DLL
-	if ( GameRules() )
-	{
-		params.m_pSoundName = GameRules()->TranslateEffectForVisionFilter( "sounds", params.m_pSoundName );
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------

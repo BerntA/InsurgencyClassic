@@ -9,6 +9,8 @@
 #include "recipientfilter.h"
 #include "team.h"
 #include "ipredictionsystem.h"
+#include "ins_player.h"
+#include "team_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -322,40 +324,22 @@ void CRecipientFilter::SetIgnorePredictionCull( bool ignore )
 //-----------------------------------------------------------------------------
 // Purpose: Simple class to create a filter for all players on a given team 
 //-----------------------------------------------------------------------------
-CTeamRecipientFilter::CTeamRecipientFilter( int team, bool isReliable )
+CTeamRecipientFilter::CTeamRecipientFilter(int team, bool isReliable)
 {
 	if (isReliable)
 		MakeReliable();
 
 	RemoveAllRecipients();
 
-	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	CTeam* pTeam = GetGlobalTeam(team);
+	if (!pTeam)
+		return;
+
+	for (int i = 0; i < pTeam->GetNumPlayers(); i++)
 	{
-		CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-
-		if ( !pPlayer )
-		{
-			continue;
-		}
-
-		if ( pPlayer->GetTeamNumber() != team )
-		{
-			//If we're in the spectator team then we should be getting whatever messages the person I'm spectating gets.
-			if ( pPlayer->GetTeamNumber() == TEAM_SPECTATOR && (pPlayer->GetObserverMode() == OBS_MODE_IN_EYE || pPlayer->GetObserverMode() == OBS_MODE_CHASE) )
-			{
-				if ( pPlayer->GetObserverTarget() )
-				{
-					if ( pPlayer->GetObserverTarget()->GetTeamNumber() != team )
-						continue;
-				}
-			}
-			else
-			{
-				continue;
-			}
-		}
-
-		AddRecipient( pPlayer );
+		CBasePlayer* pPlayer = pTeam->GetPlayer(i);
+		if (pPlayer)
+			AddRecipient(pPlayer);
 	}
 }
 

@@ -8,10 +8,8 @@
 #include "c_playerresource.h"
 #include "c_team.h"
 #include "gamestringpool.h"
-
-#ifdef HL2MP
-#include "hl2mp_gamerules.h"
-#endif
+#include "play_team_shared.h"
+#include "ins_gamerules.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -19,41 +17,27 @@
 const float PLAYER_RESOURCE_THINK_INTERVAL = 0.2f;
 
 IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_PlayerResource, DT_PlayerResource, CPlayerResource)
+RecvPropArray3(RECVINFO_ARRAY(m_bConnected), RecvPropBool(RECVINFO(m_bConnected[0]))),
 RecvPropArray3(RECVINFO_ARRAY(m_iPing), RecvPropInt(RECVINFO(m_iPing[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_nGroupID), RecvPropInt(RECVINFO(m_nGroupID[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_iLevel), RecvPropInt(RECVINFO(m_iLevel[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_iTotalScore), RecvPropInt(RECVINFO(m_iTotalScore[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_iTotalDeaths), RecvPropInt(RECVINFO(m_iTotalDeaths[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_iRoundScore), RecvPropInt(RECVINFO(m_iRoundScore[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_iRoundDeaths), RecvPropInt(RECVINFO(m_iRoundDeaths[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_iSelectedTeam), RecvPropInt(RECVINFO(m_iSelectedTeam[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_bInfected), RecvPropInt(RECVINFO(m_bInfected[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_bConnected), RecvPropInt(RECVINFO(m_bConnected[0]))),
 RecvPropArray3(RECVINFO_ARRAY(m_iTeam), RecvPropInt(RECVINFO(m_iTeam[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_bAlive), RecvPropInt(RECVINFO(m_bAlive[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_bAdmin), RecvPropInt(RECVINFO(m_bAdmin[0]))),
+RecvPropArray3(RECVINFO_ARRAY(m_bAlive), RecvPropBool(RECVINFO(m_bAlive[0]))),
 RecvPropArray3(RECVINFO_ARRAY(m_iHealth), RecvPropInt(RECVINFO(m_iHealth[0]))),
-RecvPropArray3(RECVINFO_ARRAY(m_vecPosition), RecvPropVector(RECVINFO(m_vecPosition[0]))),
+RecvPropArray3(RECVINFO_ARRAY(m_iMorale), RecvPropInt(RECVINFO(m_iMorale[0]))),
+RecvPropArray3(RECVINFO_ARRAY(m_iKills), RecvPropInt(RECVINFO(m_iKills[0]))),
+RecvPropArray3(RECVINFO_ARRAY(m_iDeaths), RecvPropInt(RECVINFO(m_iDeaths[0]))),
 END_RECV_TABLE()
 
 BEGIN_PREDICTION_DATA(C_PlayerResource)
 
 DEFINE_PRED_ARRAY(m_szName, FIELD_STRING, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_iPing, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_nGroupID, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_iLevel, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_iTotalScore, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_iTotalDeaths, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_iRoundScore, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_iRoundDeaths, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_iSelectedTeam, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_bInfected, FIELD_BOOLEAN, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
 DEFINE_PRED_ARRAY(m_bConnected, FIELD_BOOLEAN, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
+DEFINE_PRED_ARRAY(m_iPing, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
 DEFINE_PRED_ARRAY(m_iTeam, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
 DEFINE_PRED_ARRAY(m_bAlive, FIELD_BOOLEAN, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_bAdmin, FIELD_BOOLEAN, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
 DEFINE_PRED_ARRAY(m_iHealth, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
-DEFINE_PRED_ARRAY(m_vecPosition, FIELD_VECTOR, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
+DEFINE_PRED_ARRAY(m_iMorale, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
+DEFINE_PRED_ARRAY(m_iKills, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
+DEFINE_PRED_ARRAY(m_iDeaths, FIELD_INTEGER, MAX_PLAYERS + 1, FTYPEDESC_PRIVATE),
 
 END_PREDICTION_DATA()
 
@@ -66,40 +50,18 @@ IGameResources * GameResources(void) { return g_PR; }
 //-----------------------------------------------------------------------------
 C_PlayerResource::C_PlayerResource()
 {
-	memset(m_iPing, 0, sizeof(m_iPing));
-	memset(m_nGroupID, 0, sizeof(m_nGroupID));
-	memset(m_iLevel, 0, sizeof(m_iLevel));
-	memset(m_iTotalScore, 0, sizeof(m_iTotalScore));
-	memset(m_iTotalDeaths, 0, sizeof(m_iTotalDeaths));
-	memset(m_iRoundScore, 0, sizeof(m_iRoundScore));
-	memset(m_iRoundDeaths, 0, sizeof(m_iRoundDeaths));
-	memset(m_iSelectedTeam, 0, sizeof(m_iSelectedTeam));
-	memset(m_bInfected, 0, sizeof(m_bInfected));
 	memset(m_bConnected, 0, sizeof(m_bConnected));
+	memset(m_iPing, 0, sizeof(m_iPing));	
 	memset(m_iTeam, 0, sizeof(m_iTeam));
 	memset(m_bAlive, 0, sizeof(m_bAlive));
-	memset(m_bAdmin, 0, sizeof(m_bAdmin));
+	memset(m_iMorale, 0, sizeof(m_iMorale));
+	memset(m_iKills, 0, sizeof(m_iKills));
+	memset(m_iDeaths, 0, sizeof(m_iDeaths));
 	memset(m_iHealth, 0, sizeof(m_iHealth));
-	memset(m_vecPosition, 0, sizeof(m_vecPosition));
 	m_szUnconnectedName = 0;
-
-	for (int i = 0; i < MAX_TEAMS; i++)
-	{
-		m_Colors[i] = COLOR_GREY;
-	}
-
-#ifdef HL2MP
-	m_Colors[TEAM_HUMANS] = COLOR_BLUE;
-	m_Colors[TEAM_DECEASED] = COLOR_RED;
-	m_Colors[TEAM_UNASSIGNED] = COLOR_YELLOW;
-#endif
-
 	g_PR = this;
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 C_PlayerResource::~C_PlayerResource()
 {
 	g_PR = NULL;
@@ -147,9 +109,6 @@ void C_PlayerResource::ClientThink()
 	SetNextClientThink(gpGlobals->curtime + PLAYER_RESOURCE_THINK_INTERVAL);
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 const char *C_PlayerResource::GetPlayerName(int iIndex)
 {
 	if (iIndex < 1 || iIndex > MAX_PLAYERS)
@@ -177,14 +136,6 @@ bool C_PlayerResource::IsAlive(int iIndex)
 	return m_bAlive[iIndex];
 }
 
-bool C_PlayerResource::IsAdmin(int iIndex)
-{
-	if (!IsConnected(iIndex))
-		return false;
-
-	return m_bAdmin[iIndex];
-}
-
 int C_PlayerResource::GetTeam(int iIndex)
 {
 	if (iIndex < 1 || iIndex > MAX_PLAYERS)
@@ -201,19 +152,31 @@ int C_PlayerResource::GetTeam(int iIndex)
 const char * C_PlayerResource::GetTeamName(int index)
 {
 	C_Team *team = GetGlobalTeam(index);
-	if (!team)
-		return "Unknown";
-
-	return team->Get_Name();
+	return (team ? team->GetName() : "Unknown");
 }
 
 int C_PlayerResource::GetTeamScore(int index)
 {
-	C_Team *team = GetGlobalTeam(index);
-	if (!team)
+	if (!IsPlayTeam(index))
 		return 0;
 
-	return team->Get_Score();
+	C_PlayTeam* team = GetGlobalPlayTeam(index);
+	return (team ? team->GetTotalPlayerScore() : 0);
+}
+
+int C_PlayerResource::GetFrags(int index)
+{
+	return (IsConnected(index) ? m_iKills[index] : 0);
+}
+
+int C_PlayerResource::GetDeaths(int index)
+{
+	return (IsConnected(index) ? m_iDeaths[index] : 0);
+}
+
+int	C_PlayerResource::GetMorale(int index)
+{
+	return (IsConnected(index) ? m_iMorale[index] : 0);
 }
 
 bool C_PlayerResource::IsLocalPlayer(int index)
@@ -245,9 +208,6 @@ bool C_PlayerResource::IsReplay(int index)
 	return false;
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 bool C_PlayerResource::IsFakePlayer(int iIndex)
 {
 	if (!IsConnected(iIndex))
@@ -263,78 +223,17 @@ bool C_PlayerResource::IsFakePlayer(int iIndex)
 	return false;
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 int	C_PlayerResource::GetPing(int iIndex)
 {
-	if (!IsConnected(iIndex))
-		return 0;
-
-	return m_iPing[iIndex];
+	return (IsConnected(iIndex) ? m_iPing[iIndex] : 0);
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int	C_PlayerResource::GetTotalScore(int iIndex)
-{
-	if (!IsConnected(iIndex))
-		return 0;
-
-	return m_iTotalScore[iIndex];
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int	C_PlayerResource::GetTotalDeaths(int iIndex)
-{
-	if (!IsConnected(iIndex))
-		return 0;
-
-	return m_iTotalDeaths[iIndex];
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int	C_PlayerResource::GetRoundScore(int iIndex)
-{
-	if (!IsConnected(iIndex))
-		return 0;
-
-	return m_iRoundScore[iIndex];
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int	C_PlayerResource::GetRoundDeaths(int iIndex)
-{
-	if (!IsConnected(iIndex))
-		return 0;
-
-	return m_iRoundDeaths[iIndex];
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 int	C_PlayerResource::GetHealth(int iIndex)
 {
 	if (!IsConnected(iIndex))
 		return 0;
 
 	return m_iHealth[iIndex];
-}
-
-const Vector &C_PlayerResource::GetPosition(int index)
-{
-	if (!IsConnected(index))
-		return vec3_origin;
-
-	return m_vecPosition[index];
 }
 
 const Color &C_PlayerResource::GetTeamColor(int index)
@@ -347,7 +246,7 @@ const Color &C_PlayerResource::GetTeamColor(int index)
 	}
 	else
 	{
-		return m_Colors[index];
+		return INSRules()->TeamColor(index);
 	}
 }
 
@@ -359,42 +258,33 @@ bool C_PlayerResource::IsConnected(int iIndex)
 		return m_bConnected[iIndex];
 }
 
-bool C_PlayerResource::IsInfected(int iIndex)
+bool C_PlayerResource::GetSquadData(int index, SquadData_t& SquadData)
 {
-	if (iIndex < 1 || iIndex > MAX_PLAYERS)
-		return false;
-	else
-		return m_bInfected[iIndex];
-}
+	int iTeamID = GetTeamID(index);
 
-bool C_PlayerResource::IsGroupIDFlagActive(int iIndex, int flag)
-{
-	if (iIndex < 1 || iIndex > MAX_PLAYERS)
+	if (!IsPlayTeam(iTeamID))
 		return false;
 
-	return ((m_nGroupID[iIndex] & flag) != 0);
+	C_PlayTeam* pTeam = GetGlobalPlayTeam(iTeamID);
+	return (pTeam ? pTeam->GetSquadData(index, SquadData) : false);
 }
 
-int	C_PlayerResource::GetLevel(int iIndex)
+int C_PlayerResource::GetSquadID(int iID)
 {
-	if (!IsConnected(iIndex))
-		return 1;
+	SquadData_t SquadData;
 
-	return m_iLevel[iIndex];
+	if (!GetSquadData(iID, SquadData))
+		return INVALID_SQUAD;
+
+	return SquadData.GetSquadID();
 }
 
-int	C_PlayerResource::GetGroupIDFlags(int iIndex)
+int C_PlayerResource::GetSlotID(int iID)
 {
-	if (!IsConnected(iIndex))
-		return 0;
+	SquadData_t SquadData;
 
-	return m_nGroupID[iIndex];
-}
+	if (!GetSquadData(iID, SquadData))
+		return INVALID_SQUAD;
 
-int	C_PlayerResource::GetSelectedTeam(int iIndex)
-{
-	if (!IsConnected(iIndex))
-		return 0;
-
-	return m_iSelectedTeam[iIndex];
+	return SquadData.GetSlotID();
 }

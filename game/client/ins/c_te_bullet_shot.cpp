@@ -13,7 +13,7 @@
 #include "util_shared.h"
 #include "input.h"
 
-ConVar bb2_enable_particle_gunfx("bb2_enable_particle_gunfx", "1", FCVAR_ARCHIVE, "Enable particle based gun effects like: Muzzleflashes, Bullet tracers and Smoke.", true, 0.0f, true, 1.0f);
+ConVar ins_enable_particle_gunfx("ins_enable_particle_gunfx", "1", FCVAR_ARCHIVE, "Enable particle based gun effects like: Muzzleflashes, Bullet tracers and Smoke.", true, 0.0f, true, 1.0f);
 
 class C_TEBulletShot : public C_BaseTempEntity
 {
@@ -40,15 +40,16 @@ public:
 void C_TEBulletShot::CreateEffects(void)
 {
 	CAmmoDef *pAmmoDef = GetAmmoDef();
-	C_BaseCombatWeapon *pWpn = dynamic_cast<C_BaseCombatWeapon *>(ClientEntityList().GetEnt(m_iWeaponIndex));
-	if (!pAmmoDef || !pWpn)
-		return;
 
-	C_BaseCombatCharacter *pOwnerOfWep = pWpn->GetOwner();
+	C_BaseCombatCharacter* pOwnerOfWep = dynamic_cast<C_BaseCombatCharacter*>(ClientEntityList().GetEnt(m_iWeaponIndex));
 	if (!pOwnerOfWep)
 		return;
 
-	bool bParticleGunFX = bb2_enable_particle_gunfx.GetBool();
+	C_BaseCombatWeapon* pWpn = pOwnerOfWep->GetActiveWeapon();
+	if (!pAmmoDef || !pWpn)
+		return;
+
+	bool bParticleGunFX = ins_enable_particle_gunfx.GetBool();
 
 	if (m_bDoTracers || m_bDoImpacts)
 	{
@@ -73,13 +74,12 @@ void C_TEBulletShot::CreateEffects(void)
 			if (!m_bIsPenetrationBullet)
 			{
 				data.m_fFlags |= TRACER_FLAG_USEATTACHMENT;
-				data.m_nAttachmentIndex = (pWpn->IsAkimboWeapon() ? pWpn->LookupAttachment(pWpn->GetMuzzleflashAttachment(m_bPrimaryAttack)) : pWpn->GetTracerAttachment());
+				data.m_nAttachmentIndex = pWpn->GetTracerAttachment();
 			}
 
 			if (bParticleGunFX)
 			{
-				const char *pParticleEffect = pWpn->GetParticleEffect(PARTICLE_TYPE_TRACER);
-				int iParticleIndex = GetParticleSystemIndex(pParticleEffect);
+				int iParticleIndex = GetParticleSystemIndex("generic_tracer");
 				if (iParticleIndex)
 				{
 					bDoParticleTracer = true;
@@ -98,7 +98,7 @@ void C_TEBulletShot::CreateEffects(void)
 		}
 
 		if (m_bDoImpacts)
-			pWpn->DoImpactEffect(tr, pAmmoDef->DamageType(m_iAmmoID));
+			pWpn->DoImpactEffect(tr, DMG_BULLET);
 	}
 
 	if (!m_bDoMuzzleflash)
@@ -128,7 +128,7 @@ void C_TEBulletShot::CreateEffects(void)
 	}
 
 	if (bParticleGunFX)
-		DispatchParticleEffect(pWpn->GetParticleEffect(PARTICLE_TYPE_MUZZLE, bThirdpersonDispatch), PATTACH_POINT_FOLLOW, pDispatcher, pWpn->GetMuzzleflashAttachment(m_bPrimaryAttack));
+		DispatchParticleEffect((bThirdpersonDispatch ? "muzzleflash_pistol_tp" : "muzzleflash_pistol"), PATTACH_POINT_FOLLOW, pDispatcher, "muzzle");
 	else
 		pWpn->DoMuzzleFlash();
 }

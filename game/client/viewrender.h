@@ -400,6 +400,8 @@ private:
 
 	void			DrawMonitors( const CViewSetup &cameraView );
 
+	void            DrawScope(const CViewSetup& zoomedView);
+
 	bool			DrawOneMonitor( ITexture *pRenderTarget, int cameraNum, C_PointCamera *pCameraEnt, const CViewSetup &cameraView, C_BasePlayer *localPlayer, 
 						int x, int y, int width, int height );
 
@@ -429,6 +431,8 @@ private:
 	void			SetupMain3DView( const CViewSetup &view, int &nClearFlags );
 	void			CleanupMain3DView( const CViewSetup &view );
 
+	void			DoMotionBlur(const CViewSetup& view);
+	void			DrawMotionBlur(const CViewSetup& view, Rect_t actualRect, ITexture* pRenderTarget, ITexture* pBaseTexture, bool bBlurPass);
 
 	// This stores the current view
  	CViewSetup		m_CurrentView;
@@ -470,6 +474,9 @@ private:
 
 	bool			m_rbTakeFreezeFrame[ STEREO_EYE_MAX ];
 	float			m_flFreezeFrameUntil;
+
+	float			m_flMotionBlurDrawTime;
+	bool			m_bPainEffectInitialized;
 };
 
 #endif // VIEWRENDER_H

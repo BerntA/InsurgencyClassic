@@ -138,9 +138,6 @@ void CGameUI::Deactivate( CBaseEntity *pActivator )
 		// Restore weapons
 		if ( FBitSet( m_spawnflags, SF_GAMEUI_HIDE_WEAPON ) )
 		{
-			// Turn the hud back on
-			pPlayer->m_Local.m_iHideHUD &= ~HIDEHUD_WEAPONSELECTION;
-
 			if ( m_hSaveWeapon.Get() )
 			{
 				m_player->Weapon_Switch( m_hSaveWeapon.Get() );
@@ -228,8 +225,6 @@ void CGameUI::InputActivate( inputdata_t &inputdata )
 	// Store off and hide the currently held weapon
 	if ( FBitSet( m_spawnflags, SF_GAMEUI_HIDE_WEAPON ) )
 	{
-		m_player->m_Local.m_iHideHUD |= HIDEHUD_WEAPONSELECTION;
-
 		if ( m_player->GetActiveWeapon() )
 		{
 			m_hSaveWeapon = m_player->GetActiveWeapon();
@@ -364,9 +359,9 @@ void CGameUI::Think( void )
 		}
 	}
 
-	if ( nButtonsChanged & IN_ATTACK2 )
+	if ( nButtonsChanged & IN_SPECIAL2 )
 	{
-		if ( m_nLastButtonState & IN_ATTACK2 )
+		if ( m_nLastButtonState & IN_SPECIAL2)
 		{
 			m_unpressedAttack2.FireOutput( pPlayer, this, 0 );
 		}
@@ -403,7 +398,7 @@ void CGameUI::Think( void )
 		attack = 1;
 	}
 
-	if ( pPlayer->m_nButtons & IN_ATTACK2 )
+	if ( pPlayer->m_nButtons & IN_SPECIAL2)
 	{
 		attack2 = 1;
 	}

@@ -38,9 +38,7 @@ private:
 	Color	m_clrIcon;
 };
 
-
 DECLARE_HUDELEMENT( CHudVoiceSelfStatus );
-
 
 CHudVoiceSelfStatus::CHudVoiceSelfStatus( const char *pName ) :
 	vgui::Panel( NULL, "HudVoiceSelfStatus" ), CHudElement( pName )

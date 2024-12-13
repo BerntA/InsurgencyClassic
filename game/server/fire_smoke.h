@@ -42,7 +42,6 @@ public:
 // CFireSmoke
 //==================================================
 
-//NOTENOTE: Mirrored in cl_dll/c_fire_smoke.cpp
 #define	bitsFIRESMOKE_SMOKE					0x00000002
 #define	bitsFIRESMOKE_SMOKE_COLLISION		0x00000004
 #define	bitsFIRESMOKE_GLOW					0x00000008

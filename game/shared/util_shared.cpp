@@ -21,11 +21,9 @@
 
 #ifdef CLIENT_DLL
 	#include "c_te_effect_dispatch.h"
-    #include "c_hl2mp_player.h"
 	#include "GameBase_Client.h"
 #else
 	#include "te_effect_dispatch.h"
-    #include "hl2mp_player.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -497,45 +495,6 @@ bool CTraceFilterChain::ShouldHitEntity( IHandleEntity *pHandleEntity, int conte
 
 	return ( bResult1 && bResult2 );
 }
-
-#ifndef CLIENT_DLL
-//-----------------------------------------------------------------------------
-// Trace used by melee weapons and lag comp.
-//-----------------------------------------------------------------------------
-CTraceFilterRealtime::CTraceFilterRealtime(IHandleEntity *pHandleEntity, int collisionGroup, int team, CBaseCombatWeapon *pWeapon) : BaseClass(pHandleEntity, collisionGroup, team)
-{
-	m_hWeaponLink = pWeapon;
-}
-
-bool CTraceFilterRealtime::ShouldHitEntity(IHandleEntity *pHandleEntity, int contentsMask)
-{
-	CBaseEntity *pEntity = EntityFromEntityHandle(pHandleEntity);
-	CBaseCombatWeapon *pWeaponActive = m_hWeaponLink.Get();
-	if (pEntity && pWeaponActive && !pWeaponActive->CanHitThisTarget(pEntity->entindex()))
-		return false;
-
-	return BaseClass::ShouldHitEntity(pHandleEntity, contentsMask);
-}
-
-bool CTraceFilterNAVObstacle::ShouldHitEntity(IHandleEntity *pHandleEntity, int contentsMask)
-{
-	CBaseEntity *pEntity = EntityFromEntityHandle(pHandleEntity);
-	if (pEntity)
-	{
-		const int collisionGRP = pEntity->GetCollisionGroup();
-		if (
-			pEntity->IsNPC() || pEntity->IsPlayer() || pEntity->IsBaseCombatWeapon() || pEntity->IsCombatCharacter() ||
-			(collisionGRP == COLLISION_GROUP_WEAPON) || (collisionGRP == COLLISION_GROUP_DEBRIS) ||
-			(pEntity->m_takedamage != DAMAGE_YES)
-			)
-			return false;
-
-		return (pEntity->GetObstruction() && CTraceFilterSimple::ShouldHitEntity(pHandleEntity, contentsMask));
-	}
-
-	return false;
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Sweeps against a particular model, using collision rules 

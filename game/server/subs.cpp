@@ -21,7 +21,6 @@ void CPointEntity::Spawn( void )
 //	UTIL_SetSize(this, vec3_origin, vec3_origin);
 }
 
-
 class CNullEntity : public CBaseEntity
 {
 public:
@@ -30,47 +29,12 @@ public:
 	void Spawn( void );
 };
 
-
 // Null Entity, remove on startup
 void CNullEntity::Spawn( void )
 {
 	UTIL_Remove( this );
 }
 LINK_ENTITY_TO_CLASS(info_null,CNullEntity);
-
-class CBaseDMStart : public CPointEntity
-{
-public:
-	DECLARE_CLASS( CBaseDMStart, CPointEntity );
-
-	bool IsTriggered( CBaseEntity *pEntity );
-
-	DECLARE_DATADESC();
-
-	string_t m_Master;
-
-private:
-};
-
-BEGIN_DATADESC( CBaseDMStart )
-
-	DEFINE_KEYFIELD( m_Master, FIELD_STRING, "master" ),
-
-END_DATADESC()
-
-
-// These are the new entry points to entities. 
-LINK_ENTITY_TO_CLASS(info_player_deathmatch,CBaseDMStart);
-LINK_ENTITY_TO_CLASS(info_player_start,CPointEntity);
-LINK_ENTITY_TO_CLASS(info_landmark,CPointEntity);
-
-bool CBaseDMStart::IsTriggered( CBaseEntity *pEntity )
-{
-	bool master = UTIL_IsMasterTriggered( m_Master, pEntity );
-
-	return master;
-}
-
 
 // Convenient way to delay removing oneself
 void CBaseEntity::SUB_Remove( void )
@@ -323,5 +287,3 @@ float CBaseToggle::AxisDelta( int flags, const QAngle &angle1, const QAngle &ang
 
 	return angle1.y - angle2.y;
 }
-
-

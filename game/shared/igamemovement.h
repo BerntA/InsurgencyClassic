@@ -43,7 +43,6 @@ public:
 
 	EntityHandle_t	m_nPlayerHandle;	// edict index on server, client entity handle on client
 
-	int				m_nImpulseCommand;	// Impulse command issued.
 	QAngle			m_vecViewAngles;	// Command view angles (local space)
 	QAngle			m_vecAbsViewAngles;	// Command view angles (world space)
 	int				m_nButtons;			// Attack buttons.
@@ -75,7 +74,6 @@ public:
 	void			SetAbsOrigin( const Vector &vec );
 	const Vector	&GetAbsOrigin() const;
 
-private:
 	Vector			m_vecAbsOrigin;		// edict::origin
 };
 
@@ -84,24 +82,12 @@ inline const Vector &CMoveData::GetAbsOrigin() const
 	return m_vecAbsOrigin;
 }
 
-#if !defined( CLIENT_DLL ) && defined( _DEBUG )
-// We only ever want this code path on the server side in a debug build
-//  and you have to uncomment the code below and rebuild to have the test operate.
-//#define PLAYER_GETTING_STUCK_TESTING
-
-#endif
-
-#if !defined( PLAYER_GETTING_STUCK_TESTING )
-
 // This is implemented with a more exhaustive test in gamemovement.cpp.  We check if the origin being requested is
 //  inside solid, which it never should be
-inline void CMoveData::SetAbsOrigin( const Vector &vec )
+inline void CMoveData::SetAbsOrigin(const Vector& vec)
 {
 	m_vecAbsOrigin = vec;
 }
-
-#endif
-
 
 //-----------------------------------------------------------------------------
 // Purpose: The basic player movement interface

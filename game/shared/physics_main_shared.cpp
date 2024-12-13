@@ -2191,8 +2191,6 @@ float CBaseEntity::GetGroundChangeTime( void )
 	return m_flGroundChangeTime;
 }
 
-
-
 // Remove this as ground entity for all object resting on this object
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -2202,24 +2200,4 @@ void CBaseEntity::WakeRestingObjects()
 	// Unset this as ground entity for everything resting on this object
 	//  This calls endgroundcontact for everything on the list
 	PhysicsRemoveGroundList( this );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *ent - 
-//-----------------------------------------------------------------------------
-bool CBaseEntity::HasNPCsOnIt( void )
-{
-	groundlink_t *link;
-	groundlink_t *root = ( groundlink_t * )GetDataObject( GROUNDLINK );
-	if ( root )
-	{
-		for ( link = root->nextLink; link != root; link = link->nextLink )
-		{
-			if ( link->entity && link->entity->MyNPCPointer() )
-				return true;
-		}
-	}
-
-	return false;
 }

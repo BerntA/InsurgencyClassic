@@ -2484,13 +2484,6 @@ void C_BaseAnimating::CalculateIKLocks( float currentTime )
 		}
 	}
 
-#if defined( HL2_CLIENT_DLL )
-	if (minHeight < FLT_MAX)
-	{
-		input->AddIKGroundContactInfo( entindex(), minHeight, maxHeight );
-	}
-#endif
-
 	CBaseEntity::PopEnableAbsRecomputations();
 	partition->SuppressLists( curSuppressed, true );
 }
@@ -3599,7 +3592,7 @@ void MaterialFootstepSound( C_BaseAnimating *pEnt, bool bLeftFoot, float flVolum
 //-----------------------------------------------------------------------------
 void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options )
 {
-	extern ConVar bb2_enable_particle_gunfx;
+	extern ConVar ins_enable_particle_gunfx;
 
 	Vector attachOrigin;
 	QAngle attachAngles; 
@@ -3672,24 +3665,10 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 		break;
 
 	case AE_WPN_MELEE_START:
-	{
-		C_BaseCombatWeapon *pLocalWeapon = GetActiveWeapon();
-		if (pLocalWeapon)
-		{
-			int type = atoi(options);
-			if (type)
-				pLocalWeapon->MeleeAttackStart(type);
-		}
-	}
-	break;
+		break;
 
-	case AE_WPN_MELEE_END:
-	{
-		C_BaseCombatWeapon *pLocalWeapon = GetActiveWeapon();
-		if (pLocalWeapon)
-			pLocalWeapon->MeleeAttackEnd();
-	}
-	break;
+	case AE_WPN_MELEE_END:		
+		break;
 
 	case AE_CL_STOPSOUND:
 		{
@@ -3787,7 +3766,7 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 	case AE_MUZZLEFLASH:
 		{
 			// Send out the effect for a player
-			if (!bb2_enable_particle_gunfx.GetBool())
+			if (!ins_enable_particle_gunfx.GetBool())
 				DispatchMuzzleEffect(options, true);
 			break;
 		}
@@ -3795,7 +3774,7 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 	case AE_NPC_MUZZLEFLASH:
 		{
 			// Send out the effect for an NPC
-			if (!bb2_enable_particle_gunfx.GetBool())
+			if (!ins_enable_particle_gunfx.GetBool())
 				DispatchMuzzleEffect(options, false);
 			break;
 		}

@@ -36,7 +36,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE(CTEBulletShot, DT_TEBulletShot)
 SendPropInt(SENDINFO(m_iWeaponIndex), 12, SPROP_UNSIGNED),
 SendPropVector(SENDINFO(m_vecOrigin), -1, SPROP_COORD),
 SendPropVector(SENDINFO(m_vecDir), -1),
-SendPropInt(SENDINFO(m_iAmmoID), 5, SPROP_UNSIGNED),
+SendPropInt(SENDINFO(m_iAmmoID), 4, SPROP_UNSIGNED),
 SendPropBool(SENDINFO(m_bDoImpacts)),
 SendPropBool(SENDINFO(m_bDoTracers)),
 SendPropBool(SENDINFO(m_bIsPenetrationBullet)),

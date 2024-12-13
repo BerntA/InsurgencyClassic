@@ -13,7 +13,6 @@
 #include "view_shared.h"
 #include "iviewrender.h"
 #include "hud_basechat.h"
-#include "weapon_selection.h"
 #include <vgui/IVGui.h>
 #include <vgui/Cursor.h>
 #include <vgui/IPanel.h>
@@ -34,13 +33,17 @@
 #include <vgui/ILocalize.h>
 #include "ienginevgui.h"
 
-// BB2
+#include "inshud.h"
+#include "imc_config.h"
+#include "rendertexture.h"
+#include "playercust.h"
+
+#include "fmod_manager.h"
 #include "GameBase_Client.h"
-#include "c_hl2mp_player.h"
 #include "GameBase_Shared.h"
 #include "c_client_gib.h"
-#include "c_bb2_player_shared.h"
 #include "c_leaderboard_handler.h"
+#include "spectatorgui.h"
 
 #if defined( _X360 )
 #include "xbox/xbox_console.h"
@@ -69,7 +72,6 @@ class CHudVote;
 static vgui::HContext s_hVGuiContext = DEFAULT_VGUI_CONTEXT;
 
 ConVar cl_drawhud( "cl_drawhud", "1", FCVAR_CHEAT, "Enable the rendering of the hud" );
-ConVar hud_takesshots( "hud_takesshots", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Auto-save a scoreboard screenshot at the end of a map." );
 ConVar hud_freezecamhide( "hud_freezecamhide", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Hide the HUD during freeze-cam" );
 ConVar cl_show_num_particle_systems( "cl_show_num_particle_systems", "0", FCVAR_CLIENTDLL, "Display the number of active particle systems." );
 
@@ -213,106 +215,14 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 			msg.ReadString( data, sizeof(data) );
 
 			keys->SetString( name, data );
-		}
-
-		// !KLUDGE! Whitelist of URL protocols formats for MOTD
-		if (
-			!V_stricmp( panelname, PANEL_INFO ) // MOTD
-			&& keys->GetInt( "type", 0 ) == 2 // URL message type
-		) {
-			const char *pszURL = keys->GetString( "msg", "" );
-			if ( Q_strncmp( pszURL, "http://", 7 ) != 0 && Q_strncmp( pszURL, "https://", 8 ) != 0 && Q_stricmp( pszURL, "about:blank" ) != 0 )
-			{
-				Warning( "Blocking MOTD URL '%s'; must begin with 'http://' or 'https://' or be about:blank\n", pszURL );
-				keys->deleteThis();
-				return;
-			}
-		}		
+		}	
 		
 		viewport->SetData( keys );
 
 		keys->deleteThis();
 	}
 
-	// is the server telling us to show the scoreboard (at the end of a map)?
-	if ( Q_stricmp( panelname, "scores" ) == 0 )
-	{
-		if ( hud_takesshots.GetBool() == true )
-		{
-			gHUD.SetScreenShotTime( gpGlobals->curtime + 1.0 ); // take a screenshot in 1 second
-		}
-	}
-
-	// is the server trying to show an MOTD panel? Check that it's allowed right now.
-	ClientModeShared *mode = ( ClientModeShared * )GetClientModeNormal();
-	if ( Q_stricmp( panelname, PANEL_INFO ) == 0 && mode )
-	{
-		if ( !mode->IsInfoPanelAllowed() )
-		{
-			return;
-		}
-		else
-		{
-			mode->InfoPanelDisplayed();
-		}
-	}
-
 	gViewPortInterface->ShowPanel( viewport, bShow );
-}
-
-extern ConVar bb2_sound_skill_cues;
-static void __MsgFunc_SkillSoundCue(bf_read &msg)
-{
-	int cmd = msg.ReadByte();
-	if ((cmd <= 0) || !bb2_sound_skill_cues.GetBool())
-		return;
-
-	const char *script = NULL;
-	switch (cmd)
-	{
-	case SKILL_SOUND_CUE_AMMO_BLAZE:
-		script = "SkillActivated.BlazingAmmo";
-		break;
-
-	case SKILL_SOUND_CUE_AMMO_FROST:
-		script = "SkillActivated.FrostAmmo";
-		break;
-
-	case SKILL_SOUND_CUE_AMMO_REFILL:
-		script = "SkillActivated.MagRefill";
-		break;
-
-	case SKILL_SOUND_CUE_AMMO_PENETRATE:
-		script = "SkillActivated.BulletPenetration";
-		break;
-
-	case SKILL_SOUND_CUE_MELEE_BLEED:
-		script = "SkillActivated.MeleeBleed";
-		break;
-
-	case SKILL_SOUND_CUE_MELEE_STUN:
-		script = "SkillActivated.MeleeStun";
-		break;
-
-	case SKILL_SOUND_CUE_LIFE_LEECH:
-		script = "SkillActivated.LifeLeech";
-		break;
-	}
-
-	if (script == NULL)
-		return;
-
-	CSoundParameters params;
-	if (CBaseEntity::GetParametersForSound(script, params, NULL) == false)
-		return;
-
-	enginesound->EmitAmbientSound(params.soundname, 1.0f, random->RandomInt(params.pitchlow, params.pitchhigh));
-}
-
-static void __MsgFunc_Damage(bf_read& msg)
-{
-	bool bShouldRender = msg.ReadByte();
-	// TODO ???
 }
 
 //-----------------------------------------------------------------------------
@@ -322,7 +232,6 @@ ClientModeShared::ClientModeShared()
 {
 	m_pViewport = NULL;
 	m_pChatElement = NULL;
-	m_pWeaponSelection = NULL;
 	m_nRootSize[ 0 ] = m_nRootSize[ 1 ] = -1;
 }
 
@@ -361,9 +270,6 @@ void ClientModeShared::Init()
 	m_pChatElement = ( CBaseHudChat * )GET_HUDELEMENT( CHudChat );
 	Assert( m_pChatElement );
 
-	m_pWeaponSelection = ( CBaseHudWeaponSelection * )GET_HUDELEMENT( CHudWeaponSelection );
-	Assert( m_pWeaponSelection );
-
 	KeyValuesAD pConditions( "conditions" );
 	ComputeVguiResConditions( pConditions );
 
@@ -372,16 +278,14 @@ void ClientModeShared::Init()
 	m_pViewport->LoadControlSettings( "scripts/HudLayout.res", NULL, NULL, pConditions );
 
 	ListenForGameEvent("player_connect_client");
+	ListenForGameEvent("player_connect");
 	ListenForGameEvent("player_disconnect");
 	ListenForGameEvent("player_team");
 	ListenForGameEvent("server_cvar");
 	ListenForGameEvent("player_changename");
-	ListenForGameEvent("teamplay_broadcast_audio");
-	ListenForGameEvent("client_sound_transmit");
-	ListenForGameEvent("round_start");
-	ListenForGameEvent("changelevel");
+	ListenForGameEvent("round_reset");
 	ListenForGameEvent("game_achievement");
-	ListenForGameEvent("player_connection");
+	ListenForGameEvent("player_spawn");
 
 #ifndef _XBOX
 	HLTVCamera()->Init();
@@ -391,22 +295,19 @@ void ClientModeShared::Init()
 
 	HOOK_MESSAGE(VGUIMenu);
 	HOOK_MESSAGE(Rumble);
-	HOOK_MESSAGE(SkillSoundCue);
-	HOOK_MESSAGE(Damage);
-}
 
+	CLoadIMCHelper::CreateAllElements();
+}
 
 void ClientModeShared::InitViewport()
 {
 }
-
 
 void ClientModeShared::VGui_Shutdown()
 {
 	delete m_pViewport;
 	m_pViewport = NULL;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -524,7 +425,8 @@ void ClientModeShared::OverrideMouseInput( float *x, float *y )
 //-----------------------------------------------------------------------------
 bool ClientModeShared::ShouldDrawViewModel()
 {
-	return true;
+	C_BaseCombatWeapon* pWeapon = GetActiveWeapon();
+	return (pWeapon ? pWeapon->ShouldDrawViewModel() : false);
 }
 
 bool ClientModeShared::ShouldDrawDetailObjects( )
@@ -591,6 +493,7 @@ void ClientModeShared::PostRender()
 {
 	// Let the particle manager simulate things that haven't been simulated.
 	ParticleMgr()->PostRender();
+	GetINSHUDHelper()->SendPostRender();
 }
 
 void ClientModeShared::PostRenderVGui()
@@ -642,6 +545,9 @@ void ClientModeShared::Update()
 void ClientModeShared::ProcessInput(bool bActive)
 {
 	gHUD.ProcessInput( bActive );
+
+	if (bActive)
+		GetINSHUDHelper()->ProcessInput();
 }
 
 //-----------------------------------------------------------------------------
@@ -651,22 +557,6 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 {
 	if ( engine->Con_IsVisible() )
 		return 1;
-	
-	if (HL2MPRules() && (HL2MPRules()->m_iCurrentVoteType != 0) && !BB2PlayerGlobals->GetPlayerVoteResponse() && BB2PlayerGlobals->IsVotePanelActive())
-	{
-		if (keynum == KEY_F1)
-		{
-			BB2PlayerGlobals->SetPlayerVoteResponse(1);
-			engine->ClientCmd_Unrestricted("player_vote_yes\n");
-			return 0;
-		}
-		else if (keynum == KEY_F2)
-		{
-			BB2PlayerGlobals->SetPlayerVoteResponse(2);
-			engine->ClientCmd_Unrestricted("player_vote_no\n");
-			return 0;
-		}
-	}
 
 	if (pszCurrentBinding)
 	{
@@ -674,13 +564,19 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 		if (Q_strcmp(pszCurrentBinding, "messagemode") == 0 || Q_strcmp(pszCurrentBinding, "say") == 0)
 		{
 			if (down)
-				StartMessageMode(MM_SAY);
+				StartMessageMode(SAYTYPE_GLOBAL);
 			return 0;
 		}
 		else if (Q_strcmp(pszCurrentBinding, "messagemode2") == 0 || Q_strcmp(pszCurrentBinding, "say_team") == 0)
 		{
 			if (down)
-				StartMessageMode(MM_SAY_TEAM);
+				StartMessageMode(SAYTYPE_TEAM);
+			return 0;
+		}
+		else if (Q_strcmp(pszCurrentBinding, "messagemode3") == 0 || Q_strcmp(pszCurrentBinding, "say_squad") == 0)
+		{
+			if (down)
+				StartMessageMode(SAYTYPE_SQUAD);
 			return 0;
 		}
 	}
@@ -713,35 +609,10 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 //-----------------------------------------------------------------------------
 // Purpose: See if spectator input occurred. Return 0 if the key is swallowed.
 //-----------------------------------------------------------------------------
-int ClientModeShared::HandleSpectatorKeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding )
+int ClientModeShared::HandleSpectatorKeyInput(int down, ButtonCode_t keynum, const char* pszCurrentBinding)
 {
-	// we are in spectator mode, open spectator menu
-	if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+duck" ) == 0 )
-	{
-		//m_pViewport->ShowPanel( PANEL_SPECMENU, true ); Disable this one for BB2... Maybe replace it later?
-		return 0; // we handled it, don't handle twice or send to server
-	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+attack" ) == 0 )
-	{
-		engine->ClientCmd( "spec_next" );
+	if (down && pszCurrentBinding && (g_pSpectatorGUI != NULL) && !g_pSpectatorGUI->HandleInput(pszCurrentBinding))
 		return 0;
-	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+attack2" ) == 0 )
-	{
-		engine->ClientCmd( "spec_prev" );
-		return 0;
-	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+jump" ) == 0 )
-	{
-		engine->ClientCmd( "spec_mode" );
-		return 0;
-	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+strafe" ) == 0 )
-	{
-		HLTVCamera()->SetAutoDirector( true );
-		return 0;
-	}
-
 	return 1;
 }
 
@@ -750,17 +621,8 @@ int ClientModeShared::HandleSpectatorKeyInput( int down, ButtonCode_t keynum, co
 //-----------------------------------------------------------------------------
 int ClientModeShared::HudElementKeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding )
 {
-	if ( m_pWeaponSelection )
-	{
-		if ( !m_pWeaponSelection->KeyInput( down, keynum, pszCurrentBinding ) )
-		{
-			return 0;
-		}
-	}
-
 	return 1;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -791,20 +653,12 @@ vgui::Panel *ClientModeShared::GetMessagePanel()
 //-----------------------------------------------------------------------------
 void ClientModeShared::StartMessageMode(int iMessageModeType)
 {
-	// Can only show chat UI in multiplayer!!!
-	if (gpGlobals->maxClients == 1)
-		return;
-
 	if (m_pChatElement)
 		m_pChatElement->StartMessageMode(iMessageModeType);
 }
 
 void ClientModeShared::StopMessageMode(void)
 {
-	// Can only show chat UI in multiplayer!!!
-	if (gpGlobals->maxClients == 1)
-		return;
-
 	if (m_pChatElement && m_pChatElement->GetMessageMode())
 		m_pChatElement->StopMessageMode();
 }
@@ -816,8 +670,6 @@ void ClientModeShared::StopMessageMode(void)
 void ClientModeShared::LevelInit( const char *newmap )
 {
 	engine->ClientCmd_Unrestricted("progress_enable\n");
-
-	GameBaseClient->CloseGamePanels();
 
 	m_pViewport->GetAnimationController()->StartAnimationSequence("LevelInit");
 
@@ -852,8 +704,6 @@ void ClientModeShared::LevelInit( const char *newmap )
 void ClientModeShared::LevelShutdown( void )
 {
 	engine->ClientCmd_Unrestricted("progress_enable\n");
-
-	GameBaseClient->CloseGamePanels();
 
 	// Reset the third person camera so we don't crash
 	g_ThirdPersonManager.Init();
@@ -962,24 +812,31 @@ bool PlayerNameNotSetYet( const char *pszName )
 
 void ClientModeShared::FireGameEvent( IGameEvent *event )
 {
-	C_HL2MP_Player *pClient = C_HL2MP_Player::GetLocalHL2MPPlayer();
-
 	const char *eventname = event->GetName();
 
-	if (Q_strcmp("changelevel", eventname) == 0)
+	if (Q_strcmp("player_spawn", eventname) == 0)
 	{
-		const char *szMap = event->GetString("map");
-		GameBaseClient->Changelevel(szMap);
-	}
-	else if ((Q_strcmp("player_connection", eventname) == 0))
-	{
-		if (!g_PR || (HL2MPRules() && ((HL2MPRules()->GetCurrentGamemode() != MODE_OBJECTIVE) && (HL2MPRules()->GetCurrentGamemode() != MODE_ARENA))))
+		// PNOTE: this is very broken when the player changes his
+		// squad because it doesn't have the class information
+		// in the client yet and causes the wrong model to 
+		// be returned
+
+		if (event->GetBool("dead"))
 			return;
 
-		char szLocalized[128];
-		bool bState = event->GetBool("state");
-		g_pVGuiLocalize->ConvertUnicodeToANSI(g_pVGuiLocalize->Find(bState ? "#NOTIFICATION_LEAVE" : "#NOTIFICATION_JOIN"), szLocalized, sizeof(szLocalized));
-		m_pChatElement->Printf("%c%s", COLOR_CREEPY, szLocalized);
+		C_INSPlayer* pPlayer = ToINSPlayer(UTIL_PlayerByUserId(event->GetInt("userid")));
+		if (!pPlayer || !pPlayer->IsLocalPlayer() || !pPlayer->IsCustomized())
+			return;
+
+		modelcustomization_t& MdlCust = GetModelCustomization(pPlayer);
+
+		if (MdlCust.bLoaded)
+		{
+			int a, b, c;
+			LoadModelCustomization(MdlCust, true, a, b, c);
+		}
+		else
+			Warning("Player Model Loaded, but Customization is not Initialized\n");
 	}
 	else if (Q_strcmp("game_achievement", eventname) == 0)
 	{
@@ -996,127 +853,19 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			g_pVGuiLocalize->ConvertANSIToUnicode(steamapicontext->SteamUserStats()->GetAchievementDisplayAttribute(szAchievement, "name"), wszAchievementName, sizeof(wszAchievementName));
 
 			wchar_t wszLocalized[512];
-
-			if (m_iType != ACHIEVEMENT_TYPE_REWARD)
-				g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#NOTIFICATION_ACHIEVEMENT"), 2, wszPlayerName, wszAchievementName);
-			else
-				g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#NOTIFICATION_MASTERY"), 2, wszPlayerName, wszAchievementName);
+			g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#NOTIFICATION_ACHIEVEMENT"), 2, wszPlayerName, wszAchievementName);
 
 			char szLocalized[512];
 			g_pVGuiLocalize->ConvertUnicodeToANSI(wszLocalized, szLocalized, sizeof(szLocalized));
 
 			m_pChatElement->Printf("%c%s", COLOR_ACHIEVEMENT, szLocalized);
-		}		
-
-		if (pClient && (pClient->entindex() == m_iIndex))
-		{
-			// Play Congratulation Sound...
-			// If this is some mastery we'll reload the inventory.
-			//if (m_iType >= ACHIEVEMENT_TYPE_REWARD)
-			//
 		}
 	}
-	else if (Q_strcmp("round_start", eventname) == 0)
+	else if (Q_strcmp("round_reset", eventname) == 0)
 	{
 		RemoveAllClientGibs();
-
-		if (pClient && (pClient->GetTeamNumber() >= TEAM_HUMANS))
-			GameBaseClient->CloseGamePanels(true);
 	}
-	else if (Q_strcmp("client_sound_transmit", eventname) == 0)
-	{
-		int iEntIndex = event->GetInt("entity");
-		int iType = event->GetInt("type");
-		int iPlayerIndexForce = event->GetInt("playerindex");
-		bool bGender = event->GetBool("gender");
-		const char *szOriginal = event->GetString("original");
-		const char *szGender = bGender ? "Male" : "Female";
-		const char *szSurvivorLink = event->GetString("survivorlink");
-		const char *szSoundsetPrefix = event->GetString("survivorprefix");
-		char szSoundToEmit[256];
-		szSoundToEmit[0] = 0;
-		bool bIsDeathmatchAnnouncer = ((iEntIndex == -1) && (iType == BB2_SoundTypes::TYPE_ANNOUNCER));
-		bool bIsPlayerSound = ((iType == BB2_SoundTypes::TYPE_PLAYER) || (iType == BB2_SoundTypes::TYPE_DECEASED));
-		if (bIsPlayerSound)
-		{
-			const DataPlayerItem_Survivor_Shared_t *data = GameBaseShared()->GetSharedGameDetails()->GetSurvivorDataForIndex(szSurvivorLink, true);
-			if (data != NULL) // Override gender check:			
-				szGender = data->bGender ? "Male" : "Female";
-		}
-
-		if (pClient && g_PR)
-		{
-			// Filter:
-			if ((iPlayerIndexForce != 0) && (pClient->entindex() != iPlayerIndexForce))
-				return;
-
-			const char *entName = GameBaseShared()->GetSharedGameDetails()->GetEntityNameFromEntitySoundType(iType);
-			bool bEmitSound = false;
-			int soundSetIndex = GameBaseShared()->GetSharedGameDetails()->GetConVarValueForEntitySoundType(iType);
-
-			if (iType == BB2_SoundTypes::TYPE_CUSTOM)
-			{
-				// unused
-			}
-			else if (bIsPlayerSound)
-			{
-				bEmitSound = true;
-				Q_snprintf(szSoundToEmit, 256, "%s_%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetPlayerSoundsetPrefix(iType, szSurvivorLink, szSoundsetPrefix), szGender, szOriginal);
-			}
-			else if (soundSetIndex != -1)
-			{
-				if (bIsDeathmatchAnnouncer)
-				{
-					Q_snprintf(szSoundToEmit, 256, "%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetSoundPrefix(iType, soundSetIndex), szOriginal);
-					if (szSoundToEmit && szSoundToEmit[0])
-					{
-						// If this sound doesn't exist / not parsed then fallback to anything available:
-						CSoundParameters params;
-						if (pClient->GetParametersForSound(szSoundToEmit, params, NULL) == false)
-							Q_snprintf(szSoundToEmit, 256, "%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetSoundPrefix(iType, 0), szOriginal);
-
-						if (!enginesound->IsSoundPrecached(szSoundToEmit))
-							pClient->PrecacheScriptSound(szSoundToEmit);
-
-						CLocalPlayerFilter filter;
-						pClient->EmitSound(filter, pClient->entindex(), szSoundToEmit, &pClient->GetLocalOrigin());
-					}
-				}
-				else
-				{
-					bEmitSound = true;
-					Q_snprintf(szSoundToEmit, 256, "%s_%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetSoundPrefix(iType, soundSetIndex, szSurvivorLink), szGender, szOriginal);
-				}
-			}
-
-			if (bEmitSound)
-			{
-				C_BaseEntity *pEntity = ClientEntityList().GetEnt(iEntIndex);
-				if (pEntity && !pEntity->IsDormant() && szSoundToEmit && szSoundToEmit[0])
-				{
-					// If this sound doesn't exist / not parsed then fallback to anything available:
-					CSoundParameters params;
-					if (pClient->GetParametersForSound(szSoundToEmit, params, NULL) == false)
-					{
-						if ((iType == BB2_SoundTypes::TYPE_CUSTOM) || (iType == BB2_SoundTypes::TYPE_UNKNOWN))
-							return;
-
-						if (pEntity->IsPlayer()) // For players we simplify it a bit.
-							Q_snprintf(szSoundToEmit, 256, "%s_%s.%s", entName, szGender, szOriginal);
-						else // For NPC we use the default (first) soundset.
-							Q_snprintf(szSoundToEmit, 256, "%s_%s_%s.%s", entName, GameBaseShared()->GetSharedGameDetails()->GetSoundPrefix(iType, 0), szGender, szOriginal);
-					}
-
-					if (!enginesound->IsSoundPrecached(szSoundToEmit))
-						pClient->PrecacheScriptSound(szSoundToEmit);
-
-					CLocalPlayerFilter filter;
-					pEntity->EmitSound(filter, pEntity->entindex(), szSoundToEmit, &pEntity->GetAbsOrigin());
-				}
-			}
-		}
-	}
-	else if ( Q_strcmp( "player_connect_client", eventname ) == 0 )
+	else if (Q_strcmp("player_connect_client", eventname) == 0 || Q_strcmp("player_connect", eventname) == 0)
 	{
 		if (!m_pChatElement)
 			return;
@@ -1171,7 +920,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_team", eventname ) == 0 )
 	{
-		C_BasePlayer *pPlayer = USERID2PLAYER(event->GetInt("userid"));
 		if (!m_pChatElement)
 			return;
 
@@ -1179,60 +927,33 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if (bDisconnected)
 			return;
 
-		int team = event->GetInt("team");
-		bool bAutoTeamed = event->GetInt("autoteam", false);
-		bool bSilent = event->GetInt("silent", false);
+		C_BasePlayer* pPlayer = USERID2PLAYER(event->GetInt("userid"));
+		if (!pPlayer)
+			return;
 
-		const char *pszName = event->GetString("name");
+		int team = event->GetInt("team");
+		const char *pszName = pPlayer->GetPlayerName();
+
 		if (PlayerNameNotSetYet(pszName))
 			return;
 
-		if ((HL2MPRules()->GetCurrentGamemode() != MODE_ELIMINATION))
-			bSilent = true;
-		else
-		{
-			bSilent = true;
-			if (pPlayer && g_PR)
-			{
-				int selectedTeam = g_PR->GetSelectedTeam(pPlayer->entindex());
-				if (selectedTeam <= 0 || (selectedTeam != team && (team > TEAM_SPECTATOR)))
-				{
-					bSilent = false;
-				}
-			}
-		}
+		wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
+		g_pVGuiLocalize->ConvertANSIToUnicode(pszName, wszPlayerName, sizeof(wszPlayerName));
 
-		if (!bSilent)
-		{
-			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-			g_pVGuiLocalize->ConvertANSIToUnicode(pszName, wszPlayerName, sizeof(wszPlayerName));
+		wchar_t wszTeam[64];
+		C_Team* pTeam = GetGlobalTeam(team);
+		if (pTeam)		
+			g_pVGuiLocalize->ConvertANSIToUnicode(pTeam->GetName(), wszTeam, sizeof(wszTeam));		
+		else		
+			_snwprintf(wszTeam, sizeof(wszTeam) / sizeof(wchar_t), L"%d", team);		
 
-			wchar_t wszTeam[64];
-			C_Team *pTeam = GetGlobalTeam(team);
-			if (pTeam)
-			{
-				g_pVGuiLocalize->ConvertANSIToUnicode(pTeam->Get_Name(), wszTeam, sizeof(wszTeam));
-			}
-			else
-			{
-				_snwprintf(wszTeam, sizeof(wszTeam) / sizeof(wchar_t), L"%d", team);
-			}
+		wchar_t wszLocalized[100];
+		g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#game_player_joined_team"), 2, wszPlayerName, wszTeam);
 
-			wchar_t wszLocalized[100];
-			if (bAutoTeamed)
-			{
-				g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#game_player_joined_autoteam"), 2, wszPlayerName, wszTeam);
-			}
-			else
-			{
-				g_pVGuiLocalize->ConstructString(wszLocalized, sizeof(wszLocalized), g_pVGuiLocalize->Find("#game_player_joined_team"), 2, wszPlayerName, wszTeam);
-			}
+		char szLocalized[100];
+		g_pVGuiLocalize->ConvertUnicodeToANSI(wszLocalized, szLocalized, sizeof(szLocalized));
 
-			char szLocalized[100];
-			g_pVGuiLocalize->ConvertUnicodeToANSI(wszLocalized, szLocalized, sizeof(szLocalized));
-
-			m_pChatElement->Printf("%s", szLocalized);
-		}
+		m_pChatElement->Printf("%s", szLocalized);
 
 		if (pPlayer && pPlayer->IsLocalPlayer())
 		{
@@ -1262,51 +983,6 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
 
 		m_pChatElement->Printf("%s", szLocalized);
-	}
-	else if (Q_strcmp( "teamplay_broadcast_audio", eventname ) == 0 )
-	{
-		int team = event->GetInt( "team" );
-
-		bool bValidTeam = false;
-
-		if ( (GetLocalTeam() && GetLocalTeam()->GetTeamNumber() == team) )
-		{
-			bValidTeam = true;
-		}
-
-		//If we're in the spectator team then we should be getting whatever messages the person I'm spectating gets.
-		if ( bValidTeam == false )
-		{
-			CBasePlayer *pSpectatorTarget = UTIL_PlayerByIndex( GetSpectatorTarget() );
-
-			if ( pSpectatorTarget && (GetSpectatorMode() == OBS_MODE_IN_EYE || GetSpectatorMode() == OBS_MODE_CHASE) )
-			{
-				if ( pSpectatorTarget->GetTeamNumber() == team )
-				{
-					bValidTeam = true;
-				}
-			}
-		}
-
-		if ( team == 0 && GetLocalTeam() > 0 )
-		{
-			bValidTeam = false;
-		}
-
-		if ( team == 255 )
-		{
-			bValidTeam = true;
-		}
-
-		if ( bValidTeam == true )
-		{
-			EmitSound_t et;
-			et.m_pSoundName = event->GetString("sound");
-			et.m_nFlags = event->GetInt("additional_flags");
-
-			CLocalPlayerFilter filter;
-			C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, et );
-		}
 	}
 	else if ( Q_strcmp( "server_cvar", eventname ) == 0 )
 	{

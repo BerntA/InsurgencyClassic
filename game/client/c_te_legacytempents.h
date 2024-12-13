@@ -61,6 +61,7 @@ public:
 	virtual void				PhysicsProp( int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects = 0 ) = 0;
 	virtual void                ClientSideGib(int modelindex, int body, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects, int gibType) = 0;
 	virtual C_LocalTempEntity	*ClientProjectile( const Vector& vecOrigin, const Vector& vecVelocity, const Vector& vecAccel, int modelindex, int lifetime, CBaseEntity *pOwner, const char *pszImpactEffect = NULL, const char *pszParticleEffect = NULL ) = 0;
+	virtual void				CSEjectBrass(const Vector& vecPosition, const QAngle& angVelocity, int nType, int nShellType, CBasePlayer* pShooter) = 0;
 };
 
 
@@ -114,6 +115,7 @@ public:
 	void					PhysicsProp( int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects = 0 );
 	void                    ClientSideGib(int modelindex, int body, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects, int gibType);
 	C_LocalTempEntity		*ClientProjectile( const Vector& vecOrigin, const Vector& vecVelocity, const Vector& vecAcceleration, int modelindex, int lifetime, CBaseEntity *pOwner, const char *pszImpactEffect = NULL, const char *pszParticleEffect = NULL );
+	void					CSEjectBrass(const Vector& vecPosition, const QAngle& angAngles, int nType, int nShellType, CBasePlayer* pShooter);
 
 // Data
 public:

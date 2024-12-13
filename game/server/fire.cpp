@@ -732,7 +732,7 @@ void CFire::Spawn( void )
 int CFire::UpdateTransmitState()
 {
 	// Don't want to be FL_EDICT_DONTSEND because our fire entity may make us transmit.
-	return SetTransmitState( FL_EDICT_ALWAYS );
+	return SetTransmitState( FL_EDICT_ALWAYS ); // INS warn -- expensive???
 }
 
 //-----------------------------------------------------------------------------

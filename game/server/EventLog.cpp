@@ -81,10 +81,8 @@ bool CEventLog::PrintPlayerEvent( IGameEvent *event )
 		CTeam *team = NULL;
 		CBasePlayer *pPlayer = UTIL_PlayerByUserId( userid );
 
-		if ( pPlayer )
-		{
-			team = pPlayer->GetTeam();
-		}
+		if (pPlayer)
+			team = GetGlobalTeam(pPlayer->GetTeamNumber());
 
 		UTIL_LogPrintf( "\"%s<%i><%s><%s>\" disconnected (reason \"%s\")\n", name, userid, networkid, team ? team->GetName() : "", reason );
 		return true;
@@ -118,14 +116,14 @@ bool CEventLog::PrintPlayerEvent( IGameEvent *event )
 
 		return true;
 	}
-	else if ( !Q_strncmp( eventName, "death_notice", Q_strlen("death_notice") ) )
+	else if ( !Q_strncmp( eventName, "player_death", Q_strlen("player_death") ) )
 	{ 
-		int killerID = event->GetInt("killerID");
-		int victimID = event->GetInt("victimID");
+		int killerID = event->GetInt("attacker");
+		int victimID = event->GetInt("userid");
 		const char *weapon = event->GetString("weapon");
 
-		CBaseEntity *pAttacker = UTIL_EntityByIndex(killerID);
-		CBaseEntity *pVictim = UTIL_EntityByIndex(victimID);
+		CBaseEntity *pAttacker = UTIL_PlayerByUserId(killerID);
+		CBaseEntity *pVictim = UTIL_PlayerByUserId(victimID);
 
 		const char *attackerNetID = (pAttacker && pAttacker->IsPlayer()) ? engine->GetPlayerNetworkIDString(pAttacker->edict()) : "NPC";
 		const char *victimNetID = (pVictim && pVictim->IsPlayer()) ? engine->GetPlayerNetworkIDString(pVictim->edict()) : "NPC";
@@ -200,7 +198,7 @@ bool CEventLog::Init()
 {
 	ListenForGameEvent( "player_changename" );
 	ListenForGameEvent( "player_activate" );
-	ListenForGameEvent( "death_notice" );
+	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "player_team" );
 	ListenForGameEvent( "player_disconnect" );
 	ListenForGameEvent( "player_connect" );

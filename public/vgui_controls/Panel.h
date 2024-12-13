@@ -202,6 +202,8 @@ public:
 	void SetAlpha(int alpha);	// sets alpha modifier for panel and all child panels [0..255]
 	int GetAlpha();	// returns the current alpha
 
+	virtual bool UseTraverseSizing(void) { return false; }
+
 	// panel visibility
 	// invisible panels and their children do not drawn, updated, or receive input messages
 	virtual void SetVisible(bool state);
@@ -391,6 +393,9 @@ public:
 	virtual void OnThink();							// called every frame before painting, but only if panel is visible
 	virtual void OnChildAdded(VPANEL child);		// called when a child has been added to this panel
 	virtual void OnSizeChanged(int newWide, int newTall);	// called after the size of a panel has been changed
+
+	MESSAGE_FUNC(OnLevelInit, "OnLevelInit");
+	MESSAGE_FUNC_INT(OnVisibilityChange, "OnVisibilityChange", bOldVisible);
 	
 	// called every frame if ivgui()->AddTickSignal() is called
 	virtual void OnTick();
@@ -629,7 +634,7 @@ public:
 	void		SetParentNeedsCursorMoveEvents( bool bNeedsEvents ) { m_bParentNeedsCursorMoveEvents = bNeedsEvents; }
 	bool		ParentNeedsCursorMoveEvents() const { return m_bParentNeedsCursorMoveEvents; }
 
-	int ComputePos( const char *pszInput, int &nPos, const int& nSize, const int& nParentSize, const bool& bX );
+	int ComputePos(const char* pszInput, int& nPos, const int& nSize, const int& nParentSize, const bool& bX, bool& bPutInStorage);
 
 	// For 360: support directional navigation between UI controls via dpad
 	enum NAV_DIRECTION { ND_UP, ND_DOWN, ND_LEFT, ND_RIGHT, ND_BACK, ND_NONE };
@@ -839,6 +844,10 @@ private:
 
 	BaseTooltip		*m_pTooltips;
 	bool			m_bToolTipOverridden;
+
+	MESSAGE_FUNC(OnSizeChanged, "OnSizeChanged");
+	bool _sendSizeChanged;
+	int m_iBuildModeStorage[2];
 
 	PHandle			m_SkipChild;
 	long			m_lLastDoublePressTime;

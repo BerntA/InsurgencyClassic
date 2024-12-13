@@ -11,11 +11,6 @@
 #pragma once
 #endif
 
-
 #include "kbutton.h"
-
-
-extern kbutton_t in_commandermousemove;
-extern kbutton_t in_ducktoggle;
 
 #endif // IN_MAIN_H

@@ -30,9 +30,7 @@
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-																						
-ConVar localplayer_visionflags( "localplayer_visionflags", "0", FCVAR_DEVELOPMENTONLY );
-																						
+																																												
 //-----------------------------------------------------------------------------
 // ConVars
 //-----------------------------------------------------------------------------
@@ -80,38 +78,6 @@ int GetLocalPlayerIndex( void )
 		return player->entindex();
 	else
 		return 0;	// game not started yet
-}
-
-int GetLocalPlayerVisionFilterFlags( bool bWeaponsCheck /*= false */ )
-{
-	C_BasePlayer * player = C_BasePlayer::GetLocalPlayer();
-
-	if ( player )
-		return player->GetVisionFilterFlags( bWeaponsCheck );
-	else
-		return 0;
-}
-
-bool IsLocalPlayerUsingVisionFilterFlags( int nFlags, bool bWeaponsCheck /* = false */ )
-{
-	int nLocalPlayerFlags = GetLocalPlayerVisionFilterFlags( bWeaponsCheck );
-
-	if ( !bWeaponsCheck )
-	{
-		// We can only modify the RJ flags with normal checks that won't take the forced kill cam flags that can happen in weapon checks
-		int nRJShaderFlags = nLocalPlayerFlags;
-		if ( nRJShaderFlags != 0 && GameRules() && !GameRules()->AllowMapVisionFilterShaders() )
-		{
-			nRJShaderFlags = 0;
-		}
-
-		if ( nRJShaderFlags != localplayer_visionflags.GetInt() )
-		{
-			localplayer_visionflags.SetValue( nRJShaderFlags );
-		}
-	}
-
-	return ( nLocalPlayerFlags & nFlags ) == nFlags;
 }
 
 bool IsLocalPlayerSpectator( void )

@@ -27,11 +27,9 @@
 
 // SendTable stuff.
 IMPLEMENT_SERVERCLASS_ST(CBaseFlex, DT_BaseFlex)
-#ifdef HL2_DLL
 SendPropFloat(SENDINFO_VECTORELEM(m_vecViewOffset, 0), 0, SPROP_NOSCALE),
 SendPropFloat(SENDINFO_VECTORELEM(m_vecViewOffset, 1), 0, SPROP_NOSCALE),
 SendPropFloat(SENDINFO_VECTORELEM(m_vecViewOffset, 2), 0, SPROP_NOSCALE),
-#endif
 END_SEND_TABLE()
 
 LINK_ENTITY_TO_CLASS(baseflexer, CBaseFlex); // meaningless independant class!!

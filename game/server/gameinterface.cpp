@@ -14,7 +14,6 @@
 #include "client.h"
 #include "entitylist.h"
 #include "gamerules.h"
-#include "hl2mp_gamerules.h"
 #include "soundent.h"
 #include "player.h"
 #include "server_class.h"
@@ -74,6 +73,7 @@
 
 #include "GameBase_Server.h"
 #include "GameBase_Shared.h"
+#include "ins_gamerules.h"
 
 extern IToolFrameworkServer *g_pToolFrameworkServer;
 extern IParticleSystemQuery *g_pParticleSystemQuery;
@@ -146,7 +146,6 @@ INetworkStringTable *g_pStringTableParticleEffectNames = NULL;
 INetworkStringTable *g_pStringTableEffectDispatch = NULL;
 INetworkStringTable *g_pStringTableVguiScreen = NULL;
 INetworkStringTable *g_pStringTableMaterials = NULL;
-INetworkStringTable *g_pStringTableInfoPanel = NULL;
 INetworkStringTable *g_pStringTableServerMapCycle = NULL;
 
 // Holds global variables shared between engine and game.
@@ -244,71 +243,6 @@ void			DrawMessageEntities();
 
 // For now just using one big AI network
 extern ConVar think_limit;
-
-#if 0
-//-----------------------------------------------------------------------------
-// Purpose: Draw output overlays for any measure sections
-// Input  : 
-//-----------------------------------------------------------------------------
-void DrawMeasuredSections(void)
-{
-	int		row = 1;
-	float	rowheight = 0.025;
-
-	CMeasureSection *p = CMeasureSection::GetList();
-	while ( p )
-	{
-		char str[256];
-		Q_snprintf(str,sizeof(str),"%s",p->GetName());
-		NDebugOverlay::ScreenText( 0.01,0.51+(row*rowheight),str, 255,255,255,255, 0.0 );
-		
-		Q_snprintf(str,sizeof(str),"%5.2f\n",p->GetTime().GetMillisecondsF());
-		//Q_snprintf(str,sizeof(str),"%3.3f\n",p->GetTime().GetSeconds() * 100.0 / engine->Time());
-		NDebugOverlay::ScreenText( 0.28,0.51+(row*rowheight),str, 255,255,255,255, 0.0 );
-
-		Q_snprintf(str,sizeof(str),"%5.2f\n",p->GetMaxTime().GetMillisecondsF());
-		//Q_snprintf(str,sizeof(str),"%3.3f\n",p->GetTime().GetSeconds() * 100.0 / engine->Time());
-		NDebugOverlay::ScreenText( 0.34,0.51+(row*rowheight),str, 255,255,255,255, 0.0 );
-
-
-		row++;
-
-		p = p->GetNext();
-	}
-
-	bool sort_reset = false;
-
-	// Time to redo sort?
-	if ( measure_resort.GetFloat() > 0.0 &&
-		engine->Time() >= CMeasureSection::m_dNextResort )
-	{
-		// Redo it
-		CMeasureSection::SortSections();
-		// Set next time
-		CMeasureSection::m_dNextResort = engine->Time() + measure_resort.GetFloat();
-		// Flag to reset sort accumulator, too
-		sort_reset = true;
-	}
-
-	// Iterate through the sections now
-	p = CMeasureSection::GetList();
-	while ( p )
-	{
-		// Update max 
-		p->UpdateMax();
-
-		// Reset regular accum.
-		p->Reset();
-		// Reset sort accum less often
-		if ( sort_reset )
-		{
-			p->SortReset();
-		}
-		p = p->GetNext();
-	}
-
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -561,18 +495,8 @@ bool CServerGameDLL::ReplayInit( CreateInterfaceFn fnReplayFactory )
 //-----------------------------------------------------------------------------
 float CServerGameDLL::GetTickInterval( void ) const
 {
-	float tickinterval = DEFAULT_MOD_TICK_INTERVAL;
-	if (engine->IsDedicatedServer() == false)
-		tickinterval = DEFAULT_TICK_INTERVAL;
+	float tickinterval = DEFAULT_TICK_INTERVAL;
 
-	//=============================================================================
-	// HPE_BEGIN:
-	// [Forrest] For Counter-Strike, set default tick rate of 66 and removed -tickrate command line parameter.
-	//=============================================================================
-	// Ignoring this for now, server ops are abusing it
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 	// override if tick rate specified in command line
 	if (CommandLine()->CheckParm("-tickrate"))
 	{
@@ -650,12 +574,11 @@ bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, 
 	//  to be parsed (the above code has loaded all point_template entities)
 	PrecachePointTemplates();
 
-	// load MOTD from file into stringtable
-	LoadMessageOfTheDay();
-
 	// Sometimes an ent will Remove() itself during its precache, so RemoveImmediate won't happen.
 	// This makes sure those ents get cleaned up.
 	gEntList.CleanupDeleteList();
+
+	SetupTeamLookup_VidInit();
 
 	return true;
 }
@@ -714,9 +637,6 @@ void CServerGameDLL::ServerActivate( edict_t *pEdictList, int edictCount, int cl
 	}
 
 	GameBaseServer()->PostInit();
-
-	if (GameBaseShared()->GetPlayerLoadoutHandler())
-		GameBaseShared()->GetPlayerLoadoutHandler()->SetMapTransit(false);
 }
 
 //-----------------------------------------------------------------------------
@@ -895,7 +815,6 @@ void CServerGameDLL::OnQueryCvarValueFinished( QueryCvarCookie_t iCookie, edict_
 {
 }
 
-
 // Called when a level is shutdown (including changing levels)
 void CServerGameDLL::LevelShutdown( void )
 {
@@ -930,10 +849,9 @@ ServerClass* CServerGameDLL::GetAllServerClasses()
 	return g_pServerClassHead;
 }
 
-
 const char *CServerGameDLL::GetGameDescription( void )
 {
-	return ::GetGameDescription();
+	return CINSRules::GetGameDescription();
 }
 
 void CServerGameDLL::CreateNetworkStringTables( void )
@@ -944,7 +862,6 @@ void CServerGameDLL::CreateNetworkStringTables( void )
 	g_pStringTableEffectDispatch = networkstringtable->CreateStringTable( "EffectDispatch", MAX_EFFECT_DISPATCH_STRINGS );
 	g_pStringTableVguiScreen = networkstringtable->CreateStringTable( "VguiScreen", MAX_VGUI_SCREEN_STRINGS );
 	g_pStringTableMaterials = networkstringtable->CreateStringTable( "Materials", MAX_MATERIAL_STRINGS );
-	g_pStringTableInfoPanel = networkstringtable->CreateStringTable( "InfoPanel", MAX_INFOPANEL_STRINGS );
 	g_pStringTableServerMapCycle = networkstringtable->CreateStringTable( "ServerMapCycle", 128 );
 
 	bool bPopFilesValid = true;
@@ -954,7 +871,6 @@ void CServerGameDLL::CreateNetworkStringTables( void )
 			g_pStringTableEffectDispatch &&
 			g_pStringTableVguiScreen &&
 			g_pStringTableMaterials &&
-			g_pStringTableInfoPanel &&
 			g_pStringTableServerMapCycle && 
 			bPopFilesValid
 			);
@@ -1130,10 +1046,6 @@ const char *CServerGameDLL::GetServerBrowserGameData()
 //-----------------------------------------------------------------------------
 void CServerGameDLL::Status( void (*print) (const char *fmt, ...) )
 {
-	if ( g_pGameRules )
-	{
-		g_pGameRules->Status( print );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1164,11 +1076,6 @@ IServerGameDLL::eCanProvideLevelResult CServerGameDLL::CanProvideLevel( /* in/ou
 //-----------------------------------------------------------------------------
 bool CServerGameDLL::IsManualMapChangeOkay( const char **pszReason )
 {
-	if ( GameRules() )
-	{
-		return GameRules()->IsManualMapChangeOkay( pszReason );
-	}
-
 	return true;
 }
 
@@ -1198,81 +1105,6 @@ static bool IsValidPath( const char *pszFilename )
 	}
 
 	return true;
-}
-
-static void ValidateMOTDFilename( IConVar *pConVar, const char *oldValue, float flOldValue )
-{
-	ConVarRef var( pConVar );
-	if ( !IsValidPath( var.GetString() ) )
-	{
-		var.SetValue( var.GetDefault() );
-	}
-}
-
-static ConVar motdfile( "motdfile", "motd.txt", 0, "The MOTD file to load.", ValidateMOTDFilename );
-static ConVar motdfile_text( "motdfile_text", "motd_text.txt", 0, "The text-only MOTD file to use for clients that have disabled HTML MOTDs.", ValidateMOTDFilename );
-void CServerGameDLL::LoadMessageOfTheDay()
-{
-	LoadSpecificMOTDMsg( motdfile, "motd" );
-	LoadSpecificMOTDMsg( motdfile_text, "motd_text" );
-}
-
-void CServerGameDLL::LoadSpecificMOTDMsg( const ConVar &convar, const char *pszStringName )
-{
-#ifndef _XBOX
-	CUtlBuffer buf;
-
-	// Generate preferred filename, which is in the cfg folder.
-	char szPreferredFilename[ MAX_PATH ];
-	V_sprintf_safe( szPreferredFilename, "cfg/%s", convar.GetString() );
-
-	// Check the preferred filename first
-	char szResolvedFilename[ MAX_PATH ];
-	V_strcpy_safe( szResolvedFilename, szPreferredFilename );
-	bool bFound = filesystem->ReadFile( szResolvedFilename, "GAME", buf );
-
-	// Not found?  Try in the root, which is the old place it used to go.
-	if ( !bFound )
-	{
-
-		V_strcpy_safe( szResolvedFilename, convar.GetString() );
-		bFound = filesystem->ReadFile( szResolvedFilename, "GAME", buf );
-	}
-
-	// Still not found?  See if we can try the default.
-	if ( !bFound && !V_stricmp( convar.GetString(), convar.GetDefault() ) )
-	{
-		V_strcpy_safe( szResolvedFilename, szPreferredFilename );
-		char *dotTxt = V_stristr( szResolvedFilename, ".txt" );
-		Assert ( dotTxt != NULL );
-		if ( dotTxt ) V_strcpy( dotTxt, "_default.txt" );
-		bFound = filesystem->ReadFile( szResolvedFilename, "GAME", buf );
-	}
-
-	if ( !bFound )
-	{
-		Msg( "'%s' not found; not loaded\n", szPreferredFilename );
-		return;
-	}
-
-	if ( buf.TellPut() > 2048 )
-	{
-		Warning("'%s' is too big; not loaded\n", szResolvedFilename );
-		return;
-	}
-	buf.PutChar( '\0' );
-
-	if ( V_stricmp( szPreferredFilename, szResolvedFilename ) == 0)
-	{
-		Msg( "Set %s from file '%s'\n", pszStringName, szResolvedFilename );
-	}
-	else
-	{
-		Msg( "Set %s from file '%s'.  ('%s' was not found.)\n", pszStringName, szResolvedFilename, szPreferredFilename );
-	}
-
-	g_pStringTableInfoPanel->AddString( CBaseEntity::IsServer(), pszStringName, buf.TellPut(), buf.Base() );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1689,10 +1521,6 @@ void CServerGameClients::ClientActive( edict_t *pEdict, bool bLoadGame )
 //-----------------------------------------------------------------------------
 void CServerGameClients::ClientSpawned( edict_t *pPlayer )
 {
-	if ( g_pGameRules )
-	{
-		g_pGameRules->ClientSpawned( pPlayer );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1701,37 +1529,29 @@ void CServerGameClients::ClientSpawned( edict_t *pPlayer )
 //-----------------------------------------------------------------------------
 void CServerGameClients::ClientDisconnect( edict_t *pEdict )
 {
-	extern bool	g_fGameOver;
-
 	CBasePlayer *player = ( CBasePlayer * )CBaseEntity::Instance( pEdict );
 	if ( player )
 	{
-		if (GameBaseShared()->GetPlayerLoadoutHandler())
-			GameBaseShared()->GetPlayerLoadoutHandler()->RemoveDataForPlayer(player);
+		player->SetMaxSpeed(0.0f);
 
-		if ( !g_fGameOver )
+		CSound* pSound;
+		pSound = CSoundEnt::SoundPointerForIndex(CSoundEnt::ClientSoundIndex(pEdict));
 		{
-			player->SetMaxSpeed( 0.0f );
-
-			CSound *pSound;
-			pSound = CSoundEnt::SoundPointerForIndex( CSoundEnt::ClientSoundIndex( pEdict ) );
+			// since this client isn't around to think anymore, reset their sound. 
+			if (pSound)
 			{
-				// since this client isn't around to think anymore, reset their sound. 
-				if ( pSound )
-				{
-					pSound->Reset();
-				}
+				pSound->Reset();
 			}
+		}
 
 		// since the edict doesn't get deleted, fix it so it doesn't interfere.
-			player->AddFlag( FL_DONTTOUCH );	// stop it touching anything
-			player->AddFlag( FL_NOTARGET );	// stop NPCs noticing it
-			player->AddSolidFlags( FSOLID_NOT_SOLID );		// nonsolid
+		player->AddFlag(FL_DONTTOUCH);	// stop it touching anything
+		//player->AddFlag( FL_NOTARGET );	// stop NPCs noticing it
+		player->AddSolidFlags(FSOLID_NOT_SOLID);		// nonsolid
 
-			if ( g_pGameRules )
-			{
-				g_pGameRules->ClientDisconnected( pEdict );
-			}
+		if (g_pGameRules)
+		{
+			g_pGameRules->ClientDisconnected(pEdict);
 		}
 
 		// Make sure all Untouch()'s are called for this client leaving
@@ -1771,18 +1591,13 @@ void CServerGameClients::ClientSettingsChanged( edict_t *pEdict )
 	if ( !pEdict->GetUnknown() )
 		return;
 
-	CHL2MP_Player *player = ToHL2MPPlayer(CBaseEntity::Instance(pEdict));	
-	if ( !player )
+	CBasePlayer* player = ToBasePlayer(CBaseEntity::Instance(pEdict));
+	if (!player)
 		return;
-
-	bool bAllowNetworkingClientSettingsChange = g_pGameRules->IsConnectedUserInfoChangeAllowed( player );
-	if ( bAllowNetworkingClientSettingsChange )
-	{
 
 #define QUICKGETCVARVALUE(v) (engine->GetClientConVarValue( player->entindex(), v ))
 
-	// get network setting for prediction & lag compensation
-	
+	// get network setting for prediction & lag compensation	
 	// Unfortunately, we have to duplicate the code in cdll_bounded_cvars.cpp here because the client
 	// doesn't send the virtualized value up (because it has no way to know when the virtualized value
 	// changes). Possible todo: put the responsibility on the bounded cvar to notify the engine when
@@ -1833,11 +1648,7 @@ void CServerGameClients::ClientSettingsChanged( edict_t *pEdict )
 		player->m_bPredictWeapons  = false;
 	}
 
-	bool bAutoReloadWeapons = Q_atoi(QUICKGETCVARVALUE("bb2_weapon_autoreload")) > 0;
-	player->m_BB2Local.m_bEnableAutoReload.Set(bAutoReloadWeapons);
-
-#undef QUICKGETCVARVALUE
-	}
+#undef QUICKGETCVARVALUE	
 
 	g_pGameRules->ClientSettingsChanged( player );
 }
@@ -1883,7 +1694,7 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 	{
 		org = pPlayer->EyePosition();
 		pPlayer->SetupVisibility( pVE, pvs, pvssize );
-		fovDistanceAdjustFactor = pPlayer->GetFOVDistanceAdjustFactorForNetworking();
+		fovDistanceAdjustFactor = pPlayer->GetFOVDistanceAdjustFactor();
 	}
 
 	unsigned char portalBits[MAX_AREA_PORTAL_STATE_BYTES];
@@ -2008,7 +1819,6 @@ float CServerGameClients::ProcessUsercmds( edict_t *player, bf_read *buf, int nu
 	return TICK_INTERVAL;
 }
 
-
 void CServerGameClients::PostClientMessagesSent_DEPRECIATED( void )
 {
 }
@@ -2030,7 +1840,6 @@ int	CServerGameClients::GetReplayDelay( edict_t *pEdict, int &entity )
 
 	return pPlayer->GetDelayTicks();
 }
-
 
 //-----------------------------------------------------------------------------
 // The client's userinfo data lump has changed
@@ -2091,10 +1900,7 @@ void CServerGameClients::ClientCommandKeyValues( edict_t *pEntity, KeyValues *pK
 	if ( !pKeyValues )
 		return;
 
-	if ( g_pGameRules )
-	{
-		g_pGameRules->ClientCommandKeyValues( pEntity, pKeyValues );
-	}
+	// TODO ?
 }
 
 //-----------------------------------------------------------------------------
@@ -2329,16 +2135,15 @@ private:
 
 EXPOSE_SINGLE_INTERFACE( CServerDLLSharedAppSystems, IServerDLLSharedAppSystems, SERVER_DLL_SHARED_APPSYSTEMS );
 
-
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 void CServerGameTags::GetTaggedConVarList( KeyValues *pCvarTagList )
 {
-	if ( pCvarTagList && g_pGameRules )
-	{
-		g_pGameRules->GetTaggedConVarList( pCvarTagList );
-	}
+	if (!pCvarTagList)
+		return;
+	
+	// TODO ?
 }
 
 #ifndef NO_STEAM

@@ -8,8 +8,6 @@
 #include "c_basetempentity.h"
 #include <cliententitylist.h>
 #include "c_te_effect_dispatch.h"
-#include "c_hl2mp_player.h"
-#include "c_playermodel.h"
 #include "c_client_gib.h"
 #include "GameBase_Shared.h"
 
@@ -31,11 +29,12 @@ public:
 
 void C_TEPlayerGib::PostDataUpdate(DataUpdateType_t updateType)
 {
-	C_HL2MP_Player *pPlayer = ToHL2MPPlayer(UTIL_PlayerByIndex(m_iIndex));
+	C_BasePlayer *pPlayer = ToBasePlayer(UTIL_PlayerByIndex(m_iIndex));
 	if ((pPlayer == NULL) || (pPlayer->GetNewPlayerModel() == NULL))
 		return;
 
-	SpawnGibOrRagdollForPlayer(pPlayer->GetNewPlayerModel(), m_iIndex, pPlayer->GetTeamNumber(), pPlayer->GetSurvivorChoice(), m_iFlags, m_iType, m_vecOrigin, m_vecVelocity, m_angRotation);
+	// pPlayer->GetSurvivorChoice() -- todo
+	SpawnGibOrRagdollForPlayer(pPlayer->GetNewPlayerModel(), m_iIndex, pPlayer->GetTeamNumber(), "survivorX", m_iFlags, m_iType, m_vecOrigin, m_vecVelocity, m_angRotation);
 }
 
 IMPLEMENT_CLIENTCLASS_EVENT(C_TEPlayerGib, DT_TEPlayerGib, CTEPlayerGib);
@@ -53,15 +52,18 @@ END_RECV_TABLE()
 
 void SpawnGibOrRagdollForPlayer(C_BaseAnimating *pFrom, int index, int team, const char *survivor, int flags, int type, const Vector &origin, const Vector &velocity, const QAngle &angles)
 {
-	const DataPlayerItem_Survivor_Shared_t *data = GameBaseShared()->GetSharedGameDetails()->GetSurvivorDataForIndex(survivor);
-	if (data == NULL || pFrom == NULL)
-		return;
+	// TODO -- MAKE GIBS A THING IN INS CLASSIC?
+
+	//const DataPlayerItem_Survivor_Shared_t *data = GameBaseShared()->GetSharedGameDetails()->GetSurvivorDataForIndex(survivor);
+	//if (data == NULL || pFrom == NULL)
+	//	return;
 
 	const model_t *model = NULL;
-	if (type == CLIENT_RAGDOLL)
-		model = (team == TEAM_DECEASED) ? data->m_pClientModelPtrZombie : data->m_pClientModelPtrHuman;
-	else
-		model = GameBaseShared()->GetSharedGameDetails()->GetPlayerGibModelPtrForGibID((*data), !(team == TEAM_DECEASED), flags);
+
+	//if (type == CLIENT_RAGDOLL)
+	//	model = (team == TEAM_ONE) ? data->m_pClientModelPtrZombie : data->m_pClientModelPtrHuman;
+	//else
+	//	model = GameBaseShared()->GetSharedGameDetails()->GetPlayerGibModelPtrForGibID((*data), !(team == TEAM_DECEASED), flags);
 
 	if (model == NULL)
 		return;
@@ -93,10 +95,10 @@ void SpawnGibOrRagdollForPlayer(C_BaseAnimating *pFrom, int index, int team, con
 		Assert(pRagdoll != NULL);
 
 		pRagdoll->m_nGibFlags = flags;
-		pRagdoll->SetPlayerLink(index, team, data->szSurvivorName);
+		pRagdoll->SetPlayerLink(index, team, "survivorX");
 
-		if (index == GetLocalPlayerIndex())
-			m_pPlayerRagdoll = pRagdoll;
+		//if (index == GetLocalPlayerIndex())
+		//	m_pPlayerRagdoll = pRagdoll;
 
 		OnClientPlayerRagdollSpawned(pRagdoll, flags);
 	}

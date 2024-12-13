@@ -167,7 +167,6 @@ protected:
 protected:
 	ScrollBar			*_vertScrollBar;	// the scroll bar used in the window
 
-private:
 	int GetLineHeight();
 	HFont GetDefaultFont();
 

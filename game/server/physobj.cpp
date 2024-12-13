@@ -1005,7 +1005,7 @@ void CPhysExplosion::Explode( CBaseEntity *pActivator, CBaseEntity *pCaller )
 
 							CBasePlayer *pPlayer = ToBasePlayer( pEntity );
 							pPlayer->SnapEyeAngles( GetLocalAngles() + vecDeltaAngles );
-							pEntity->ViewPunch( vecDeltaAngles );
+							pPlayer->ViewPunch( vecDeltaAngles );
 						}
 
 						Vector vecPush = (vecPushDir*m_damage*flFalloff*2.0f);

@@ -8,7 +8,6 @@
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterialproxy.h"
 #include "baseviewmodel_shared.h"
-#include "c_hl2mp_player.h"
 #include "toolframework_client.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -60,7 +59,7 @@ void C_TeamTextureProxy::OnBind(void* pC_BaseEntity)
 	if (alpha == NULL)
 		return;
 
-	C_HL2MP_Player *pLocal = C_HL2MP_Player::GetLocalHL2MPPlayer();
+	C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
 	if (!pLocal)
 		return;
 

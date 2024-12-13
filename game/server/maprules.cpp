@@ -39,15 +39,12 @@ BEGIN_DATADESC( CRuleEntity )
 
 END_DATADESC()
 
-
-
 void CRuleEntity::Spawn( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
 	AddEffects( EF_NODRAW );
 }
-
 
 bool CRuleEntity::CanFireForActivator( CBaseEntity *pActivator )
 {
@@ -101,151 +98,11 @@ void CRuleBrushEntity::Spawn( void )
 	BaseClass::Spawn();
 }
 
-
-// CGameScore / game_score	-- award points to player / team 
-//	Points +/- total
-//	Flag: Allow negative scores					SF_SCORE_NEGATIVE
-//	Flag: Award points to team in teamplay		SF_SCORE_TEAM
-
-#define SF_SCORE_NEGATIVE			0x0001
-#define SF_SCORE_TEAM				0x0002
-
-class CGameScore : public CRulePointEntity
-{
-public:
-	DECLARE_CLASS( CGameScore, CRulePointEntity );
-	DECLARE_DATADESC();
-
-	void	Spawn( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	bool	KeyValue( const char *szKeyName, const char *szValue );
-
-	inline	int		Points( void ) { return m_Score; }
-	inline	bool	AllowNegativeScore( void ) { return m_spawnflags & SF_SCORE_NEGATIVE; }
-	inline	int		AwardToTeam( void ) { return (m_spawnflags & SF_SCORE_TEAM); }
-
-	inline	void	SetPoints( int points ) { m_Score = points; }
-
-	void InputApplyScore( inputdata_t &inputdata );
-
-private:
-};
-
-LINK_ENTITY_TO_CLASS( game_score, CGameScore );
-
-BEGIN_DATADESC( CGameScore )
-	// Inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "ApplyScore", InputApplyScore ),
-END_DATADESC()
-
-void CGameScore::Spawn( void )
-{
-	int iScore = Points();
-	BaseClass::Spawn();
-	SetPoints( iScore );
-}
-
-
-bool CGameScore::KeyValue( const char *szKeyName, const char *szValue )
-{
-	if (FStrEq(szKeyName, "points"))
-	{
-		SetPoints( atoi(szValue) );
-	}
-	else
-		return BaseClass::KeyValue( szKeyName, szValue );
-
-	return true;
-}
-
-void CGameScore::InputApplyScore( inputdata_t &inputdata )
-{
-	CBaseEntity *pActivator = inputdata.pActivator;
-
-	if ( pActivator == NULL )
-		 return;
-
-	if ( CanFireForActivator( pActivator ) == false )
-		return;
-
-	// Only players can use this
-	if ( pActivator->IsPlayer() )
-	{
-		if ( AwardToTeam() )
-		{
-			pActivator->AddPointsToTeam( Points(), AllowNegativeScore() );
-		}
-		else
-		{
-			pActivator->AddPoints( Points(), AllowNegativeScore() );
-		}
-	}
-}
-
-void CGameScore::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	if ( !CanFireForActivator( pActivator ) )
-		return;
-
-	// Only players can use this
-	if ( pActivator->IsPlayer() )
-	{
-		if ( AwardToTeam() )
-		{
-			pActivator->AddPointsToTeam( Points(), AllowNegativeScore() );
-		}
-		else
-		{
-			pActivator->AddPoints( Points(), AllowNegativeScore() );
-		}
-	}
-}
-
-
-// CGameEnd / game_end	-- Ends the game in MP
-
-class CGameEnd : public CRulePointEntity
-{
-	DECLARE_CLASS( CGameEnd, CRulePointEntity );
-
-public:
-	DECLARE_DATADESC();
-
-	void	InputGameEnd( inputdata_t &inputdata );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-private:
-};
-
-BEGIN_DATADESC( CGameEnd )
-
-	// inputs
-	DEFINE_INPUTFUNC( FIELD_VOID, "EndGame", InputGameEnd ),
-
-END_DATADESC()
-
-LINK_ENTITY_TO_CLASS( game_end, CGameEnd );
-
-
-void CGameEnd::InputGameEnd( inputdata_t &inputdata )
-{
-	g_pGameRules->EndMultiplayerGame();
-}
-
-void CGameEnd::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	if ( !CanFireForActivator( pActivator ) )
-		return;
-
-	g_pGameRules->EndMultiplayerGame();
-}
-
-
 //
 // CGameText / game_text	-- NON-Localized HUD Message (use env_message to display a titles.txt message)
 //	Flag: All players					SF_ENVTEXT_ALLPLAYERS
 //
 #define SF_ENVTEXT_ALLPLAYERS			0x0001
-
 
 class CGameText : public CRulePointEntity
 {
@@ -295,8 +152,6 @@ BEGIN_DATADESC( CGameText )
 
 END_DATADESC()
 
-
-
 bool CGameText::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "color"))
@@ -323,7 +178,6 @@ bool CGameText::KeyValue( const char *szKeyName, const char *szValue )
 	return true;
 }
 
-
 void CGameText::InputDisplay( inputdata_t &inputdata )
 {
 	Display( inputdata.pActivator );
@@ -344,56 +198,6 @@ void CGameText::Display( CBaseEntity *pActivator )
 		UTIL_HudMessage(ToBasePlayer(pActivator), m_textParms, MessageGet());
 	}
 }
-
-
-/* TODO: Replace with an entity I/O version
-//
-// CGameTeamSet / game_team_set	-- Changes the team of the entity it targets to the activator's team
-// Flag: Fire once
-// Flag: Clear team				-- Sets the team to "NONE" instead of activator
-
-#define SF_TEAMSET_FIREONCE			0x0001
-#define SF_TEAMSET_CLEARTEAM		0x0002
-
-class CGameTeamSet : public CRulePointEntity
-{
-public:
-	DECLARE_CLASS( CGameTeamSet, CRulePointEntity );
-
-	inline bool RemoveOnFire( void ) { return (m_spawnflags & SF_TEAMSET_FIREONCE) ? true : false; }
-	inline bool ShouldClearTeam( void ) { return (m_spawnflags & SF_TEAMSET_CLEARTEAM) ? true : false; }
-	void InputTrigger( inputdata_t &inputdata );
-
-private:
-	COutputEvent m_OnTrigger;
-};
-
-LINK_ENTITY_TO_CLASS( game_team_set, CGameTeamSet );
-
-
-void CGameTeamSet::InputTrigger( inputdata_t &inputdata )
-{
-	if ( !CanFireForActivator( inputdata.pActivator ) )
-		return;
-
-	if ( ShouldClearTeam() )
-	{
-		// clear the team of our target
-	}
-	else
-	{
-		// set the team of our target to our activator's team
-	}
-
-	m_OnTrigger.FireOutput(pActivator, this);
-
-	if ( RemoveOnFire() )
-	{
-		UTIL_Remove( this );
-	}
-}
-*/
-
 
 //
 // CGamePlayerZone / game_player_zone -- players in the zone fire my target when I'm fired
@@ -429,7 +233,6 @@ BEGIN_DATADESC( CGamePlayerZone )
 	DEFINE_OUTPUT(m_PlayersOutCount, "PlayersOutCount"),
 
 END_DATADESC()
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Counts all the players in the zone. Fires one output per player
@@ -479,220 +282,3 @@ void CGamePlayerZone::InputCountPlayersInZone(inputdata_t& inputdata)
 	m_PlayersInCount.Set(playersInCount, inputdata.pActivator, this);
 	m_PlayersOutCount.Set(playersOutCount, inputdata.pActivator, this);
 }
-
-
-/*
-// Disable.  Eventually will be replace by new activator filter entities.  (LHL)
-//
-// CGamePlayerHurt / game_player_hurt	-- Damages the player who fires it
-// Flag: Fire once
-
-#define SF_PKILL_FIREONCE			0x0001
-class CGamePlayerHurt : public CRulePointEntity
-{
-public:
-	DECLARE_CLASS( CGamePlayerHurt, CRulePointEntity );
-
-	void		Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	inline bool RemoveOnFire( void ) { return (m_spawnflags & SF_PKILL_FIREONCE) ? true : false; }
-
-	DECLARE_DATADESC();
-
-private:
-	
-	float m_flDamage;		// Damage to inflict, negative values give health.
-
-	COutputEvent m_OnUse;
-};
-
-LINK_ENTITY_TO_CLASS( game_player_hurt, CGamePlayerHurt );
-
-
-BEGIN_DATADESC( CGamePlayerHurt )
-
-	DEFINE_KEYFIELD( m_flDamage, FIELD_FLOAT, "dmg" ),
-
-END_DATADESC()
-
-
-
-void CGamePlayerHurt::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	if ( !CanFireForActivator( pActivator ) )
-		return;
-
-	if ( pActivator->IsPlayer() )
-	{
-		if ( m_flDamage < 0 )
-		{
-			pActivator->TakeHealth( -m_flDamage, DMG_GENERIC );
-		}
-		else
-		{
-			pActivator->TakeDamage( this, this, m_flDamage, DMG_GENERIC );
-		}
-	}
-	
-	SUB_UseTargets( pActivator, useType, value );
-	m_OnUse.FireOutput(pActivator, this); // dvsents2: handle useType and value here - they are passed through
-
-	if ( RemoveOnFire() )
-	{
-		UTIL_Remove( this );
-	}
-}
-*/
-
-//
-// CGamePlayerEquip / game_playerequip	-- Sets the default player equipment
-// Flag: USE Only
-
-#define SF_PLAYEREQUIP_USEONLY			0x0001
-#define MAX_EQUIP		32
-
-class CGamePlayerEquip : public CRulePointEntity
-{
-public:
-	DECLARE_CLASS( CGamePlayerEquip, CRulePointEntity );
-
-	bool		KeyValue( const char *szKeyName, const char *szValue );
-	void		Touch( CBaseEntity *pOther );
-	void		Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-
-	inline bool	UseOnly( void ) { return (m_spawnflags & SF_PLAYEREQUIP_USEONLY) ? true : false; }
-
-private:
-
-	void		EquipPlayer( CBaseEntity *pPlayer );
-
-	string_t	m_weaponNames[MAX_EQUIP];
-	int			m_weaponCount[MAX_EQUIP];
-};
-
-LINK_ENTITY_TO_CLASS( game_player_equip, CGamePlayerEquip );
-
-bool CGamePlayerEquip::KeyValue( const char *szKeyName, const char *szValue )
-{
-	if ( !BaseClass::KeyValue( szKeyName, szValue ) )
-	{
-		for ( int i = 0; i < MAX_EQUIP; i++ )
-		{
-			if ( !m_weaponNames[i] )
-			{
-				char tmp[128];
-
-				UTIL_StripToken( szKeyName, tmp );
-
-				m_weaponNames[i] = AllocPooledString(tmp);
-				m_weaponCount[i] = atoi(szValue);
-				m_weaponCount[i] = MAX(1,m_weaponCount[i]);
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-
-void CGamePlayerEquip::Touch( CBaseEntity *pOther )
-{
-	if ( !CanFireForActivator( pOther ) )
-		return;
-
-	if ( UseOnly() )
-		return;
-
-	EquipPlayer( pOther );
-}
-
-void CGamePlayerEquip::EquipPlayer( CBaseEntity *pEntity )
-{
-	CBasePlayer *pPlayer = ToBasePlayer(pEntity);
-
-	if ( !pPlayer )
-		return;
-
-	for ( int i = 0; i < MAX_EQUIP; i++ )
-	{
-		if ( !m_weaponNames[i] )
-			break;
-		for ( int j = 0; j < m_weaponCount[i]; j++ )
-		{
- 			pPlayer->GiveNamedItem( STRING(m_weaponNames[i]) );
-		}
-	}
-}
-
-
-void CGamePlayerEquip::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	EquipPlayer( pActivator );
-}
-
-
-//
-// CGamePlayerTeam / game_player_team	-- Changes the team of the player who fired it
-// Flag: Fire once
-// Flag: Kill Player
-// Flag: Gib Player
-
-#define SF_PTEAM_FIREONCE			0x0001
-#define SF_PTEAM_KILL    			0x0002
-#define SF_PTEAM_GIB     			0x0004
-
-class CGamePlayerTeam : public CRulePointEntity
-{
-public:
-	DECLARE_CLASS( CGamePlayerTeam, CRulePointEntity );
-
-	void		Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-
-private:
-
-	inline bool RemoveOnFire( void ) { return (m_spawnflags & SF_PTEAM_FIREONCE) ? true : false; }
-	inline bool ShouldKillPlayer( void ) { return (m_spawnflags & SF_PTEAM_KILL) ? true : false; }
-	inline bool ShouldGibPlayer( void ) { return (m_spawnflags & SF_PTEAM_GIB) ? true : false; }
-	
-	const char *TargetTeamName( const char *pszTargetName, CBaseEntity *pActivator );
-};
-
-LINK_ENTITY_TO_CLASS( game_player_team, CGamePlayerTeam );
-
-
-const char *CGamePlayerTeam::TargetTeamName( const char *pszTargetName, CBaseEntity *pActivator )
-{
-	CBaseEntity *pTeamEntity = NULL;
-
-	while ((pTeamEntity = gEntList.FindEntityByName( pTeamEntity, pszTargetName, NULL, pActivator )) != NULL)
-	{
-		if ( FClassnameIs( pTeamEntity, "game_team_master" ) )
-			return pTeamEntity->TeamID();
-	}
-
-	return NULL;
-}
-
-
-void CGamePlayerTeam::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	if ( !CanFireForActivator( pActivator ) )
-		return;
-
-	if ( pActivator->IsPlayer() )
-	{
-		const char *pszTargetTeam = TargetTeamName( STRING(m_target), pActivator );
-		if ( pszTargetTeam )
-		{
-			CBasePlayer *pPlayer = (CBasePlayer *)pActivator;
-			g_pGameRules->ChangePlayerTeam( pPlayer, pszTargetTeam, ShouldKillPlayer(), ShouldGibPlayer() );
-		}
-	}
-	
-	if ( RemoveOnFire() )
-	{
-		UTIL_Remove( this );
-	}
-}
-
-

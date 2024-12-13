@@ -235,35 +235,6 @@ protected:
 	int m_iTeamLink;
 };
 
-#ifndef CLIENT_DLL
-class CBaseCombatWeapon;
-class CTraceFilterRealtime : public CBulletsTraceFilter // Used for lag comp and melee traces.
-{
-public:
-	DECLARE_CLASS(CTraceFilterRealtime, CBulletsTraceFilter);
-	CTraceFilterRealtime(IHandleEntity *pHandleEntity, int collisionGroup, int team, CBaseCombatWeapon *pWeapon);
-	virtual bool ShouldHitEntity(IHandleEntity *pHandleEntity, int contentsMask);
-
-protected:
-	CHandle<CBaseCombatWeapon> m_hWeaponLink;
-};
-
-class CTraceFilterNAVObstacle : public CTraceFilterSimple
-{
-public:
-	CTraceFilterNAVObstacle(const IHandleEntity *passentity, int collisionGroup) : CTraceFilterSimple(passentity, collisionGroup)
-	{
-	}
-
-	TraceType_t	GetTraceType() const
-	{
-		return TRACE_ENTITIES_ONLY;
-	}
-
-	bool ShouldHitEntity(IHandleEntity *pHandleEntity, int contentsMask);
-};
-#endif
-
 // helper
 void DebugDrawLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, int r, int g, int b, bool test, float duration );
 

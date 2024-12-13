@@ -61,7 +61,6 @@ class CTakeDamageInfo;
 class C_BaseCombatCharacter;
 class CEntityMapData;
 class ConVar;
-class CDmgAccumulator;
 class IHasAttributes;
 
 struct CSoundParameters;
@@ -198,15 +197,11 @@ public:
 
 	// FireBullets uses shared code for prediction.
 	virtual void					FireBullets(const FireBulletsInfo_t &info);
-	virtual float                   FirePenetrativeBullet(const FireBulletsInfo_t &info, Vector &vecStart, Vector &vecDir, CBaseEntity *pAttacker, CBaseEntity *pIgnore, int dmgType);
 	virtual void					ModifyFireBulletsDamage(CTakeDamageInfo* dmgInfo) {}
-	virtual bool					ShouldDrawUnderwaterBulletBubbles();
 	virtual bool					ShouldDrawWaterImpacts(void) { return true; }
-	virtual bool					HandleShotImpactingWater(const FireBulletsInfo_t &info,
-		const Vector &vecEnd, ITraceFilter *pTraceFilter, Vector *pVecTracerDest);
 	virtual ITraceFilter*			GetBeamTraceFilter(void);
-	virtual void					DispatchTraceAttack(const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator = NULL);
-	virtual void					TraceAttack(const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator = NULL);
+	virtual void					DispatchTraceAttack(const CTakeDamageInfo& info, const Vector& vecDir, trace_t* ptr);
+	virtual void					TraceAttack(const CTakeDamageInfo& info, const Vector& vecDir, trace_t* ptr);
 	virtual void					DoImpactEffect(trace_t &tr, int nDamageType);
 	virtual void					MakeTracer(const Vector &vecTracerSrc, const trace_t &tr, int iTracerType);
 	virtual int						GetTracerAttachment(void);
@@ -220,6 +215,7 @@ public:
 	virtual void					Precache(void);
 	virtual void					Activate();
 	virtual void                    OnDormantStateChange(void) { }
+	virtual int						ActionType(void) const { return -1; }
 
 	virtual void					ParseMapData(CEntityMapData *mapData);
 	virtual bool					KeyValue(const char *szKeyName, const char *szValue);
@@ -571,9 +567,6 @@ public:
 	virtual C_Team					*GetTeam(void);
 	virtual int						GetTeamNumber(void) const;
 	virtual void					ChangeTeam(int iTeamNum);			// Assign this entity to a team.
-	virtual int						GetRenderTeamNumber(void);
-	virtual bool					InSameTeam(C_BaseEntity *pEntity);	// Returns true if the specified entity is on the same team as this one
-	virtual bool					InLocalTeam(void);
 
 	// ID Target handling
 	virtual bool					IsValidIDTarget(void) { return false; }
@@ -609,11 +602,6 @@ public:
 	// These files need to be listed in scripts/game_sounds_manifest.txt
 	static HSOUNDSCRIPTHANDLE PrecacheScriptSound(const char *soundname);
 	static void PrefetchScriptSound(const char *soundname);
-
-	// For each client who appears to be a valid recipient, checks the client has disabled CC and if so, removes them from 
-	//  the recipient list.
-	static void RemoveRecipientsIfNotCloseCaptioning(C_RecipientFilter& filter);
-	static void EmitCloseCaption(IRecipientFilter& filter, int entindex, char const *token, CUtlVector< Vector >& soundorigins, float duration, bool warnifmissing = false);
 
 	// Moves all aiments into their correct position for the frame
 	static void	MarkAimEntsDirty();
@@ -940,7 +928,6 @@ public:
 
 	// Remove this as ground entity for all object resting on this object
 	void					WakeRestingObjects();
-	bool					HasNPCsOnIt();
 
 	bool					PhysicsCheckWater(void);
 	void					PhysicsCheckVelocity(void);
@@ -1005,6 +992,7 @@ public:
 	virtual bool					IsBaseCombatWeapon(void) const { return false; }
 	virtual class C_BaseCombatWeapon		*MyCombatWeaponPointer() { return NULL; }
 	virtual bool					IsBaseTrain(void) const { return false; }
+	virtual C_BaseAnimating*		GetNewPlayerModel() { return NULL; } // client-side plr model helper
 
 	// Returns the eye point + angles (used for viewing + shooting)
 	virtual Vector			EyePosition(void);
@@ -1338,9 +1326,6 @@ public:
 
 	// was pev->speed
 	float							m_flSpeed;
-
-	// Team Handling
-	int								m_iTeamNum;
 
 #if !defined( NO_ENTITY_PREDICTION )
 	// Certain entities (projectiles) can be created on the client

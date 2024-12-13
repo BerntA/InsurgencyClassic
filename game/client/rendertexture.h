@@ -30,4 +30,6 @@ ITexture *GetTeenyTexture(int which);						// tiny 32x32 texture, always 8888
 
 void ReleaseRenderTargets( void );
 
+ITexture* GetScopeTexture(void);
+
 #endif // RENDERTARGETS_H

@@ -38,7 +38,7 @@ private:
 };
 
 extern CGlowObjectManager g_GlowObjectManager;
-extern ConVar bb2_max_glow_effects;
+extern ConVar ins_max_glow_effects;
 
 #endif // GLOWS_ENABLE
 

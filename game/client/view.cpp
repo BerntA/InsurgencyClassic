@@ -306,6 +306,9 @@ void CViewRender::LevelInit( void )
 	}
 	m_flFreezeFrameUntil = 0;
 
+	m_flMotionBlurDrawTime = 0.0f;
+	m_bPainEffectInitialized = false;
+
 	// Clear our overlay materials
 	m_ScreenOverlayMaterial.Init( NULL );
 
@@ -461,58 +464,7 @@ StereoEye_t		CViewRender::GetLastEye() const
 void CViewRender::OnRenderStart()
 {
 	VPROF_("CViewRender::OnRenderStart", 2, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0);
-
     SetUpViews();
-
-	// Adjust mouse sensitivity based upon the current FOV
-	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
-	if ( player )
-	{
-		default_fov.SetValue( player->m_iDefaultFOV );
-
-		//Update our FOV, including any zooms going on
-		int iDefaultFOV = default_fov.GetInt();
-		int	localFOV	= player->GetFOV();
-		int min_fov		= player->GetMinFOV();
-
-		// Don't let it go too low
-		localFOV = MAX( min_fov, localFOV );
-
-		gHUD.m_flFOVSensitivityAdjust = 1.0f;
-#ifndef _XBOX
-		if ( gHUD.m_flMouseSensitivityFactor )
-		{
-			gHUD.m_flMouseSensitivity = sensitivity.GetFloat() * gHUD.m_flMouseSensitivityFactor;
-		}
-		else
-#endif
-		{
-			// No override, don't use huge sensitivity
-			if ( localFOV == iDefaultFOV )
-			{
-#ifndef _XBOX
-				// reset to saved sensitivity
-				gHUD.m_flMouseSensitivity = 0;
-#endif
-			}
-			else
-			{  
-				// Set a new sensitivity that is proportional to the change from the FOV default and scaled
-				//  by a separate compensating factor
-				if ( iDefaultFOV == 0 )
-				{
-					Assert(0); // would divide by zero, something is broken with iDefatulFOV
-					iDefaultFOV = 1;
-				}
-				gHUD.m_flFOVSensitivityAdjust = 
-					((float)localFOV / (float)iDefaultFOV) * // linear fov downscale
-					zoom_sensitivity_ratio.GetFloat(); // sensitivity scale factor
-#ifndef _XBOX
-				gHUD.m_flMouseSensitivity = gHUD.m_flFOVSensitivityAdjust * sensitivity.GetFloat(); // regular sensitivity
-#endif
-			}
-		}
-	}
 }
 
 
@@ -634,7 +586,7 @@ void CViewRender::SetUpViews()
 			// If we are looking through another entities eyes, then override the angles/origin for view
 			int viewentity = render->GetViewEntity();
 
-			if ( pPlayer->entindex() != viewentity )
+			if (pPlayer->entindex() != viewentity)
 			{
 				C_BaseEntity *ve = cl_entitylist->GetEnt( viewentity );
 				if ( ve )
@@ -678,11 +630,10 @@ void CViewRender::SetUpViews()
 	}
 
 	//Find the offset our current FOV is from the default value
-	float fDefaultFov = default_fov.GetFloat();
-	float flFOVOffset = fDefaultFov - view.fov;
+	float flFOVOffset = (g_pGameRules == NULL) ? 0.0f : (g_pGameRules->DefaultFOV() - view.fov);
 
 	//Adjust the viewmodel's FOV to move with any FOV offsets on the viewer's end
-	view.fovViewmodel = abs(g_pClientMode->GetViewModelFOV() - flFOVOffset);
+	view.fovViewmodel = (g_pClientMode->GetViewModelFOV() - flFOVOffset);
 
 	// left and right stereo views should default to being the same as the mono/middle view
 	m_ViewLeft = m_View;
@@ -734,9 +685,6 @@ void CViewRender::SetUpViews()
 	s_DbgSetupAngles = view.angles;
 #endif
 }
-
-
-
 
 void CViewRender::WriteSaveGameScreenshotOfSize( const char *pFilename, int width, int height, bool bCreatePowerOf2Padded/*=false*/,
 												 bool bWriteVTF/*=false*/ )
@@ -901,7 +849,6 @@ void CViewRender::WriteSaveGameScreenshot( const char *pFilename )
 {
 	WriteSaveGameScreenshotOfSize( pFilename, SAVEGAME_SCREENSHOT_WIDTH, SAVEGAME_SCREENSHOT_HEIGHT );
 }
-
 
 float ScaleFOVByWidthRatio( float fovDegrees, float ratio )
 {
@@ -1125,9 +1072,6 @@ void CViewRender::Render( vrect_t *rect )
 	render->PopView(GetFrustum());
 }
 
-
-
-
 static void GetPos( const CCommand &args, Vector &vecOrigin, QAngle &angles )
 {
 	vecOrigin = MainViewOrigin();
@@ -1169,4 +1113,3 @@ CON_COMMAND( getpos, "dump position and angles to the console" )
 	Warning( "%s %f %f %f;", pCommand1, vecOrigin.x, vecOrigin.y, vecOrigin.z );
 	Warning( "%s %f %f %f\n", pCommand2, angles.x, angles.y, angles.z );
 }
-

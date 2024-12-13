@@ -49,7 +49,6 @@ static IClientNetworkable* ClientWorldFactory( int entnum, int serialNum )
 IMPLEMENT_CLIENTCLASS_FACTORY( C_World, DT_World, CWorld, ClientWorldFactory );
 
 BEGIN_RECV_TABLE( C_World, DT_World )
-	RecvPropFloat(RECVINFO(m_flWaveHeight)),
 	RecvPropVector(RECVINFO(m_WorldMins)),
 	RecvPropVector(RECVINFO(m_WorldMaxs)),
 	RecvPropInt(RECVINFO(m_bStartDark)),
@@ -59,7 +58,6 @@ BEGIN_RECV_TABLE( C_World, DT_World )
 	RecvPropFloat(RECVINFO(m_flMinPropScreenSpaceWidth)),
 	RecvPropString(RECVINFO(m_iszDetailSpriteMaterial)),
 	RecvPropInt(RECVINFO(m_bColdWorld)),
-	RecvPropInt(RECVINFO(m_bIsStoryMap)),
 END_RECV_TABLE()
 
 
@@ -73,10 +71,8 @@ C_World::~C_World( void )
 
 bool C_World::Init( int entnum, int iSerialNum )
 {
-	m_flWaveHeight = 0.0f;
 	ActivityList_Init();
 	EventList_Init();
-
 	return BaseClass::Init( entnum, iSerialNum );
 }
 
@@ -147,7 +143,7 @@ short		g_sModelIndexBloodSpray;	// holds the sprite index for splattered blood
 //-----------------------------------------------------------------------------
 void W_Precache(void)
 {
-	PrecacheFileWeaponInfoDatabase(filesystem, GameBaseShared()->GetEncryptionKey());
+	// PrecacheFileWeaponInfoDatabase(filesystem, GameBaseShared()->GetEncryptionKey());
 
 	g_sModelIndexFireball = modelinfo->GetModelIndex ("sprites/zerogxplode.vmt");// fireball
 	g_sModelIndexWExplosion = modelinfo->GetModelIndex ("sprites/WXplo1.vmt");// underwater fireball
@@ -182,11 +178,8 @@ void C_World::Spawn( void )
 	Precache();
 }
 
-
-
 C_World *GetClientWorldEntity()
 {
 	Assert( g_pClientWorld != NULL );
 	return g_pClientWorld;
 }
-

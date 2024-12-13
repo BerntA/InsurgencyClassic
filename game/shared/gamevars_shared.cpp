@@ -34,16 +34,3 @@ ConVar mp_forcecamera(
 	, MPForceCameraCallback 
 #endif
 	);
-	
-ConVar mp_allowspectators(
-	"mp_allowspectators",
-	"1",
-	FCVAR_REPLICATED,
-	"toggles whether the server allows spectator mode or not");
-
-ConVar friendlyfire(
-	"mp_friendlyfire",
-	"0",
-	FCVAR_REPLICATED | FCVAR_NOTIFY,
-	"Allows team members to injure other members of their team"
-	);

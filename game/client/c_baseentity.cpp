@@ -38,8 +38,6 @@
 #include "cdll_bounded_cvars.h"
 #include "inetchannelinfo.h"
 #include "proto_version.h"
-#include "c_playermodel.h"
-#include "c_hl2mp_player.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -437,11 +435,7 @@ RecvPropInt(RECVINFO(m_flSimulationTime), 0, RecvProxy_SimulationTime),
 RecvPropInt(RECVINFO(m_ubInterpolationFrame)),
 
 RecvPropVector(RECVINFO_NAME(m_vecNetworkOrigin, m_vecOrigin)),
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-RecvPropVector( RECVINFO_NAME( m_angNetworkAngles, m_angRotation ) ),
-#else
 RecvPropQAngles(RECVINFO_NAME(m_angNetworkAngles, m_angRotation)),
-#endif
 
 #ifdef DEMO_BACKWARDCOMPATABILITY
 RecvPropInt(RECVINFO(m_nModelIndex), 0, RecvProxy_IntToModelIndex16_BackCompatible),
@@ -453,7 +447,6 @@ RecvPropInt(RECVINFO(m_fEffects), 0, RecvProxy_EffectFlags),
 RecvPropInt(RECVINFO(m_nRenderMode)),
 RecvPropInt(RECVINFO(m_nRenderFX)),
 RecvPropInt(RECVINFO(m_clrRender)),
-RecvPropInt(RECVINFO(m_iTeamNum)),
 RecvPropInt(RECVINFO(m_CollisionGroup)),
 RecvPropFloat(RECVINFO(m_flElasticity)),
 RecvPropFloat(RECVINFO(m_flShadowCastDistance)),
@@ -504,7 +497,6 @@ DEFINE_PRED_FIELD(m_fFlags, FIELD_INTEGER, FTYPEDESC_INSENDTABLE),
 DEFINE_PRED_FIELD_TOL(m_vecViewOffset, FIELD_VECTOR, FTYPEDESC_INSENDTABLE, 0.25f),
 DEFINE_PRED_FIELD(m_nModelIndex, FIELD_SHORT, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX),
 DEFINE_PRED_FIELD(m_flFriction, FIELD_FLOAT, FTYPEDESC_INSENDTABLE),
-DEFINE_PRED_FIELD(m_iTeamNum, FIELD_INTEGER, FTYPEDESC_INSENDTABLE),
 DEFINE_PRED_FIELD(m_hOwnerEntity, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE),
 
 //	DEFINE_FIELD( m_nSimulationTick, FIELD_INTEGER ),
@@ -3233,12 +3225,12 @@ bool C_BaseEntity::CanGlowEntity()
 	if (GetGlowMode() <= GLOW_MODE_NONE)
 		return false;
 
-	if (!ShouldDraw() || IsDormant() || !IsServerEntity())
+	if (!ShouldDraw() || IsDormant() || !IsServerEntity() || (pLocal->GetTeamNumber() == TEAM_UNASSIGNED) || (pLocal->GetTeamNumber() == TEAM_SPECTATOR))
 		return false;
 
 	// Team Filtering:
 	int teamLink = GetGlowTeamLink();
-	if (teamLink >= TEAM_HUMANS)
+	if (teamLink == TEAM_ONE || teamLink == TEAM_TWO)
 	{
 		if (pLocal->GetTeamNumber() != teamLink)
 			return false;
@@ -3250,7 +3242,7 @@ bool C_BaseEntity::CanGlowEntity()
 	float length = pLocal->GetLocalOrigin().DistTo(GetLocalOrigin());
 	if (GetGlowMode() == GLOW_MODE_RADIUS)
 	{
-		if (!pLocal->IsAlive() || (pLocal->GetTeamNumber() != TEAM_HUMANS))
+		if (!pLocal->IsAlive())
 			return false;
 
 		float maxRangeDist = ((float)m_iGlowRadiusOverride);
@@ -3274,7 +3266,7 @@ bool C_BaseEntity::CanGlowEntity()
 			)
 			return false;
 
-		if (length <= bb2_elimination_teammate_distance.GetFloat())
+		if (length <= 512.0f)
 			return false;
 	}
 
@@ -3895,7 +3887,7 @@ void C_BaseEntity::operator delete(void *pMem)
 //========================================================================================
 C_Team *C_BaseEntity::GetTeam(void)
 {
-	return GetGlobalTeam(m_iTeamNum);
+	return GetGlobalTeam(GetTeamNumber());
 }
 
 //-----------------------------------------------------------------------------
@@ -3904,36 +3896,8 @@ C_Team *C_BaseEntity::GetTeam(void)
 //-----------------------------------------------------------------------------
 int C_BaseEntity::GetTeamNumber(void) const
 {
-	return m_iTeamNum;
+	return TEAM_UNASSIGNED;
 }
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int	C_BaseEntity::GetRenderTeamNumber(void)
-{
-	return GetTeamNumber();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true if these entities are both in at least one team together
-//-----------------------------------------------------------------------------
-bool C_BaseEntity::InSameTeam(C_BaseEntity *pEntity)
-{
-	if (!pEntity)
-		return false;
-
-	return (pEntity->GetTeam() == GetTeam());
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true if the entity's on the same team as the local player
-//-----------------------------------------------------------------------------
-bool C_BaseEntity::InLocalTeam(void)
-{
-	return (GetTeam() == GetLocalTeam());
-}
-
 
 void C_BaseEntity::SetNextClientThink(float nextThinkTime)
 {
@@ -5067,7 +5031,6 @@ void C_BaseEntity::SetOwnerEntity(C_BaseEntity *pOwner)
 //-----------------------------------------------------------------------------
 void C_BaseEntity::ChangeTeam(int iTeamNum)
 {
-	m_iTeamNum = iTeamNum;
 }
 
 //-----------------------------------------------------------------------------
@@ -6069,20 +6032,6 @@ C_AI_BaseNPC *C_BaseEntity::MyNPCPointer(void)
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: For each client (only can be local client in client .dll ) checks the client has disabled CC and if so, removes them from 
-//  the recipient list.
-// Input  : filter - 
-//-----------------------------------------------------------------------------
-void C_BaseEntity::RemoveRecipientsIfNotCloseCaptioning(C_RecipientFilter& filter)
-{
-	extern ConVar closecaption;
-	if (!closecaption.GetBool())
-	{
-		filter.Reset();
-	}
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : recording - 
 // Output : inline void
@@ -6348,16 +6297,11 @@ int C_BaseEntity::GetCreationTick() const
 }
 
 // MAKES SURE THAT WE USE THE RIGHT CLIENT-SIDED PLAYER MODEL!
-C_BaseEntity *C_BaseEntity::GetOverridenParentEntity(C_BaseEntity *pOriginalParent)
+C_BaseEntity* C_BaseEntity::GetOverridenParentEntity(C_BaseEntity* pOriginalParent)
 {
-	C_BaseEntity *pNewParent = pOriginalParent;
-	if (pNewParent && pNewParent->IsPlayer())
-	{
-		C_HL2MP_Player *pPlayer = ToHL2MPPlayer(pNewParent);
-		if (pPlayer && pPlayer->GetNewPlayerModel())
-			pNewParent = pPlayer->GetNewPlayerModel();
-	}
-
+	C_BaseEntity* pNewParent = pOriginalParent;
+	if (pNewParent && pNewParent->IsPlayer() && pNewParent->GetNewPlayerModel())
+		return pNewParent->GetNewPlayerModel();
 	return pNewParent;
 }
 

@@ -33,6 +33,10 @@ typedef struct wrect_s
 	int height;
 } wrect_t;
 
+typedef float TexCoord_t[4];
+extern void CreateTexCoord(TexCoord_t& TexCoord, wrect_s* pRC, int iTexWide, int iTexTall);
+extern void CreateTexCoord(TexCoord_t& TexCoord, int iXPos, int iYPos, int iWide, int iHeight, int iTexWide, int iTexTall);
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -82,7 +86,8 @@ public:
 	// vgui texture Id assigned to this item
 	int			textureId;
 	// s0, t0, s1, t1
-	float		texCoords[ 4 ];
+	//float		texCoords[ 4 ];
+	TexCoord_t	texCoords;
 
 	// Original bounds
 	wrect_t		rc;
@@ -157,7 +162,6 @@ public:
 
 	// User messages
 	void						MsgFunc_ResetHUD(bf_read &msg);
-	void 						MsgFunc_SendAudio(bf_read &msg);
 
 	// Hud Render group
 	int							LookupRenderGroupIndexByName( const char *pszGroupName );
@@ -167,8 +171,6 @@ public:
 	int							RegisterForRenderGroup( const char *pszGroupName );
 	int							AddHudRenderGroup( const char *pszGroupName );
 	bool						DoesRenderGroupExist( int iGroupIndex );
-
-	void						SetScreenShotTime( float flTime ){ m_flScreenShotTime = flTime; }
 
 public:
 
@@ -197,8 +199,6 @@ private:
 
 	CUtlVector< const char * >				m_RenderGroupNames;
 	CUtlMap< int, CHudRenderGroup * >		m_RenderGroups;
-
-	float						m_flScreenShotTime; // used to take end-game screenshots
 };
 
 extern CHud gHUD;
@@ -207,6 +207,7 @@ extern CHud gHUD;
 // Global fonts used in the client DLL
 //-----------------------------------------------------------------------------
 extern vgui::HFont g_hFontTrebuchet24;
+extern ConVar hidehud;
 
 void LoadHudTextures( CUtlDict< CHudTexture *, int >& list, const char *szFilenameWithoutExtension, const unsigned char *pICEKey );
 

@@ -52,7 +52,6 @@
 #include "con_nprint.h"
 #include "clientmode_shared.h"
 #include "GameBase_Client.h"
-#include "c_objective_icon.h"
 #include "GlobalRenderEffects.h"
 
 #if defined( HL2_CLIENT_DLL )
@@ -62,6 +61,9 @@
 #include "rendertexture.h"
 #include "viewpostprocess.h"
 #include "viewdebug.h"
+
+#include "inshud.h"
+#include "pain_helper.h"
 
 #ifdef USE_MONITORS
 #include "c_point_camera.h"
@@ -94,6 +96,8 @@ extern bool g_bDumpRenderTargets;
 // Convars related to controlling rendering
 //-----------------------------------------------------------------------------
 static ConVar cl_maxrenderable_dist("cl_maxrenderable_dist", "3000", FCVAR_CHEAT, "Max distance from the camera at which things will be rendered" );
+
+static ConVar ins_suppress_render_fx("ins_suppress_render_fx", "0", 0, "Disable INS based render effects, such as pain, scopes, etc.");
 
 ConVar r_entityclips( "r_entityclips", "1" ); //FIXME: Nvidia drivers before 81.94 on cards that support user clip planes will have problems with this, require driver update? Detect and disable?
 
@@ -153,7 +157,6 @@ static ConVar cl_drawmonitors( "cl_drawmonitors", "1" );
 static ConVar r_eyewaterepsilon( "r_eyewaterepsilon", "10.0f", FCVAR_CHEAT );
 
 extern ConVar cl_leveloverview;
-extern ConVar localplayer_visionflags;
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -719,6 +722,11 @@ static void SetClearColorToFogColor()
 // Precache of necessary materials
 //-----------------------------------------------------------------------------
 
+CLIENTEFFECT_REGISTER_BEGIN(PrecacheViewRender)
+CLIENTEFFECT_MATERIAL("overlays/agony")
+CLIENTEFFECT_MATERIAL("overlays/frontbuffer")
+CLIENTEFFECT_REGISTER_END()
+
 CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffects )
 	CLIENTEFFECT_MATERIAL( "dev/blurfiltery_and_add_nohdr" )
 	CLIENTEFFECT_MATERIAL( "dev/blurfilterx" )
@@ -856,6 +864,8 @@ CViewRender::CViewRender()
 	m_BaseDrawFlags = 0;
 	m_pActiveRenderer = NULL;
 	m_pCurrentlyDrawingEntity = NULL;
+	m_flMotionBlurDrawTime = 0.0f;
+	m_bPainEffectInitialized = false;
 }
 
 
@@ -1702,10 +1712,8 @@ void CViewRender::RenderPlayerSprites()
 {
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
 
-	GetClientVoiceMgr()->DrawHeadLabels();
-
-	RenderObjectiveIcons();
-	DrawHumanIndicators();
+	if (!ins_suppress_render_fx.GetBool())
+		GetINSHUDHelper()->DrawHUDMesh();
 }
 
 //-----------------------------------------------------------------------------
@@ -1751,6 +1759,178 @@ void CViewRender::CleanupMain3DView( const CViewSetup &view )
 	render->PopView( GetFrustum() );
 }
 
+#define MAT_FRONTBUFFER materials->FindMaterial( "overlays/frontbuffer", TEXTURE_GROUP_OTHER )
+#define MAT_PAIN materials->FindMaterial( "overlays/agony", TEXTURE_GROUP_OTHER )
+#define BLUR_FACTOR 0.015f
+
+void CViewRender::DoMotionBlur(const CViewSetup& view)
+{
+	if (m_bPainEffectInitialized && !g_PainHelper.AttemptUpdate())
+		return;
+
+	if (!m_bPainEffectInitialized)
+		g_PainHelper.FudgeValues();
+
+	if (ins_suppress_render_fx.GetBool())
+		return;
+
+	CMatRenderContextPtr pRenderContext(materials);
+
+	pRenderContext->MatrixMode(MATERIAL_PROJECTION);
+	pRenderContext->PushMatrix();
+	pRenderContext->LoadIdentity();
+
+	pRenderContext->MatrixMode(MATERIAL_VIEW);
+	pRenderContext->PushMatrix();
+	pRenderContext->LoadIdentity();
+
+	Rect_t actualRect;
+	UpdateScreenEffectTexture(0, view.x, view.y, view.width, view.height, false, &actualRect);
+
+	ITexture* pTexRenderTarget = pRenderContext->GetRenderTarget();
+
+	if (g_PainHelper.UsingMotionBlur())
+	{
+		DrawMotionBlur(view, actualRect,
+			GetFullFrameFrameBufferTexture(1), GetFullFrameFrameBufferTexture(0),
+			false);
+	}
+
+	DrawMotionBlur(view, actualRect,
+		pTexRenderTarget,
+		GetFullFrameFrameBufferTexture(
+			g_PainHelper.UsingMotionBlur() ? 1 : 0),
+		g_PainHelper.UsingMotionBlur());
+
+	pRenderContext->MatrixMode(MATERIAL_PROJECTION);
+	pRenderContext->PopMatrix();
+
+	pRenderContext->MatrixMode(MATERIAL_VIEW);
+	pRenderContext->PopMatrix();
+
+	m_bPainEffectInitialized = true;
+}
+
+void CViewRender::DrawMotionBlur(const CViewSetup& view, Rect_t actualRect, ITexture* pRenderTarget, ITexture* pBaseTexture, bool bBlurPass = false)
+{
+	CMatRenderContextPtr pRenderContext(materials);
+
+	IMaterialVar* pMV;
+	bool bFound;
+
+	IMaterial* pMatRender = bBlurPass ? MAT_FRONTBUFFER : MAT_PAIN;
+
+	pRenderContext->SetRenderTarget(pRenderTarget);
+
+	pMV = pMatRender->FindVar("$basetexture", &bFound);
+
+	if (bFound)
+		pMV->SetTextureValue(pBaseTexture);
+
+	if (!bBlurPass)
+	{
+		pMV = pMatRender->FindVar("$alpha", &bFound);
+		if (bFound)
+			pMV->SetFloatValue(1.0 - g_PainHelper.GetAlphaLevel());
+
+		pMV = pMatRender->FindVar("$blur", &bFound);
+		if (bFound)
+			pMV->SetFloatValue(g_PainHelper.GetBlurLevel());
+
+		pMV = pMatRender->FindVar("$haze", &bFound);
+		if (bFound)
+			pMV->SetFloatValue(g_PainHelper.GetHazeLevel());
+
+		pRenderContext->DrawScreenSpaceQuad(pMatRender);
+	}
+	else
+	{
+		pMV = pMatRender->FindVar("$color", &bFound);
+		if (bFound)
+			pMV->SetVecValue(1.0, 1.0, 1.0, 1.0);
+
+		pMV = pMatRender->FindVar("$alpha", &bFound);
+		if (bFound)
+			pMV->SetFloatValue(1.0f);
+
+		pRenderContext->DrawScreenSpaceQuad(pMatRender);
+	}
+}
+
+void CViewRender::DrawScope(const CViewSetup& zoomedView)
+{
+	if (!g_pGameRules || ins_suppress_render_fx.GetBool())
+		return;
+
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	if (!pPlayer || !pPlayer->ActiveZoom())
+		return;
+
+	C_BaseEntity* pViewModel = pPlayer->GetViewModel();
+	if (!pViewModel)
+		return;
+
+	ITexture* pRenderTarget = GetScopeTexture();
+	if (pRenderTarget == NULL)
+		return;
+
+	CViewSetup monitorView = zoomedView;
+
+	Vector vecOrigin;
+	QAngle angAngles;
+
+	int iScopePOVAttach = pViewModel->LookupAttachment("scope_pov");
+	if (iScopePOVAttach >= 0)
+	{
+		pViewModel->GetAttachment(iScopePOVAttach, vecOrigin, angAngles);
+
+		int iScopeAlignAttach = pViewModel->LookupAttachment("scope_align");
+		if (iScopeAlignAttach >= 0)
+		{
+			Vector vecAlign;
+			pViewModel->GetAttachment(iScopeAlignAttach, vecAlign, angAngles);
+			VectorAngles((vecAlign - vecOrigin), angAngles);
+		}
+		else
+		{
+			angAngles = pPlayer->EyeAngles();
+		}
+	}
+	else
+	{
+		vecOrigin = pPlayer->EyePosition();
+		angAngles = pPlayer->EyeAngles();
+	}
+
+	int iFOV = pPlayer->GetScopeFOV();
+	if (iFOV == 0)
+		iFOV = g_pGameRules->DefaultFOV();
+
+	monitorView.width = pRenderTarget->GetActualWidth();
+	monitorView.height = pRenderTarget->GetActualHeight();
+	monitorView.x = 0;
+	monitorView.y = 0;
+	monitorView.origin = vecOrigin;
+	monitorView.angles = angAngles;
+	monitorView.fov = iFOV;
+	monitorView.m_bOrtho = false;
+	monitorView.m_flAspectRatio = monitorView.height / monitorView.width;
+	monitorView.zFar = 32768.0;
+
+	render->Push3DView(monitorView, VIEW_CLEAR_DEPTH, pRenderTarget, GetFrustum());
+
+	SkyboxVisibility_t nSkyboxVisible = SKYBOX_NOT_VISIBLE;
+	int ClearFlags = 0;
+
+	CSkyboxView* pSkyView = new CSkyboxView(this);
+	if (pSkyView->Setup(monitorView, &ClearFlags, &nSkyboxVisible) != false)
+		AddViewToScene(pSkyView);
+	SafeRelease(pSkyView);
+
+	ViewDrawScene(false, SKYBOX_3DSKYBOX_VISIBLE, monitorView, VIEW_CLEAR_DEPTH, VIEW_MONITOR);
+
+	render->PopView(GetFrustum());
+}
 
 //-----------------------------------------------------------------------------
 // Queues up an overlay rendering
@@ -1899,7 +2079,6 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 		// We can still use the 'current view' stuff set up in ViewDrawScene
 		s_bCanAccessCurrentView = true;
 
-
 		engine->DrawPortals();
 
 		DisableFog();
@@ -1950,6 +2129,8 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 
 		// Prevent sound stutter if going slow
 		engine->Sound_ExtraUpdate();	
+
+		DoMotionBlur(view);
 	
 		if ( !building_cubemaps.GetBool() && view.m_bDoBloomAndToneMapping )
 		{
@@ -2159,6 +2340,11 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 	if ( IsPC() )
 	{
 		CDebugViewRender::GenerateOverdrawForTesting();
+	}
+
+	if (g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 70)
+	{
+		DrawScope(view);
 	}
 
 	render->PopView( GetFrustum() );

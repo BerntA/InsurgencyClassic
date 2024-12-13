@@ -17,16 +17,11 @@
 #include "prediction.h"
 #include "bitbuf.h"
 #include "checksum_md5.h"
-#include "c_hl2mp_player.h"
 #include "hltvcamera.h"
 #include <ctype.h> // isalnum()
 #include <voice_status.h>
 #include "cam_thirdperson.h"
-
 #include <vgui/ISurface.h>
-
-// BB2 Experimental
-#include "ScoreBoardPanel.h"
 
 extern ConVar in_joystick;
 extern ConVar cam_idealpitch;
@@ -54,16 +49,13 @@ ConVar cl_yawspeed( "cl_yawspeed", "210", FCVAR_NONE, "Client yaw speed.", true,
 ConVar cl_pitchspeed( "cl_pitchspeed", "225", FCVAR_NONE, "Client pitch speed.", true, -100000, true, 100000 );
 ConVar cl_pitchdown( "cl_pitchdown", "89", FCVAR_CHEAT );
 ConVar cl_pitchup( "cl_pitchup", "89", FCVAR_CHEAT );
-ConVar cl_sidespeed("cl_sidespeed", "4500", FCVAR_REPLICATED | FCVAR_CHEAT);
-ConVar cl_upspeed("cl_upspeed", "4500", FCVAR_REPLICATED | FCVAR_CHEAT);
-ConVar cl_forwardspeed("cl_forwardspeed", "4500", FCVAR_REPLICATED | FCVAR_CHEAT);
-ConVar cl_backspeed("cl_backspeed", "4500", FCVAR_REPLICATED | FCVAR_CHEAT);
+ConVar cl_sidespeed("cl_sidespeed", "400", FCVAR_REPLICATED | FCVAR_CHEAT);
+ConVar cl_upspeed("cl_upspeed", "320", FCVAR_REPLICATED | FCVAR_CHEAT);
+ConVar cl_forwardspeed("cl_forwardspeed", "400", FCVAR_REPLICATED | FCVAR_CHEAT);
+ConVar cl_backspeed("cl_backspeed", "400", FCVAR_REPLICATED | FCVAR_CHEAT);
 ConVar lookspring( "lookspring", "0", FCVAR_ARCHIVE );
 ConVar lookstrafe( "lookstrafe", "0", FCVAR_ARCHIVE );
 ConVar in_joystick( "joystick","0", FCVAR_ARCHIVE );
-
-ConVar thirdperson_platformer( "thirdperson_platformer", "0", 0, "Player will aim in the direction they are moving." );
-ConVar thirdperson_screenspace( "thirdperson_screenspace", "0", 0, "Movement will be relative to the camera, eg: left means screen-left" );
 
 ConVar sv_noclipduringpause( "sv_noclipduringpause", "0", FCVAR_REPLICATED | FCVAR_CHEAT, "If cheats are enabled, then you can noclip with the game paused (for doing screenshots, etc.)." );
 
@@ -95,11 +87,11 @@ state bit 2 is edge triggered on the down to up transition
 kbutton_t	in_walk;
 kbutton_t	in_jlook;
 kbutton_t	in_strafe;
-kbutton_t	in_commandermousemove;
 kbutton_t	in_forward;
 kbutton_t	in_back;
 kbutton_t	in_moveleft;
 kbutton_t	in_moveright;
+
 // Display the netgraph
 kbutton_t	in_graph;  
 kbutton_t	in_joyspeed;		// auto-speed key from the joystick (only works for player movement)
@@ -112,19 +104,21 @@ static	kbutton_t	in_lookdown;
 static	kbutton_t	in_use;
 static	kbutton_t	in_jump;
 static	kbutton_t	in_attack;
-static	kbutton_t	in_attack2;
 static	kbutton_t	in_up;
 static	kbutton_t	in_down;
 static	kbutton_t	in_duck;
 static	kbutton_t	in_reload;
-static	kbutton_t	in_alt1;
-static	kbutton_t	in_alt2;
 static	kbutton_t	in_score;
 static	kbutton_t	in_break;
-static	kbutton_t	in_attack3;
-static  kbutton_t   in_bash;
-static  kbutton_t   in_slide;
-kbutton_t	in_ducktoggle;
+static	kbutton_t	in_sprint;
+static	kbutton_t	in_prone;
+static	kbutton_t	in_special1;
+static	kbutton_t	in_special2;
+static	kbutton_t	in_firemode;
+static	kbutton_t	in_leanright;
+static	kbutton_t	in_leanleft;
+static	kbutton_t	in_showmap;
+static	kbutton_t	in_showindicators;
 
 /*
 ===========
@@ -406,8 +400,6 @@ void KeyUp( kbutton_t *b, const char *c )
 	b->state |= 4; 		// impulse up
 }
 
-void IN_CommanderMouseMoveDown( const CCommand &args ) {KeyDown(&in_commandermousemove, args[1] );}
-void IN_CommanderMouseMoveUp( const CCommand &args ) {KeyUp(&in_commandermousemove, args[1] );}
 void IN_BreakDown( const CCommand &args ) { KeyDown( &in_break , args[1] );}
 void IN_BreakUp( const CCommand &args )
 { 
@@ -444,8 +436,6 @@ void IN_WalkDown( const CCommand &args ) {KeyDown(&in_walk, args[1] );}
 void IN_WalkUp( const CCommand &args ) {KeyUp(&in_walk, args[1] );}
 void IN_StrafeDown( const CCommand &args ) {KeyDown(&in_strafe, args[1] );}
 void IN_StrafeUp( const CCommand &args ) {KeyUp(&in_strafe, args[1] );}
-void IN_Attack2Down( const CCommand &args ) { KeyDown(&in_attack2, args[1] );}
-void IN_Attack2Up( const CCommand &args ) {KeyUp(&in_attack2, args[1] );}
 void IN_UseDown ( const CCommand &args ) {KeyDown(&in_use, args[1] );}
 void IN_UseUp ( const CCommand &args ) {KeyUp(&in_use, args[1] );}
 void IN_JumpDown ( const CCommand &args ) {KeyDown(&in_jump, args[1] );}
@@ -454,30 +444,51 @@ void IN_DuckDown( const CCommand &args ) {KeyDown(&in_duck, args[1] );}
 void IN_DuckUp( const CCommand &args ) {KeyUp(&in_duck, args[1] );}
 void IN_ReloadDown( const CCommand &args ) {KeyDown(&in_reload, args[1] );}
 void IN_ReloadUp( const CCommand &args ) {KeyUp(&in_reload, args[1] );}
-void IN_Alt1Down( const CCommand &args ) {KeyDown(&in_alt1, args[1] );}
-void IN_Alt1Up( const CCommand &args ) {KeyUp(&in_alt1, args[1] );}
-void IN_Alt2Down( const CCommand &args ) {KeyDown(&in_alt2, args[1] );}
-void IN_Alt2Up( const CCommand &args ) {KeyUp(&in_alt2, args[1] );}
 void IN_GraphDown( const CCommand &args ) {KeyDown(&in_graph, args[1] );}
 void IN_GraphUp( const CCommand &args ) {KeyUp(&in_graph, args[1] );}
 void IN_XboxStub( const CCommand &args ) { /*do nothing*/ }
-void IN_Attack3Down( const CCommand &args ) { KeyDown(&in_attack3, args[1] );}
-void IN_Attack3Up( const CCommand &args ) { KeyUp(&in_attack3, args[1] );}
-void IN_BashDown( const CCommand &args ) { KeyDown( &in_bash, args[1] ); }
-void IN_BashUp( const CCommand &args ) { KeyUp( &in_bash, args[1] ); }
-void IN_SlideDown(const CCommand &args) { KeyDown(&in_slide, args[1]); }
-void IN_SlideUp(const CCommand &args) { KeyUp(&in_slide, args[1]); }
 
-void IN_DuckToggle( const CCommand &args ) 
-{ 
-	if ( ::input->KeyState(&in_ducktoggle) )
+void IN_SprintDown(const CCommand& args) { KeyDown(&in_sprint, args[1]); }
+void IN_SprintUp(const CCommand& args) { KeyUp(&in_sprint, args[1]); }
+void IN_ProneDown(const CCommand& args) { KeyDown(&in_prone, args[1]); }
+void IN_ProneUp(const CCommand& args) { KeyUp(&in_prone, args[1]); }
+void IN_Special1Down(const CCommand& args) { KeyDown(&in_special1, args[1]); }
+void IN_Special1Up(const CCommand& args) { KeyUp(&in_special1, args[1]); }
+void IN_Special2Down(const CCommand& args) { KeyDown(&in_special2, args[1]); }
+void IN_Special2Up(const CCommand& args) { KeyUp(&in_special2, args[1]); }
+void IN_FiremodeDown(const CCommand& args) { KeyDown(&in_firemode, args[1]); }
+void IN_FiremodeUp(const CCommand& args) { KeyUp(&in_firemode, args[1]); }
+void IN_LeanRightDown(const CCommand& args) { KeyDown(&in_leanright, args[1]); }
+void IN_LeanRightUp(const CCommand& args) { KeyUp(&in_leanright, args[1]); }
+void IN_LeanLeftDown(const CCommand& args) { KeyDown(&in_leanleft, args[1]); }
+void IN_LeanLeftUp(const CCommand& args) { KeyUp(&in_leanleft, args[1]); }
+
+void IN_ShowMapDown(const CCommand& args)
+{
+	KeyDown(&in_showmap, args[1]);
+	if (gViewPortInterface)
 	{
-		KeyUp( &in_ducktoggle, args[1] ); 
+		gViewPortInterface->ShowPanel(PANEL_OVERVIEW, true);
 	}
-	else
+}
+
+void IN_ShowMapUp(const CCommand& args)
+{
+	KeyUp(&in_showmap, args[1]);
+	if (gViewPortInterface)
 	{
-		KeyDown( &in_ducktoggle, args[1] ); 
+		gViewPortInterface->ShowPanel(PANEL_OVERVIEW, false);
 	}
+}
+
+void IN_ShowIndicatorsDown(const CCommand& args)
+{
+	KeyDown(&in_showindicators, args[1]);
+}
+
+void IN_ShowIndicatorsUp(const CCommand& args)
+{
+	KeyUp(&in_showindicators, args[1]);
 }
 
 void IN_AttackDown( const CCommand &args )
@@ -642,23 +653,6 @@ void CInput::AdjustYaw( float speed, QAngle& viewangles )
 		viewangles[YAW] -= speed*cl_yawspeed.GetFloat() * KeyState (&in_right);
 		viewangles[YAW] += speed*cl_yawspeed.GetFloat() * KeyState (&in_left);
 	}
-
-	// thirdperson platformer mode
-	// use movement keys to aim the player relative to the thirdperson camera
-	if ( CAM_IsThirdPerson() && thirdperson_platformer.GetInt() )
-	{
-		float side = KeyState(&in_moveleft) - KeyState(&in_moveright);
-		float forward = KeyState(&in_forward) - KeyState(&in_back);
-
-		if ( side || forward )
-		{
-			viewangles[YAW] = RAD2DEG(atan2(side, forward)) + g_ThirdPersonManager.GetCameraOffsetAngles()[ YAW ];
-		}
-		if ( side || forward || KeyState (&in_right) || KeyState (&in_left) )
-		{
-			cam_idealyaw.SetValue( g_ThirdPersonManager.GetCameraOffsetAngles()[ YAW ] - viewangles[ YAW ] );
-		}
-	}
 }
 
 /*
@@ -764,30 +758,6 @@ ComputeSideMove
 */
 void CInput::ComputeSideMove( CUserCmd *cmd )
 {
-	// thirdperson platformer movement
-	if ( CAM_IsThirdPerson() && thirdperson_platformer.GetInt() )
-	{
-		// no sideways movement in this mode
-		return;
-	}
-
-	// thirdperson screenspace movement
-	if ( CAM_IsThirdPerson() && thirdperson_screenspace.GetInt() )
-	{
-		float ideal_yaw = cam_idealyaw.GetFloat();
-		float ideal_sin = sin(DEG2RAD(ideal_yaw));
-		float ideal_cos = cos(DEG2RAD(ideal_yaw));
-		
-		float movement = ideal_cos*KeyState(&in_moveright)
-			+  ideal_sin*KeyState(&in_back)
-			+ -ideal_cos*KeyState(&in_moveleft)
-			+ -ideal_sin*KeyState(&in_forward);
-
-		cmd->sidemove += cl_sidespeed.GetFloat() * movement;
-
-		return;
-	}
-
 	// If strafing, check left and right keys and act like moveleft and moveright keys
 	if ( in_strafe.state & 1 )
 	{
@@ -820,37 +790,6 @@ ComputeForwardMove
 */
 void CInput::ComputeForwardMove( CUserCmd *cmd )
 {
-	// thirdperson platformer movement
-	if ( CAM_IsThirdPerson() && thirdperson_platformer.GetInt() )
-	{
-		// movement is always forward in this mode
-		float movement = KeyState(&in_forward)
-			|| KeyState(&in_moveright)
-			|| KeyState(&in_back)
-			|| KeyState(&in_moveleft);
-
-		cmd->forwardmove += cl_forwardspeed.GetFloat() * movement;
-
-		return;
-	}
-
-	// thirdperson screenspace movement
-	if ( CAM_IsThirdPerson() && thirdperson_screenspace.GetInt() )
-	{
-		float ideal_yaw = cam_idealyaw.GetFloat();
-		float ideal_sin = sin(DEG2RAD(ideal_yaw));
-		float ideal_cos = cos(DEG2RAD(ideal_yaw));
-		
-		float movement = ideal_cos*KeyState(&in_forward)
-			+  ideal_sin*KeyState(&in_moveright)
-			+ -ideal_cos*KeyState(&in_back)
-			+ -ideal_sin*KeyState(&in_moveleft);
-
-		cmd->forwardmove += cl_forwardspeed.GetFloat() * movement;
-
-		return;
-	}
-
 	if ( !(in_klook.state & 1 ) )
 	{	
 		cmd->forwardmove += cl_forwardspeed.GetFloat() * KeyState (&in_forward);
@@ -1041,8 +980,7 @@ void CInput::CreateMove ( int sequence_number, float input_sample_frametime, boo
 	engine->GetViewAngles( viewangles );
 
 	// Latch and clear impulse
-	cmd->impulse = in_impulse;
-	in_impulse = 0;
+	in_impulse = 0; // remove me!
 
 	// Latch and clear weapon selection
 	if ( m_hSelectedWeapon != NULL )
@@ -1091,16 +1029,6 @@ void CInput::CreateMove ( int sequence_number, float input_sample_frametime, boo
 	cmd->random_seed = MD5_PseudoRandom( sequence_number ) & 0x7fffffff;
 
 	HLTVCamera()->CreateMove( cmd );
-
-#if defined( HL2_CLIENT_DLL )
-	// copy backchannel data
-	int i;
-	for (i = 0; i < m_EntityGroundContact.Count(); i++)
-	{
-		cmd->entitygroundcontact.AddToTail( m_EntityGroundContact[i] );
-	}
-	m_EntityGroundContact.RemoveAll();
-#endif
 
 	pVerified->m_cmd = *cmd;
 	pVerified->m_crc = cmd->GetChecksum();
@@ -1270,9 +1198,9 @@ int CInput::GetButtonBits( int bResetState )
 {
 	int bits = 0;
 
-	CalcButtonBits( bits, IN_WALK, s_ClearInputState, &in_walk, bResetState );
+	CalcButtonBits( bits, IN_SHUFFLE, s_ClearInputState, &in_walk, bResetState );
 	CalcButtonBits( bits, IN_ATTACK, s_ClearInputState, &in_attack, bResetState );
-	CalcButtonBits( bits, IN_DUCK, s_ClearInputState, &in_duck, bResetState );
+	CalcButtonBits( bits, IN_CROUCH, s_ClearInputState, &in_duck, bResetState );
 	CalcButtonBits( bits, IN_JUMP, s_ClearInputState, &in_jump, bResetState );
 	CalcButtonBits( bits, IN_FORWARD, s_ClearInputState, &in_forward, bResetState );
 	CalcButtonBits( bits, IN_BACK, s_ClearInputState, &in_back, bResetState );
@@ -1281,34 +1209,19 @@ int CInput::GetButtonBits( int bResetState )
 	CalcButtonBits( bits, IN_RIGHT, s_ClearInputState, &in_right, bResetState );
 	CalcButtonBits( bits, IN_MOVELEFT, s_ClearInputState, &in_moveleft, bResetState );
 	CalcButtonBits( bits, IN_MOVERIGHT, s_ClearInputState, &in_moveright, bResetState );
-	CalcButtonBits( bits, IN_ATTACK2, s_ClearInputState, &in_attack2, bResetState );
 	CalcButtonBits( bits, IN_RELOAD, s_ClearInputState, &in_reload, bResetState );
-	CalcButtonBits( bits, IN_ALT1, s_ClearInputState, &in_alt1, bResetState );
-	CalcButtonBits( bits, IN_ALT2, s_ClearInputState, &in_alt2, bResetState );
-	CalcButtonBits( bits, IN_SCORE, s_ClearInputState, &in_score, bResetState );
-	CalcButtonBits( bits, IN_ATTACK3, s_ClearInputState, &in_attack3, bResetState );
-	CalcButtonBits( bits, IN_BASH, s_ClearInputState, &in_bash, bResetState );
-	CalcButtonBits(bits, IN_SLIDE, s_ClearInputState, &in_slide, bResetState);
-
-	if ( KeyState(&in_ducktoggle) )
-	{
-		bits |= IN_DUCK;
-	}
+	CalcButtonBits(bits, IN_SPRINT, s_ClearInputState, &in_sprint, bResetState);
+	CalcButtonBits(bits, IN_PRONE, s_ClearInputState, &in_prone, bResetState);
+	CalcButtonBits(bits, IN_SPECIAL1, s_ClearInputState, &in_special1, bResetState);
+	CalcButtonBits(bits, IN_SPECIAL2, s_ClearInputState, &in_special2, bResetState);
+	CalcButtonBits(bits, IN_FIREMODE, s_ClearInputState, &in_firemode, bResetState);
+	CalcButtonBits(bits, IN_LEAN_RIGHT, s_ClearInputState, &in_leanright, bResetState);
+	CalcButtonBits(bits, IN_LEAN_LEFT, s_ClearInputState, &in_leanleft, bResetState);
 
 	// Cancel is a special flag
 	if (in_cancel)
 	{
 		bits |= IN_CANCEL;
-	}
-
-	if ( gHUD.m_iKeyBits & IN_WEAPON1 )
-	{
-		bits |= IN_WEAPON1;
-	}
-
-	if ( gHUD.m_iKeyBits & IN_WEAPON2 )
-	{
-		bits |= IN_WEAPON2;
 	}
 
 	// Clear out any residual
@@ -1352,35 +1265,6 @@ float CInput::GetLastForwardMove( void )
 	return m_flLastForwardMove;
 }
 
-
-#if defined( HL2_CLIENT_DLL )
-//-----------------------------------------------------------------------------
-// Purpose: back channel contact info for ground contact
-// Output :
-//-----------------------------------------------------------------------------
-
-void CInput::AddIKGroundContactInfo( int entindex, float minheight, float maxheight )
-{
-	CEntityGroundContact data;
-	data.entindex = entindex;
-	data.minheight = minheight;
-	data.maxheight = maxheight;
-
-	if (m_EntityGroundContact.Count() >= MAX_EDICTS)
-	{
-		// some overflow here, probably bogus anyway
-		Assert(0);
-		m_EntityGroundContact.RemoveAll();
-		return;
-	}
-
-	m_EntityGroundContact.AddToTail( data );
-}
-#endif
-
-
-static ConCommand startcommandermousemove("+commandermousemove", IN_CommanderMouseMoveDown);
-static ConCommand endcommandermousemove("-commandermousemove", IN_CommanderMouseMoveUp);
 static ConCommand startmoveup("+moveup",IN_UpDown);
 static ConCommand endmoveup("-moveup",IN_UpUp);
 static ConCommand startmovedown("+movedown",IN_DownDown);
@@ -1407,8 +1291,6 @@ static ConCommand startwalk("+walk", IN_WalkDown);
 static ConCommand endwalk("-walk", IN_WalkUp);
 static ConCommand startattack("+attack", IN_AttackDown);
 static ConCommand endattack("-attack", IN_AttackUp);
-static ConCommand startattack2("+attack2", IN_Attack2Down);
-static ConCommand endattack2("-attack2", IN_Attack2Up);
 static ConCommand startuse("+use", IN_UseDown);
 static ConCommand enduse("-use", IN_UseUp);
 static ConCommand startjump("+jump", IN_JumpDown);
@@ -1418,30 +1300,39 @@ static ConCommand startklook("+klook", IN_KLookDown);
 static ConCommand endklook("-klook", IN_KLookUp);
 static ConCommand startjlook("+jlook", IN_JLookDown);
 static ConCommand endjlook("-jlook", IN_JLookUp);
-static ConCommand startduck("+duck", IN_DuckDown);
-static ConCommand endduck("-duck", IN_DuckUp);
+static ConCommand startduck("+crouch", IN_DuckDown);
+static ConCommand endduck("-crouch", IN_DuckUp);
 static ConCommand startreload("+reload", IN_ReloadDown);
 static ConCommand endreload("-reload", IN_ReloadUp);
-static ConCommand startalt1("+alt1", IN_Alt1Down);
-static ConCommand endalt1("-alt1", IN_Alt1Up);
-static ConCommand startalt2("+alt2", IN_Alt2Down);
-static ConCommand endalt2("-alt2", IN_Alt2Up);
 static ConCommand startscore("+score", IN_ScoreDown);
 static ConCommand endscore("-score", IN_ScoreUp);
-static ConCommand startshowscores("+showscores", IN_ScoreDown);
-static ConCommand endshowscores("-showscores", IN_ScoreUp);
+static ConCommand startshowscores("+scores", IN_ScoreDown);
+static ConCommand endshowscores("-scores", IN_ScoreUp);
 static ConCommand startgraph("+graph", IN_GraphDown);
 static ConCommand endgraph("-graph", IN_GraphUp);
 static ConCommand startbreak("+break",IN_BreakDown);
 static ConCommand endbreak("-break",IN_BreakUp);
 static ConCommand force_centerview("force_centerview", IN_CenterView_f);
 static ConCommand joyadvancedupdate("joyadvancedupdate", IN_Joystick_Advanced_f, "", FCVAR_CLIENTCMD_CAN_EXECUTE);
-static ConCommand startattack3("+attack3", IN_Attack3Down);
-static ConCommand endattack3("-attack3", IN_Attack3Up);
-static ConCommand startbash( "+bash", IN_BashDown );
-static ConCommand endbash( "-bash",  IN_BashUp );
-static ConCommand startslide("+slide", IN_SlideDown);
-static ConCommand endslide("-slide", IN_SlideUp);
+
+static ConCommand startsprint("+sprint", IN_SprintDown);
+static ConCommand endsprint("-sprint", IN_SprintUp);
+static ConCommand startprone("+prone", IN_ProneDown);
+static ConCommand endprone("-prone", IN_ProneUp);
+static ConCommand startspecial1("+special1", IN_Special1Down);
+static ConCommand endspecial1("-special1", IN_Special1Up);
+static ConCommand startspecial2("+special2", IN_Special2Down);
+static ConCommand endspecial2("-special2", IN_Special2Up);
+static ConCommand startfiremode("+firemode", IN_FiremodeDown);
+static ConCommand endfiremode("-firemode", IN_FiremodeUp);
+static ConCommand startleanright("+leanright", IN_LeanRightDown);
+static ConCommand endleanright("-leanright", IN_LeanRightUp);
+static ConCommand startleanleft("+leanleft", IN_LeanLeftDown);
+static ConCommand endleanleft("-leanleft", IN_LeanLeftUp);
+static ConCommand startshowmap("+showmap", IN_ShowMapDown);
+static ConCommand endshowmap("-showmap", IN_ShowMapUp);
+static ConCommand startshowindicators("+showindicators", IN_ShowIndicatorsDown);
+static ConCommand endshowindicators("-showindicators", IN_ShowIndicatorsUp);
 
 // Xbox 360 stub commands
 static ConCommand xboxmove("xmove", IN_XboxStub);
@@ -1504,8 +1395,4 @@ void CInput::Shutdown_All(void)
 
 void CInput::LevelInit( void )
 {
-#if defined( HL2_CLIENT_DLL )
-	// Remove any IK information
-	m_EntityGroundContact.RemoveAll();
-#endif
 }

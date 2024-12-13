@@ -12,12 +12,11 @@
 #endif
 
 #include <vgui/VGUI.h>
-#include "c_hl2mp_player.h"
 #include <steam/steam_api.h>
 #include "steam/isteamapps.h"
 
-extern ConVar bb2_render_client_in_mirrors;
-extern ConVar bb2_enable_multicore;
+extern ConVar ins_render_client_in_mirrors;
+extern ConVar ins_enable_multicore;
 
 typedef struct IVoiceTweak_s IVoiceTweak;
 
@@ -31,15 +30,8 @@ public:
 	virtual void		PostInit(void) = 0;
 
 	// Shared
-	virtual void LoadGameLocalization(void) = 0;
 	virtual void OnUpdate(void) = 0;
-	virtual void CloseGamePanels(bool bInGamePanelsOnly = false) = 0;
 	virtual bool IsInGame(void) = 0;
-	virtual void Changelevel(const char* szMap) = 0;
-
-	// In-Game Panel Accessors
-	virtual void ShowVotePanel(bool bForceOff = false) = 0;
-	virtual bool IsViewPortPanelVisible(const char* panel) = 0;
 
 	// In-Game 
 	virtual void OnLocalPlayerExternalRendering(void) = 0;

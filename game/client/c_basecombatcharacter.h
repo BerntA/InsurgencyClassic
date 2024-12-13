@@ -35,17 +35,18 @@ public:
 	virtual bool	IsBaseCombatCharacter( void ) { return true; };
 	virtual C_BaseCombatCharacter *MyCombatCharacterPointer( void ) { return this; }
 
-	C_BaseCombatWeapon*	Weapon_OwnsThisType( const char *pszWeapon ) const;  // True if already owns a weapon of this class
-	C_BaseCombatWeapon* Weapon_GetBySlot(int slot) const;
-	virtual	bool		Weapon_Switch(C_BaseCombatWeapon *pWeapon, bool bWantDraw = false);
+	virtual C_BaseCombatWeapon*	Weapon_OwnsThisType(int iWeaponID) const;  // True if already owns a weapon of this class
+	virtual C_BaseCombatWeapon* Weapon_GetBySlot(int slot) const;
+	virtual	bool		Weapon_Switch(C_BaseCombatWeapon *pWeapon, bool bForce = false);
 	virtual bool		Weapon_CanSwitchTo(C_BaseCombatWeapon *pWeapon);
+	virtual C_BaseCombatWeapon* GetNextBestWeapon(C_BaseCombatWeapon* pCurrentWeapon);
 	
 	// I can't use my current weapon anymore. Switch me to the next best weapon.
-	bool SwitchToNextBestWeapon(C_BaseCombatWeapon *pCurrent);
+	virtual bool SwitchToNextBestWeapon(C_BaseCombatWeapon *pCurrent);
 
 	virtual C_BaseCombatWeapon	*GetActiveWeapon( void ) const;
-	int					WeaponCount() const;
-	C_BaseCombatWeapon	*GetWeapon( int i ) const;
+	virtual int					WeaponCount() const;
+	virtual C_BaseCombatWeapon	*GetWeapon( int i ) const;
 
 	float				GetNextAttack() const { return m_flNextAttack; }
 	void				SetNextAttack( float flWait ) { m_flNextAttack = flWait; }
@@ -53,7 +54,7 @@ public:
 	virtual int			BloodColor();
 
 	// Blood color (see BLOOD_COLOR_* macros in baseentity.h)
-	void SetBloodColor( int nBloodColor );
+	virtual void SetBloodColor( int nBloodColor );
 
 	virtual void		DoMuzzleFlash();
 
@@ -78,8 +79,8 @@ protected:
 
 public:
 
-	CHandle<C_BaseCombatWeapon>		m_hMyWeapons[MAX_WEAPONS];
-	CHandle< C_BaseCombatWeapon > m_hActiveWeapon;
+	CHandle<C_BaseCombatWeapon>		m_hMyWeapons[MAX_PWEAPONS];
+	CHandle< C_BaseCombatWeapon >	m_hActiveWeapon;
 
 private:
 	C_BaseCombatCharacter( const C_BaseCombatCharacter & ); // not defined, not accessible
@@ -102,7 +103,7 @@ inline C_BaseCombatCharacter *ToBaseCombatCharacter( C_BaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 inline int	C_BaseCombatCharacter::WeaponCount() const
 {
-	return MAX_WEAPONS;
+	return MAX_PWEAPONS;
 }
 
 //-----------------------------------------------------------------------------
@@ -111,7 +112,7 @@ inline int	C_BaseCombatCharacter::WeaponCount() const
 //-----------------------------------------------------------------------------
 inline C_BaseCombatWeapon *C_BaseCombatCharacter::GetWeapon( int i ) const
 {
-	Assert( (i >= 0) && (i < MAX_WEAPONS) );
+	Assert( (i >= 0) && (i < MAX_PWEAPONS) );
 	return m_hMyWeapons[i].Get();
 }
 

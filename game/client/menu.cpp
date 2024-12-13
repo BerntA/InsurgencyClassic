@@ -14,7 +14,6 @@
 #include "text_message.h"
 #include "hud_macros.h"
 #include "iclientmode.h"
-#include "weapon_selection.h"
 
 #include <vgui/VGUI.h>
 #include <vgui/ISurface.h>
@@ -27,6 +26,7 @@ wchar_t g_szMenuString[MAX_MENU_STRING];
 char g_szPrelocalisedMenuString[MAX_MENU_STRING];
 
 #include "menu.h"
+#include "ins_utils.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -102,6 +102,41 @@ bool CHudMenu::IsMenuOpen( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+bool CHudMenu::IsControlActive(void)
+{
+	return m_bMenuTakesInput;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CHudMenu::Number(int iNumber)
+{
+	SelectMenuItem(iNumber);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CHudMenu::DoControlClose(void)
+{
+	HideMenu();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CHudMenu::ShowMenu(void)
+{
+	m_bMenuDisplayed = true;
+	m_bMenuTakesInput = true;
+	m_flSelectionTime = gpGlobals->curtime;
+	ControlTakeFocus();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
 void CHudMenu::VidInit( void )
 {
 }
@@ -158,7 +193,6 @@ void CHudMenu::PaintString( const wchar_t *text, int textlen, vgui::HFont& font,
 		vgui::surface()->DrawUnicodeChar( text[ch] );
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -247,8 +281,11 @@ void CHudMenu::Paint()
 //-----------------------------------------------------------------------------
 void CHudMenu::SelectMenuItem( int menu_item )
 {
+	if (menu_item == 0)
+		menu_item = 10;
+
 	// if menu_item is in a valid slot,  send a menuselect command to the server
-	if ( (menu_item > 0) && (m_bitsValidSlots & (1 << (menu_item-1))) )
+	if ( (menu_item >= 0) && (m_bitsValidSlots & (1 << (menu_item-1))) )
 	{
 		char szbuf[32];
 		Q_snprintf( szbuf, sizeof( szbuf ), "menuselect %d\n", menu_item );
@@ -357,6 +394,7 @@ void CHudMenu::ProcessText( void )
 		m_nHeight += l->height;
 	}
 }
+
 //-----------------------------------------------------------------------------
 // Purpose: Local method to hide a menu, mirroring code found in
 //          MsgFunc_ShowMenu.
@@ -393,11 +431,7 @@ void CHudMenu::ShowMenu( const char * menuName, int validSlots )
 	g_pVGuiLocalize->ConvertANSIToUnicode( szMenuString, g_szMenuString, sizeof( g_szMenuString ) );
 	
 	ProcessText();
-
-	m_bMenuDisplayed = true;
-	m_bMenuTakesInput = true;
-
-	m_flSelectionTime = gpGlobals->curtime;
+	ShowMenu();	
 }
 
 //-----------------------------------------------------------------------------
@@ -441,11 +475,7 @@ void CHudMenu::ShowMenu_KeyValueItems( KeyValues *pKV )
 	pWritePosition += nCount;
 
 	ProcessText();
-
-	m_bMenuDisplayed = true;
-	m_bMenuTakesInput = true;
-
-	m_flSelectionTime = gpGlobals->curtime;
+	ShowMenu();
 }
 
 //-----------------------------------------------------------------------------
@@ -500,10 +530,7 @@ void CHudMenu::MsgFunc_ShowMenu( bf_read &msg)
 			ProcessText();
 		}
 
-		m_bMenuDisplayed = true;
-		m_bMenuTakesInput = true;
-
-		m_flSelectionTime = gpGlobals->curtime;
+		ShowMenu();
 	}
 	else
 	{

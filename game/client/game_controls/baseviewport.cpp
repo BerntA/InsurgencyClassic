@@ -32,15 +32,9 @@
 #include <igameresources.h>
 
 // sub dialogs
-#include "ScoreBoardPanel.h"
 #include "spectatorgui.h"
-#include "vguitextwindow.h"
 #include "IGameUIFuncs.h"
 #include "hud.h"
-#include "keypad_menu.h"
-#include "voice_menu.h"
-#include "EndMapVoteMenu.h"
-#include "hl2mp_gamerules.h"
 #include "GameBase_Client.h"
 
 // our definition
@@ -50,7 +44,7 @@
 #include "ienginevgui.h"
 #include "iclientmode.h"
 
-#include "c_hl2mp_player.h"
+#include "insvgui.h"
 
 #include "tier0/etwprof.h"
 
@@ -85,11 +79,6 @@ CON_COMMAND( showpanel, "Shows a viewport panel <name>" )
 		return;
 	
 	if ( args.ArgC() != 2 )
-		return;
-
-	if (!strcmp(args[1], PANEL_KEYPAD) || 
-		!strcmp(args[1], PANEL_ENDVOTE) ||
-		!strcmp(args[1], PANEL_VOICEWHEEL))
 		return;
 		
 	 gViewPortInterface->ShowPanel( args[ 1 ], true );
@@ -208,10 +197,8 @@ void CBaseViewport::OnScreenSizeChanged(int iOldWide, int iOldTall)
 	BaseClass::OnScreenSizeChanged(iOldWide, iOldTall);
 
 	IViewPortPanel* pSpecGuiPanel = FindPanelByName(PANEL_SPECGUI);
-	IViewPortPanel* pMOTDPanel = FindPanelByName(PANEL_INFO);
 
 	bool bSpecGuiWasVisible = pSpecGuiPanel && pSpecGuiPanel->IsVisible();
-	bool bMOTDWasVisible = pMOTDPanel && pMOTDPanel->IsVisible();
 
 	// reload the script file, so the screen positions in it are correct for the new resolution
 	ReloadScheme(NULL);
@@ -228,25 +215,20 @@ void CBaseViewport::OnScreenSizeChanged(int iOldWide, int iOldTall)
 		ShowPanel(PANEL_SPECGUI, true);
 
 	engine->ClientCmd_Unrestricted("hud_reloadscheme\n");
-
-	if (bMOTDWasVisible) // ensure we join the game!
-		engine->ClientCmd_Unrestricted("joingame\n");
 }
 
 void CBaseViewport::CreateDefaultPanels( void )
 {
 	// Load Custom Schemes here!
-	vgui::scheme()->LoadSchemeFromFile("resource/BaseScheme.res", "BaseScheme");
-	vgui::scheme()->LoadSchemeFromFile("resource/LoadingScheme.res", "LoadingScheme");
+	//vgui::scheme()->LoadSchemeFromFile("resource/BaseScheme.res", "BaseScheme");
+	//vgui::scheme()->LoadSchemeFromFile("resource/LoadingScheme.res", "LoadingScheme");
 
 #ifndef _XBOX
 	AddNewPanel(CreatePanelByName(PANEL_SCOREBOARD), "PANEL_SCOREBOARD");
-	AddNewPanel(CreatePanelByName(PANEL_INFO), "PANEL_INFO");
 	AddNewPanel(CreatePanelByName(PANEL_SPECGUI), "PANEL_SPECGUI");
-	AddNewPanel(CreatePanelByName(PANEL_VOICEWHEEL), "PANEL_VOICEWHEEL");
-	AddNewPanel(CreatePanelByName(PANEL_ENDVOTE), "PANEL_ENDVOTE");
-	AddNewPanel(CreatePanelByName(PANEL_KEYPAD), "PANEL_KEYPAD");
 #endif
+
+	CINSViewportHelper::CreateAllElements(this);
 }
 
 void CBaseViewport::UpdateAllPanels( void )
@@ -269,29 +251,9 @@ IViewPortPanel* CBaseViewport::CreatePanelByName(const char *szPanelName)
 	IViewPortPanel* newpanel = NULL;
 
 #ifndef _XBOX
-	if ( Q_strcmp(PANEL_SCOREBOARD, szPanelName) == 0 )
+	if (Q_strcmp(PANEL_SPECGUI, szPanelName) == 0)
 	{
-		newpanel = new CScoreBoardPanel(this);
-	}
-	else if ( Q_strcmp(PANEL_INFO, szPanelName) == 0 )
-	{
-		newpanel = new CTextWindow( this );
-	}
-	else if ( Q_strcmp(PANEL_KEYPAD, szPanelName) == 0 )
-	{
-		newpanel = new CKeyPadMenu( this );
-	}
-	else if (Q_strcmp(PANEL_VOICEWHEEL, szPanelName) == 0)
-	{
-		newpanel = new CVoiceMenu(this);
-	}
-	else if (Q_strcmp(PANEL_ENDVOTE, szPanelName) == 0)
-	{
-		newpanel = new CEndMapVoteMenu(this);
-	}
-	else if ( Q_strcmp(PANEL_SPECGUI, szPanelName) == 0 )
-	{
-		newpanel = new CSpectatorGUI( this );
+		newpanel = new CSpectatorGUI(this); // ins warn
 	}
 #endif
 	
@@ -449,17 +411,45 @@ IViewPortPanel* CBaseViewport::GetActivePanel( void )
 	return m_pActivePanel;
 }
 
-void CBaseViewport::RemoveAllPanels( void)
+void CBaseViewport::RemoveAllPanels(void)
 {
 	g_lastPanel = NULL;
-	for ( int i=0; i < m_Panels.Count(); i++ )
+	for (int i = 0; i < m_Panels.Count(); i++)
 	{
 		vgui::VPANEL vPanel = m_Panels[i]->GetVPanel();
-		vgui::ipanel()->DeletePanel( vPanel );
+		vgui::ipanel()->DeletePanel(vPanel);
 	}
 	m_Panels.Purge();
 	m_pActivePanel = NULL;
 	m_pLastActivePanel = NULL;
+}
+
+void CBaseViewport::HideAllPanels(void)
+{
+	for (int i = 0; i < m_Panels.Count(); i++)
+	{
+		IViewPortPanel* pPanel = m_Panels[i];
+		if (pPanel)
+			gViewPortInterface->ShowPanel(pPanel, false);
+	}
+}
+
+void CBaseViewport::ResetAllPanels(void)
+{
+	for (int i = 0; i < m_Panels.Count(); i++)
+	{
+		IViewPortPanel* pViewPanel = m_Panels[i];
+		if (!pViewPanel)
+			continue;
+
+		pViewPanel->Reset();
+
+		Panel* pPanel = dynamic_cast<Panel*>(pViewPanel);
+		if (!pPanel)
+			continue;
+
+		pPanel->OnLevelInit();
+	}
 }
 
 CBaseViewport::~CBaseViewport()
@@ -670,14 +660,6 @@ void CBaseViewport::ReloadScheme(const char *fromFile)
 	gHUD.ResetHUD();
 }
 
-int CBaseViewport::GetDeathMessageStartHeight( void )
-{
-	if (GameBaseClient->IsViewPortPanelVisible(PANEL_SPECGUI))
-		return YRES(35);
-
-	return YRES(2);
-}
-
 void CBaseViewport::Paint()
 {
 	if ( cl_leveloverviewmarker.GetInt() > 0 )
@@ -688,4 +670,23 @@ void CBaseViewport::Paint()
 		vgui::surface()->DrawLine( size, 0, size, size );
 		vgui::surface()->DrawLine( 0, size, size, size );
 	}
+}
+
+CON_COMMAND(changeteam, "Change your Team")
+{
+	if (!GetINSVGUIHelper()->CanShowTeamPanel())
+		return;
+	gViewPortInterface->ShowPanel(PANEL_CHANGETEAM, true);
+}
+
+CON_COMMAND(changesquad, "Change your Squad")
+{
+	if (!GetINSVGUIHelper()->CanShowSquadPanel())
+		return;
+	gViewPortInterface->ShowPanel(PANEL_SQUADSELECT, true);
+}
+
+CON_COMMAND(deathinfo, "Show Last Deathinfo")
+{
+	GetINSVGUIHelper()->ShowDeathPanel();
 }

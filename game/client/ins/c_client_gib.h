@@ -122,8 +122,8 @@ public:
 	void OnFullyInitialized(void);
 };
 
-extern ConVar bb2_gibs_fadeout_time;
-extern ConVar bb2_gibs_blood_chance;
+extern ConVar ins_gibs_fadeout_time;
+extern ConVar ins_gibs_blood_chance;
 
 extern bool RemoveAllClientGibs();
 extern void SpawnGibOrRagdollForPlayer(C_BaseAnimating *pFrom, int index, int team, const char *survivor, int flags, int type, const Vector &origin, const Vector &velocity, const QAngle &angles);

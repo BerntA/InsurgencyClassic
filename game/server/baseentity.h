@@ -11,8 +11,6 @@
 #pragma once
 #endif
 
-#define TEAMNUM_NUM_BITS	6
-
 #include "entitylist.h"
 #include "entityoutput.h"
 #include "networkvar.h"
@@ -22,7 +20,6 @@
 #include "engine/ivmodelinfo.h"
 
 class CDamageModifier;
-class CDmgAccumulator;
 
 struct CSoundParameters;
 
@@ -81,16 +78,9 @@ enum Class_T
 	CLASS_NONE = 0,				
 	CLASS_PLAYER,
 	CLASS_BULLSEYE,
-	CLASS_COMBINE,
 	CLASS_MILITARY,
-	CLASS_ZOMBIE,
-	CLASS_ZOMBIE_BOSS,
 	CLASS_MISSILE,
 	CLASS_FLARE,
-	CLASS_EARTH_FAUNA,
-	CLASS_PLAYER_ZOMB,
-	CLASS_PLAYER_INFECTED,
-	CLASS_MILITARY_VEHICLE,
 
 	NUM_AI_CLASSES
 };
@@ -545,8 +535,6 @@ public:
 	void InputFireUser2( inputdata_t &inputdata );
 	void InputFireUser3( inputdata_t &inputdata );
 	void InputFireUser4( inputdata_t &inputdata );
-	void InputFireInventoryObjectiveSuccess(inputdata_t &inputdata);
-	void InputFireInventoryObjectiveFail(inputdata_t &inputdata);
 
 	// Gives mappers many joys! BB2
 #ifdef GLOWS_ENABLE
@@ -734,12 +722,12 @@ public:
 	virtual ITraceFilter*	GetBeamTraceFilter( void );
 
 	// Call this to do a TraceAttack on an entity, performs filtering. Don't call TraceAttack() directly except when chaining up to base class
-	void			DispatchTraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator = NULL );
+	void			DispatchTraceAttack(const CTakeDamageInfo& info, const Vector& vecDir, trace_t* ptr);
 	virtual bool	PassesDamageFilter( const CTakeDamageInfo &info );
 
 
 protected:
-	virtual void	TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator = NULL );
+	virtual void	TraceAttack(const CTakeDamageInfo& info, const Vector& vecDir, trace_t* ptr);
 
 public:
 
@@ -779,40 +767,7 @@ public:
 	virtual void			DecalTrace( trace_t *pTrace, char const *decalName );
 	virtual void			ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName = NULL );
 
-	void			AddPoints(int score, bool bAllowNegativeScore);
-	void			AddPointsToTeam(int score, bool bAllowNegativeScore);
 	void			RemoveAllDecals(void);
-
-	virtual bool IsHuman(bool includeNPCs = false)
-	{
-		if (includeNPCs && ((Classify() == CLASS_COMBINE) || (Classify() == CLASS_MILITARY)))
-			return true;
-
-		return ((Classify() == CLASS_PLAYER) || (Classify() == CLASS_PLAYER_INFECTED));
-	}
-
-	virtual bool IsMercenary(void)
-	{
-		return (Classify() == CLASS_MILITARY);
-	}
-
-	virtual bool IsHumanBoss(void)
-	{
-		return false;
-	}
-
-	virtual bool IsZombie(bool includeNPCs = false)
-	{
-		if (includeNPCs && ((Classify() == CLASS_ZOMBIE) || (Classify() == CLASS_ZOMBIE_BOSS)))
-			return true;
-
-		return (Classify() == CLASS_PLAYER_ZOMB);
-	}
-
-	virtual bool IsZombieBoss(void)
-	{
-		return (Classify() == CLASS_ZOMBIE_BOSS);
-	}
 
 	virtual bool	OnControls( CBaseEntity *pControls ) { return false; }
 	virtual bool	HasTarget( string_t targetname );
@@ -833,13 +788,14 @@ public:
 	virtual bool	IsViewable( void );					// is this something that would be looked at (model, sprite, etc.)?
 
 	// Team Handling
-	CTeam			*GetTeam( void ) const;				// Get the Team this entity is on
-	int				GetTeamNumber( void ) const;		// Get the Team number of the team this entity is on
+	virtual CTeam	*GetTeam( void ) const;				// Get the Team this entity is on
+	virtual int		GetTeamNumber( void ) const;		// Get the Team number of the team this entity is on
 	virtual void	ChangeTeam( int iTeamNum );			// Assign this entity to a team.
-	bool			IsInTeam( CTeam *pTeam ) const;		// Returns true if this entity's in the specified team
-	bool			InSameTeam( CBaseEntity *pEntity ) const;	// Returns true if the specified entity is on the same team as this one
-	bool			IsInAnyTeam( void ) const;			// Returns true if this entity is in any team
-	const char		*TeamID( void ) const;				// Returns the name of the team this entity is on.
+
+	virtual CBasePlayer* GetScorer(void) const { return NULL; }
+	virtual int GetInflictorType(void) const { return -1; }
+	virtual int GetInflictorID(void) const { return -1; }
+	virtual bool IsInflictorDistance(void) const { return false; }
 
 	// Entity events... these are events targetted to a particular entity
 	// Each event defines its own well-defined event data structure
@@ -866,7 +822,6 @@ public:
 	void (CBaseEntity ::*m_pfnBlocked)( CBaseEntity *pOther );
 
 	virtual void			Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	virtual void            DelayedUse(CBaseEntity *pActivator) {}
 	virtual void			StartTouch( CBaseEntity *pOther );
 	virtual void			Touch( CBaseEntity *pOther ); 
 	virtual void			EndTouch( CBaseEntity *pOther );
@@ -908,7 +863,6 @@ public:
 
 	// Remove this as ground entity for all object resting on this object
 	void					WakeRestingObjects();
-	bool					HasNPCsOnIt();
 
 	virtual void			UpdateOnRemove( void );
 	virtual void			StopLoopingSounds( void ) {}
@@ -936,7 +890,6 @@ public:
 	virtual void MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
 	virtual int	GetTracerAttachment( void );
 	virtual void FireBullets( const FireBulletsInfo_t &info );
-	virtual float FirePenetrativeBullet(const FireBulletsInfo_t &info, Vector &vecStart, Vector &vecDir, CBaseEntity *pAttacker, CBaseEntity *pIgnore, int dmgType);
 	virtual void DoImpactEffect( trace_t &tr, int nDamageType ); // give shooter a chance to do a custom impact.
 
 	// OLD VERSION! Use the struct version
@@ -949,7 +902,7 @@ public:
 	virtual CBaseEntity *Respawn( void ) { return NULL; }
 
 	// Method used to deal with attacks passing through triggers
-	void TraceAttackToTriggers( const CTakeDamageInfo &info, const Vector& start, const Vector& end, const Vector& dir );
+	static void TraceAttackToTriggers(const CTakeDamageInfo& info, const Vector& start, const Vector& end, const Vector& dir);
 
 	// Do the bounding boxes of these two intersect?
 	bool	Intersects( CBaseEntity *pOther );
@@ -957,10 +910,10 @@ public:
 
 	// Health accessors.
 	virtual int		GetMaxHealth()  const	{ return m_iMaxHealth; }
-	void	SetMaxHealth( int amt )	{ m_iMaxHealth = amt; }
+	virtual void	SetMaxHealth( int amt )	{ m_iMaxHealth = amt; }
 
-	int		GetHealth() const		{ return m_iHealth; }
-	void	SetHealth( int amt )	{ m_iHealth = amt; }
+	virtual int		GetHealth() const		{ return m_iHealth; }
+	virtual void	SetHealth( int amt )	{ m_iHealth = amt; }
 	
 	float HealthFraction() const;
 
@@ -1238,11 +1191,9 @@ public:
 
 	// For each client who appears to be a valid recipient, checks the client has disabled CC and if so, removes them from 
 	//  the recipient list.
-	static void RemoveRecipientsIfNotCloseCaptioning( CRecipientFilter& filter );
-	static void EmitCloseCaption( IRecipientFilter& filter, int entindex, char const *token, CUtlVector< Vector >& soundorigins, float duration, bool warnifmissing = false );
-	static void	EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
+	static void	EmitSentenceByIndex(IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex,
 		float flVolume, soundlevel_t iSoundlevel, int iFlags = 0, int iPitch = PITCH_NORM,
-		const Vector *pOrigin = NULL, const Vector *pDirection = NULL, bool bUpdatePositions = true, float soundtime = 0.0f );
+		const Vector* pOrigin = NULL, const Vector* pDirection = NULL, bool bUpdatePositions = true, float soundtime = 0.0f);
 
 	static bool IsPrecacheAllowed();
 	static void SetAllowPrecache( bool allow );
@@ -1438,18 +1389,6 @@ private:
 	float GetNextThink( int nContextIndex ) const;
 	int	GetNextThinkTick( int nContextIndex ) const;
 
-	// Shot statistics
-	void UpdateShotStatistics( const trace_t &tr );
-
-	// Handle shot entering water
-	bool HandleShotImpactingWater( const FireBulletsInfo_t &info, const Vector &vecEnd, ITraceFilter *pTraceFilter, Vector *pVecTracerDest );
-
-	// Handle shot entering water
-	void HandleShotImpactingGlass( const FireBulletsInfo_t &info, const trace_t &tr, const Vector &vecDir, ITraceFilter *pTraceFilter );
-
-	// Should we draw bubbles underwater?
-	bool ShouldDrawUnderwaterBulletBubbles();
-
 	// Computes the tracer start position
 	void ComputeTracerStartPosition( const Vector &vecShotSrc, Vector *pVecTracerStart );
 
@@ -1509,10 +1448,6 @@ private:
 
 	CNetworkVar( float, m_flShadowCastDistance );
 	float		m_flDesiredShadowCastDistance;
-
-	// Team handling
-	int			m_iInitialTeamNum;		// Team number of this entity's team read from file
-	CNetworkVar( int, m_iTeamNum );				// Team number of this entity's team. 
 
 	// Sets water type + level for physics objects
 	unsigned char	m_nWaterTouch;
@@ -1576,8 +1511,6 @@ private:
 	COutputEvent m_OnUser2;
 	COutputEvent m_OnUser3;
 	COutputEvent m_OnUser4;
-	COutputEvent m_OnInventoryObjectiveItemUsed;
-	COutputEvent m_OnInventoryObjectiveItemFail;
 
 	QAngle			m_angAbsRotation;
 

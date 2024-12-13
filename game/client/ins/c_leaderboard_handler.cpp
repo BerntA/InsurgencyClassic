@@ -16,7 +16,7 @@ static int m_gIndex = 0;
 static int m_gCurrentIndex = -1;
 static float m_gUploadDelay = 0.0f;
 
-CLeaderboardHandler::CLeaderboardHandler(const char *leaderboardName)
+CLeaderboardHandler::CLeaderboardHandler(const char* leaderboardName)
 {
 	g_pLeaderboards.AddToTail(this);
 	Q_strncpy(m_pchLeaderboardName, leaderboardName, sizeof(m_pchLeaderboardName));
@@ -60,21 +60,21 @@ void CLeaderboardHandler::FetchLeaderboardResults(int iOffset)
 	m_callResultDownload.Set(hSteamAPICall, this, &CLeaderboardHandler::OnLeaderboardDownloadedEntries);
 }
 
-void CLeaderboardHandler::OnFindLeaderboard(LeaderboardFindResult_t *pData, bool bIOFailure)
+void CLeaderboardHandler::OnFindLeaderboard(LeaderboardFindResult_t* pData, bool bIOFailure)
 {
 	// See if we encountered an error during the call
 	if (!pData->m_bLeaderboardFound || bIOFailure)
 		return;
 
 	// Only allow the selected leaderboard scores.
-	const char *pchName = steamapicontext->SteamUserStats()->GetLeaderboardName(pData->m_hSteamLeaderboard);
+	const char* pchName = steamapicontext->SteamUserStats()->GetLeaderboardName(pData->m_hSteamLeaderboard);
 	if (strcmp(pchName, m_pchLeaderboardName))
 		return;
 
 	m_hLeaderboardHandle = pData->m_hSteamLeaderboard;
 }
 
-void CLeaderboardHandler::OnLeaderboardDownloadedEntries(LeaderboardScoresDownloaded_t *pData, bool bIOFailure)
+void CLeaderboardHandler::OnLeaderboardDownloadedEntries(LeaderboardScoresDownloaded_t* pData, bool bIOFailure)
 {
 	int iEntries = pData->m_cEntryCount;
 	int m_iItemIndex = 0;
@@ -89,7 +89,7 @@ void CLeaderboardHandler::OnLeaderboardDownloadedEntries(LeaderboardScoresDownlo
 
 			char pszPlayerName[32];
 			char pszSteamID[80];
-			const char *playerName = steamapicontext->SteamFriends()->GetFriendPersonaName(pSteamID);
+			const char* playerName = steamapicontext->SteamFriends()->GetFriendPersonaName(pSteamID);
 			if (!(playerName && playerName[0]))
 				playerName = "Unnamed";
 
@@ -104,12 +104,12 @@ void CLeaderboardHandler::OnLeaderboardDownloadedEntries(LeaderboardScoresDownlo
 	}
 
 	m_bIsLoading = false;
-	
+
 	// callback to GUI
 	// steamapicontext->SteamUserStats()->GetLeaderboardEntryCount(m_hLeaderboardHandle)
 }
 
-void CLeaderboardHandler::OnLeaderboardUploadedEntry(LeaderboardScoreUploaded_t *pData, bool bIOFailure)
+void CLeaderboardHandler::OnLeaderboardUploadedEntry(LeaderboardScoreUploaded_t* pData, bool bIOFailure)
 {
 	m_bIsUploading = false;
 	m_gCurrentIndex++;
@@ -136,7 +136,7 @@ void CLeaderboardHandler::OnLeaderboardUploadedEntry(LeaderboardScoreUploaded_t 
 		g_pLeaderboards[i]->OnUpdate();
 }
 
-/*static*/void CLeaderboardHandler::FetchLeaderboardResults(const char *name, int iOffset)
+/*static*/void CLeaderboardHandler::FetchLeaderboardResults(const char* name, int iOffset)
 {
 	if (!name || !name[0])
 		return;

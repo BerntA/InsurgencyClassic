@@ -73,7 +73,7 @@ ConVar func_breakdmg_bullet( "func_breakdmg_bullet", "0.5" );
 ConVar func_breakdmg_club( "func_breakdmg_club", "1.5" );
 ConVar func_breakdmg_explosive( "func_breakdmg_explosive", "1.25" );
 
-ConVar sv_turbophysics( "sv_turbophysics", "0", FCVAR_REPLICATED, "Turns on turbo physics" );
+ConVar sv_turbophysics( "sv_turbophysics", "1", FCVAR_REPLICATED, "Turns on turbo physics" );
 
 //-----------------------------------------------------------------------------
 // Purpose: Breakable objects take different levels of damage based upon the damage type.
@@ -146,12 +146,6 @@ float GetBreakableDamage( const CTakeDamageInfo &inputInfo, IBreakableWithPropDa
 	{
 		// Cut by a Ravenholm propeller trap
 		flDamage *= 10.0f;
-	}
-
-	// Poison & other timebased damage types do no damage
-	if ( g_pGameRules->Damage_IsTimeBased( iDmgType ) )
-	{
-		flDamage = 0;
 	}
 
 	return flDamage;
@@ -423,11 +417,6 @@ void CBreakableProp::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize,
 		return;
 
 	BaseClass::Ignite( flFlameLifetime, bNPCOnly, flSize, bCalledByLevelDesigner );
-
-	if ( g_pGameRules->ShouldBurningPropsEmitLight() )
-	{
-		GetEffectEntity()->AddEffects( EF_DIMLIGHT );
-	}
 
 	// Frighten AIs, just in case this is an exploding thing.
 	CSoundEnt::InsertSound( SOUND_DANGER, GetAbsOrigin(), 128.0f, 1.0f, this, SOUNDENT_CHANNEL_REPEATED_DANGER );
@@ -1641,13 +1630,9 @@ END_SEND_TABLE()
 CDynamicProp::CDynamicProp()
 {
 	m_nPendingSequence = -1;
-	if ( g_pGameRules->IsMultiplayer() )
-	{
-		UseClientSideAnimation();
-	}
+	UseClientSideAnimation();
 	m_iGoalSequence = -1;
 }
-
 
 //------------------------------------------------------------------------------
 // Purpose:
@@ -2614,31 +2599,31 @@ float CPhysicsProp::GetCarryDistanceOffset( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPhysicsProp::ObjectCaps()
-{ 
-	int caps = BaseClass::ObjectCaps();
-
-	if ( HasSpawnFlags( SF_PHYSPROP_ENABLE_PICKUP_OUTPUT ) )
-	{
-		caps |= FCAP_IMPULSE_USE;
-	}
-	else if ( CBasePlayer::CanPickupObject( this, 35, 128 ) )
-	{
-		caps |= FCAP_IMPULSE_USE;
-
-		if( HasInteraction( PROPINTER_PHYSGUN_CREATE_FLARE )  )
-		{
-			caps |= FCAP_USE_IN_RADIUS;
-		}
-	}
-
-	if( HasSpawnFlags( SF_PHYSPROP_RADIUS_PICKUP ) )
-	{
-		caps |= FCAP_USE_IN_RADIUS;
-	}
-
-	return caps;
-}
+//int CPhysicsProp::ObjectCaps()
+//{ 
+//	int caps = BaseClass::ObjectCaps();
+//
+//	if ( HasSpawnFlags( SF_PHYSPROP_ENABLE_PICKUP_OUTPUT ) )
+//	{
+//		caps |= FCAP_IMPULSE_USE;
+//	}
+//	else if ( CBasePlayer::CanPickupObject( this, 35, 128 ) )
+//	{
+//		caps |= FCAP_IMPULSE_USE;
+//
+//		if( HasInteraction( PROPINTER_PHYSGUN_CREATE_FLARE )  )
+//		{
+//			caps |= FCAP_USE_IN_RADIUS;
+//		}
+//	}
+//
+//	if( HasSpawnFlags( SF_PHYSPROP_RADIUS_PICKUP ) )
+//	{
+//		caps |= FCAP_USE_IN_RADIUS;
+//	}
+//
+//	return caps;
+//}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -2647,19 +2632,19 @@ int CPhysicsProp::ObjectCaps()
 //			useType - 
 //			value - 
 //-----------------------------------------------------------------------------
-void CPhysicsProp::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
-	if ( pPlayer )
-	{
-		if ( HasSpawnFlags( SF_PHYSPROP_ENABLE_PICKUP_OUTPUT ) )
-		{
-			m_OnPlayerUse.FireOutput( this, this );
-		}
-
-		pPlayer->PickupObject( this );
-	}
-}
+//void CPhysicsProp::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+//{
+//	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
+//	if ( pPlayer )
+//	{
+//		if ( HasSpawnFlags( SF_PHYSPROP_ENABLE_PICKUP_OUTPUT ) )
+//		{
+//			m_OnPlayerUse.FireOutput( this, this );
+//		}
+//
+//		pPlayer->PickupObject( this );
+//	}
+//}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -4405,13 +4390,9 @@ public:
 	void	DoorResume( void );
 	void	DoorStop( void );
 
-	float	GetOpenInterval();
-
 	bool	OverridePropdata() { return true; }
 
 	void	InputSetSpeed(inputdata_t &inputdata);
-
-	void    DelayedUse(CBaseEntity *pActivator);
 
 	DECLARE_DATADESC();
 
@@ -5010,18 +4991,6 @@ void CPropDoorRotating::DoorResume( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Returns how long it will take this door to open.
-//-----------------------------------------------------------------------------
-float CPropDoorRotating::GetOpenInterval()
-{
-	// set destdelta to the vector needed to move
-	QAngle vecDestDelta = m_angRotationOpenForward - GetLocalAngles();
-	
-	// divide by speed to get time to reach dest
-	return vecDestDelta.Length() / m_flSpeed;
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
@@ -5107,19 +5076,7 @@ void CPropDoorRotating::InputSetSpeed(inputdata_t &inputdata)
 	DoorResume();
 }
 
-void CPropDoorRotating::DelayedUse(CBaseEntity *pActivator)
-{
-	if (!pActivator)
-		return;
-
-	if (!pActivator->IsPlayer() || pActivator->IsZombie() || m_bStartLocked)
-		return;
-
-	ChangeLockedState(pActivator);
-}
-
 LINK_ENTITY_TO_CLASS( prop_sphere, CPhysSphere );
-
 
 // ------------------------------------------------------------------------------------------ //
 // Special version of func_physbox.
@@ -5966,16 +5923,13 @@ void CPropDoorBreakable::SetUnBreakable(inputdata_t &inputdata)
 
 bool CPropDoorBreakable::CanEntityUseDoor(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
 {
-	// Zombie Players can no longer open breakable doors, they gotta break'em!
-	if (CanBreak() && pActivator && pActivator->IsZombie(true))
-		return false;
 	return true;
 }
 
 bool CPropDoorBreakable::ParseDoorData(const char *script)
 {
 	char pszPath[80];
-	Q_snprintf(pszPath, 80, "data/doors/%s", script);
+	Q_snprintf(pszPath, 80, "scripts/doors/%s", script);
 
 	KeyValues *pkvData = GameBaseShared()->ReadEncryptedKeyValueFile(filesystem, pszPath);
 	if (pkvData)

@@ -22,6 +22,7 @@ CFMODAmbience::CFMODAmbience()
 	m_pChannel = NULL;
 	m_flVolume = 0.0f;
 	m_pchSoundFile[0] = 0;
+	m_bIsLooped = false;
 }
 
 CFMODAmbience::~CFMODAmbience()
@@ -35,15 +36,28 @@ void CFMODAmbience::Restart(void)
 		PlaySoundInternal();
 }
 
-void CFMODAmbience::PlaySound(const char* pSoundPath)
+void CFMODAmbience::PlaySound(const char* pSoundPath, bool bLooped, float flVolOverride)
 {
-	Q_strncpy(m_pchSoundFile, FMODManager()->GetFullPathToSound(pSoundPath), sizeof(m_pchSoundFile));
+	m_bIsLooped = bLooped;
+	m_flVolume = flVolOverride;
+	Q_strncpy(m_pchSoundFile, FMODManager()->GetSoundPath(pSoundPath), sizeof(m_pchSoundFile));
 	PlaySoundInternal();
 }
 
 void CFMODAmbience::PlaySoundInternal(void)
 {
-	FMOD_RESULT result = FMODManager()->GetFMODSystem()->createStream(m_pchSoundFile, FMOD_LOOP_NORMAL | FMOD_2D | FMOD_HARDWARE, 0, &m_pSound);
+	if (!FMODManager()->HasLoadedModule())
+	{
+		Warning("Unable to play sound before FMOD has fully loaded!\n");
+		return;
+	}
+
+	FMOD_RESULT result = FMODManager()->GetFMODSystem()->createStream(
+		m_pchSoundFile,
+		(m_bIsLooped ? (FMOD_LOOP_NORMAL | FMOD_2D | FMOD_HARDWARE) : (FMOD_LOOP_OFF | FMOD_2D | FMOD_HARDWARE)),
+		0,
+		&m_pSound
+	);
 
 	if (result != FMOD_OK)
 	{
@@ -71,13 +85,13 @@ void CFMODAmbience::StopSound(void)
 void CFMODAmbience::SetVolume(float volume)
 {
 	m_flVolume = clamp(volume, 0.0f, 1.0f);
-	if (m_pChannel && (m_flVolume <= 0.0f))
+	if (m_pChannel && (m_flVolume <= 0.0f) && FMODManager()->HasLoadedModule())
 		m_pChannel->setVolume(0.0f);
 }
 
 void CFMODAmbience::Think(void)
 {
-	if (m_pChannel == NULL)
+	if (m_pChannel == NULL || !FMODManager()->HasLoadedModule())
 		return;
 
 	bool bShouldMute = (engine->IsPaused() || !engine->IsActiveApp());
@@ -88,19 +102,33 @@ void CFMODAmbience::Think(void)
 	if (bIsMuted != bShouldMute)
 		m_pChannel->setMute(bShouldMute);
 
-	m_pChannel->setVolume(bShouldMute ? 0.0f : (m_flVolume * FMODManager()->GetMasterVolume()));
+	m_pChannel->setVolume(bShouldMute ? 0.0f : (m_flVolume * FMODManager()->GetMusicVolume()));
 }
 
 void CFMODAmbience::Destroy(void)
 {
 	SetVolume(0.0f);
 
-	if (m_pSound != NULL)
-		m_pSound->release();
+	if (FMODManager()->HasLoadedModule())
+	{
+		if (m_pSound != NULL)
+			m_pSound->release();
 
-	if (m_pChannel != NULL)
-		m_pChannel->stop();
+		if (m_pChannel != NULL)
+			m_pChannel->stop();
+	}
 
 	m_pSound = NULL;
 	m_pChannel = NULL;
+}
+
+bool CFMODAmbience::IsPlaying(void)
+{
+	if (m_pSound == NULL || m_pChannel == NULL || !FMODManager()->HasLoadedModule())
+		return false;
+
+	bool bIsPlaying = false;
+	m_pChannel->isPlaying(&bIsPlaying);
+
+	return bIsPlaying;
 }

@@ -15,7 +15,6 @@ enum AchievementTypes
 {
 	ACHIEVEMENT_TYPE_DEFAULT = 0,
 	ACHIEVEMENT_TYPE_MAP,
-	ACHIEVEMENT_TYPE_REWARD,
 };
 
 struct achievementStatItem_t
@@ -24,7 +23,6 @@ struct achievementStatItem_t
 	const char *szStat;
 	int value;
 	int type;
-	int reward;
 	bool hidden;
 	const char *szMapLink;
 };

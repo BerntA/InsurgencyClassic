@@ -16,8 +16,8 @@
 #include "vgui/ILocalize.h"
 #include "vguicenterprint.h"
 #include "game/client/iviewport.h"
+#include "c_ins_player.h"
 #include <KeyValues.h>
-#include "c_hl2mp_player.h"
 
 ConVar spec_autodirector( "spec_autodirector", "1", FCVAR_CLIENTDLL | FCVAR_CLIENTCMD_CAN_EXECUTE, "Auto-director chooses best view modes while spectating" );
 
@@ -111,9 +111,7 @@ void C_HLTVCamera::CalcChaseCamView( Vector& eyeOrigin, QAngle& eyeAngles, float
 		return;
 
 	// get primary target, also translates to ragdoll
-	C_BaseEntity *target1 = GetPrimaryTarget();
-	C_HL2MP_Player *pClient = ToHL2MPPlayer(target1);
-
+	C_INSPlayer *target1 = ToINSPlayer(GetPrimaryTarget());
  	if ( !target1 ) 
 		return;
 	
@@ -126,11 +124,11 @@ void C_HLTVCamera::CalcChaseCamView( Vector& eyeOrigin, QAngle& eyeAngles, float
 	{
 		targetOrigin1 += VEC_DEAD_VIEWHEIGHT;
 	}
-	else if (pClient && pClient->IsSliding())
+	else if (target1->IsProned())
 	{
-		targetOrigin1 += VEC_SLIDE_VIEW;
+		targetOrigin1 += VEC_PRONE_VIEW;
 	}
-	else if ( target1->GetFlags() & FL_DUCKING )
+	else if ( target1->IsCrouched() )
 	{
 		targetOrigin1 += VEC_DUCK_VIEW;
 	}
@@ -140,17 +138,16 @@ void C_HLTVCamera::CalcChaseCamView( Vector& eyeOrigin, QAngle& eyeAngles, float
 	}
 
 	// get secondary target if set
-	C_BaseEntity *target2 = NULL;
+	C_INSPlayer *target2 = NULL;
 
 	if ( m_iTraget2 > 0 && (m_iTraget2 != m_iTraget1) && !bManual )
 	{
-		target2 = ClientEntityList().GetBaseEntity( m_iTraget2 );
+		target2 = ToINSPlayer(ClientEntityList().GetBaseEntity(m_iTraget2));
 
 		// if target is out PVS and not dead, it's not valid
 		if ( target2 && target2->IsDormant() && target2->IsAlive() )
 			target2 = NULL;
 
-		pClient = ToHL2MPPlayer(target2);
 		if ( target2 )
 		{
 			targetOrigin2 = target2->GetRenderOrigin();
@@ -159,11 +156,11 @@ void C_HLTVCamera::CalcChaseCamView( Vector& eyeOrigin, QAngle& eyeAngles, float
 			{
 				targetOrigin2 += VEC_DEAD_VIEWHEIGHT;
 			}
-			else if (pClient && pClient->IsSliding())
+			else if (target2->IsProned())
 			{
-				targetOrigin2 += VEC_SLIDE_VIEW;
+				targetOrigin2 += VEC_PRONE_VIEW;
 			}
-			else if ( target2->GetFlags() & FL_DUCKING )
+			else if ( target2->IsCrouched() )
 			{
 				targetOrigin2 += VEC_DUCK_VIEW;
 			}
@@ -306,7 +303,7 @@ C_BaseEntity *C_HLTVCamera::GetCameraMan()
 
 void C_HLTVCamera::CalcInEyeCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )
 {
-	C_HL2MP_Player *pPlayer = ToHL2MPPlayer(UTIL_PlayerByIndex(m_iTraget1));
+	C_INSPlayer * pPlayer = ToINSPlayer(UTIL_PlayerByIndex(m_iTraget1));
 	if ( !pPlayer )
 		return;
 
@@ -321,11 +318,11 @@ void C_HLTVCamera::CalcInEyeCamView( Vector& eyeOrigin, QAngle& eyeAngles, float
 	m_vCamOrigin = pPlayer->GetAbsOrigin();
 	m_flFOV = pPlayer->GetFOV();
 
-	if (pPlayer->IsSliding())
+	if (pPlayer->IsProned())
 	{
-		m_vCamOrigin += VEC_SLIDE_VIEW;
+		m_vCamOrigin += VEC_PRONE_VIEW;
 	}
-	else if ( pPlayer->GetFlags() & FL_DUCKING )
+	else if ( pPlayer->IsCrouched())
 	{
 		m_vCamOrigin += VEC_DUCK_VIEW;
 	}

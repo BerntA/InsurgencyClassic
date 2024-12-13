@@ -19,10 +19,8 @@
 #include <KeyValues.h>
 #include "ienginevgui.h"
 #include "c_playerresource.h"
-#include "ihudlcd.h"
 #include "vgui/IInput.h"
-#include "vgui/ILocalize.h"
-#include "multiplay_gamerules.h"
+#include "ins_shared.h"
 #include "vgui_controls/ScrollBar.h"
 #include "voice_status.h"
 
@@ -479,7 +477,7 @@ CBaseHudChat::CBaseHudChat( const char *pElementName )
 
 	g_pVGuiLocalize->AddFile( "resource/chat_%language%.txt" );
 
-	m_nMessageMode = 0;
+	m_nMessageMode = SAYTYPE_GLOBAL;
 
 	vgui::ivgui()->AddTickSignal( GetVPanel() );
 
@@ -894,20 +892,58 @@ void CBaseHudChat::StartMessageMode( int iMessageModeType )
 
 	m_pChatInput->ClearEntry();
 
-	const wchar_t *pszPrompt = ( m_nMessageMode == MM_SAY ) ? g_pVGuiLocalize->Find( "#chat_say" ) : g_pVGuiLocalize->Find( "#chat_say_team" ); 
+	const wchar_t* pszPrompt = NULL;
+
+	switch (iMessageModeType)
+	{
+
+	case SAYTYPE_GLOBAL:
+	{
+		pszPrompt = g_pVGuiLocalize->Find("#chat_say");
+		break;
+	}
+
+	case SAYTYPE_TEAM:
+	{
+		pszPrompt = g_pVGuiLocalize->Find("#chat_say_team");
+		break;
+	}
+
+	case SAYTYPE_SQUAD:
+	{
+		pszPrompt = g_pVGuiLocalize->Find("#chat_say_squad");
+		break;
+	}
+
+	}
+
 	if ( pszPrompt )
 	{
 		m_pChatInput->SetPrompt( pszPrompt );
 	}
 	else
 	{
-		if ( m_nMessageMode == MM_SAY )
+		switch (iMessageModeType)
 		{
-			m_pChatInput->SetPrompt( L"Say :" );
+
+		case SAYTYPE_GLOBAL:
+		{
+			m_pChatInput->SetPrompt(L"Say :");
+			break;
 		}
-		else
+
+		case SAYTYPE_TEAM:
 		{
-			m_pChatInput->SetPrompt( L"Say (TEAM) :" );
+			m_pChatInput->SetPrompt(L"Say (TEAM) :");
+			break;
+		}
+
+		case SAYTYPE_SQUAD:
+		{
+			m_pChatInput->SetPrompt(L"Say (SQUAD) :");
+			break;
+		}
+
 		}
 	}
 	
@@ -974,7 +1010,7 @@ void CBaseHudChat::StopMessageMode( void )
 
 	m_flHistoryFadeTime = gpGlobals->curtime + CHAT_HISTORY_FADE_TIME;
 
-	m_nMessageMode = MM_NONE;
+	m_nMessageMode = SAYTYPE_GLOBAL;
 #endif
 }
 
@@ -1320,26 +1356,42 @@ This is a very long string that I am going to attempt to paste into the cs hud c
 	*/
 
 	// remove the \n
-	if ( len > 0 &&
-		ansi[ len - 1 ] == '\n' )
+	if (len > 0 &&
+		ansi[len - 1] == '\n')
 	{
-		ansi[ len - 1 ] = '\0';
+		ansi[len - 1] = '\0';
 	}
 
-	if( len > 0 )
+	if (len > 0)
 	{
-		// Let the game rules at it
-		if ( GameRules() )
+		char szbuf[144];	// more than 128
+
+		switch (m_nMessageMode)
 		{
-			GameRules()->ModifySentChat( ansi, ARRAYSIZE(ansi) );
+
+		case SAYTYPE_TEAM:
+		{
+			Q_snprintf(szbuf, sizeof(szbuf), "say_team \"%s\"", ansi);
+			break;
 		}
 
-		char szbuf[144];	// more than 128
-		Q_snprintf( szbuf, sizeof(szbuf), "%s \"%s\"", m_nMessageMode == MM_SAY ? "say" : "say_team", ansi );
+		case SAYTYPE_SQUAD:
+		{
+			Q_snprintf(szbuf, sizeof(szbuf), "say_squad \"%s\"", ansi);
+			break;
+		}
+
+		default:
+		{
+			Q_snprintf(szbuf, sizeof(szbuf), "say \"%s\"", ansi);
+			break;
+		}
+
+		}
 
 		engine->ClientCmd_Unrestricted(szbuf);
 	}
-	
+
 	m_pChatInput->ClearEntry();
 #endif
 }
@@ -1436,15 +1488,6 @@ void CBaseHudChat::ChatPrintf( int iPlayerIndex, const char *fmt, ... )
 	{
 		if ( GetClientVoiceMgr() && GetClientVoiceMgr()->IsPlayerBlocked( iPlayerIndex ) )	
 			return;
-	}	
-
-	if ( *pmsg < 32 )
-	{
-		hudlcd->AddChatLine( pmsg + 1 );
-	}
-	else
-	{
-		hudlcd->AddChatLine( pmsg );
 	}
 
 	line->SetText( "" );

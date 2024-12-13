@@ -6,7 +6,6 @@
 
 #include "cbase.h"
 #include "hl2_shared_misc.h"
-#include "hl2_player.h"
 #include "triggers.h"
 
 //-----------------------------------------------------------------------------
@@ -258,89 +257,6 @@ void CTriggerWeaponDissolve::InputStopSound( inputdata_t &inputdata )
 }
 
 //-----------------------------------------------------------------------------
-// Weapon-strip trigger; can't pick up weapons while in the field
-//-----------------------------------------------------------------------------
-class CTriggerWeaponStrip : public CTriggerMultiple
-{
-	DECLARE_CLASS( CTriggerWeaponStrip, CTriggerMultiple );
-	DECLARE_DATADESC();
-
-public:
-	void StartTouch(CBaseEntity *pOther);
-	void EndTouch(CBaseEntity *pOther);
-
-private:
-	bool m_bKillWeapons;
-};
-
-
-//-----------------------------------------------------------------------------
-// Save/load
-//-----------------------------------------------------------------------------
-LINK_ENTITY_TO_CLASS( trigger_weapon_strip, CTriggerWeaponStrip );
-
-BEGIN_DATADESC( CTriggerWeaponStrip )
-	DEFINE_KEYFIELD( m_bKillWeapons,	FIELD_BOOLEAN, "KillWeapons" ),
-END_DATADESC()
-
-
-//-----------------------------------------------------------------------------
-// Drops all weapons, marks the character as not being able to pick up weapons
-//-----------------------------------------------------------------------------
-void CTriggerWeaponStrip::StartTouch(CBaseEntity *pOther)
-{
-	BaseClass::StartTouch( pOther );
-
-	if ( PassesTriggerFilters(pOther) == false )
-		return;
-
-	CBaseCombatCharacter *pCharacter = pOther->MyCombatCharacterPointer();
-	if (pCharacter == NULL)
-		return;
-	
-	if ( m_bKillWeapons )
-	{
-		for ( int i = 0 ; i < pCharacter->WeaponCount(); ++i )
-		{
-			CBaseCombatWeapon *pWeapon = pCharacter->GetWeapon( i );
-			if ( !pWeapon )
-				continue;
-
-			pCharacter->Weapon_Drop( pWeapon );
-			UTIL_Remove( pWeapon );
-		}
-		return;
-	}
-
-	// Strip the player of his weapons
-	if ( pCharacter && pCharacter->IsAllowedToPickupWeapons() )
-	{
-		pCharacter->Weapon_DropAll( true );
-		pCharacter->SetPreventWeaponPickup( true );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Called when an entity stops touching us.
-// Input  : pOther - The entity that was touching us.
-//-----------------------------------------------------------------------------
-void CTriggerWeaponStrip::EndTouch(CBaseEntity *pOther)
-{
-	if ( IsTouching( pOther ) )
-	{
-		CBaseCombatCharacter *pCharacter = pOther->MyCombatCharacterPointer();
-		if ( pCharacter )
-		{
-			pCharacter->SetPreventWeaponPickup( false );
-		}
-	}
-
-	BaseClass::EndTouch( pOther );
-}
-
-
-
-//-----------------------------------------------------------------------------
 // Teleport trigger
 //-----------------------------------------------------------------------------
 class CTriggerPhysicsTrap : public CTriggerMultiple
@@ -358,7 +274,6 @@ private:
 
 	int m_nDissolveType;
 };
-
 
 //-----------------------------------------------------------------------------
 // Save/load
@@ -703,13 +618,6 @@ void CTriggerWateryDeath::StartTouch(CBaseEntity *pOther)
 	if ( pOther->IsPlayer() )
 	{
 		SpawnLeeches( pOther );
-
-		CHL2_Player *pHL2Player = dynamic_cast<CHL2_Player*>( pOther );
-
-		if ( pHL2Player )
-		{
-			pHL2Player->StartWaterDeathSounds();
-		}
 	}
 #endif
 	
@@ -750,20 +658,6 @@ void CTriggerWateryDeath::EndTouch( CBaseEntity *pOther )
 
 		if ( m_hLeeches.Count() > 0 )
 			 m_hLeeches.Purge();
-
-		CHL2_Player *pHL2Player = dynamic_cast<CHL2_Player*>( pOther );
-
-		if ( pHL2Player )
-		{
-			//Adrian: Hi, you might be wondering why I'm doing this, yes?
-			//        Well, EndTouch is called not only when the player leaves
-			//		  the trigger, but also on level shutdown. We can't let the
-			//		  soundpatch fade the sound out since we'll hit a nasty assert
-			//        cause it'll try to fade out a sound using an entity that might
-			//        be gone since we're shutting down the server.
-			if ( !(pHL2Player->GetFlags() & FL_DONTTOUCH ) )
-				  pHL2Player->StopWaterDeathSounds();
-		}
 	}
 #endif
 

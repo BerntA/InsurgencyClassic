@@ -12,7 +12,7 @@
 #include "materialsystem/itexture.h"
 #include "view_shared.h"
 #include "viewpostprocess.h"
-#include "c_hl2mp_player.h"
+#include "c_ins_player.h"
 
 #define FULL_FRAME_TEXTURE "_rt_FullFrameFB"
 #define DEFAULT_RENDER_FLAGS_FOR_GLOW_ENTS (STUDIO_RENDER | STUDIO_SKIP_MATERIAL_OVERRIDES)
@@ -20,7 +20,7 @@
 #ifdef GLOWS_ENABLE
 
 ConVar glow_outline_effect_enable("glow_outline_effect_enable", "1", FCVAR_ARCHIVE, "Enable entity outline glow effects.");
-ConVar bb2_max_glow_effects("bb2_max_glow_effects", "5", FCVAR_ARCHIVE, "Maximum amount of glow render effects at once.", true, 1.0f, true, 20.0f);
+ConVar ins_max_glow_effects("ins_max_glow_effects", "5", FCVAR_ARCHIVE, "Maximum amount of glow render effects at once.", true, 1.0f, true, 20.0f);
 
 extern bool g_bDumpRenderTargets; // in viewpostprocess.cpp
 
@@ -83,7 +83,7 @@ void CGlowObjectManager::RenderGlowEffects(const CViewSetup *pSetup)
 {
 	if (g_pMaterialSystemHardwareConfig->SupportsPixelShaders_2_0())
 	{
-		C_HL2MP_Player *pLocalPlayer = C_HL2MP_Player::GetLocalHL2MPPlayer();
+		C_INSPlayer* pLocalPlayer = C_INSPlayer::GetLocalPlayer();
 		if (!pLocalPlayer)
 			return;
 
@@ -98,7 +98,7 @@ void CGlowObjectManager::RenderGlowEffects(const CViewSetup *pSetup)
 
 				if (m_pGlowEntities[i]->GetGlowMode() == GLOW_MODE_RADIUS)
 				{
-					if (numRadiusObjects >= bb2_max_glow_effects.GetInt())
+					if (numRadiusObjects >= ins_max_glow_effects.GetInt())
 					{
 						m_pGlowEntities[i]->m_bGlowSuppressRender = true;
 						continue;

@@ -28,8 +28,7 @@
 #define CLIENTNAME_TIMED_OUT "%s timed out"
 
 // This is the default, see shareddefs.h for mod-specific value, which can override this
-#define DEFAULT_TICK_INTERVAL	(0.015)				// 15 msec is the default
-#define DEFAULT_MOD_TICK_INTERVAL	(0.030)				// BB2 now uses 30 ms @33 tickrate by def.
+#define DEFAULT_TICK_INTERVAL	(0.015)
 #define MINIMUM_TICK_INTERVAL   (0.001)
 #define MAXIMUM_TICK_INTERVAL	(0.1)
 
@@ -358,7 +357,7 @@ enum RenderFx_t
 
 enum Collision_Group_t
 {
-	COLLISION_GROUP_NONE  = 0,
+	COLLISION_GROUP_NONE = 0,
 	COLLISION_GROUP_DEBRIS,			// Collides with nothing but world and static stuff
 	COLLISION_GROUP_DEBRIS_TRIGGER, // Same as debris, but hits triggers
 	COLLISION_GROUP_INTERACTIVE_DEBRIS,	// Collides with everything except other interactive debris or debris
@@ -373,18 +372,6 @@ enum Collision_Group_t
 	COLLISION_GROUP_PASSABLE_DOOR,	// Doors that the player shouldn't collide with
 	COLLISION_GROUP_DISSOLVING,		// Things that are dissolving are in this group
 	COLLISION_GROUP_PUSHAWAY,		// Nonsolid on client and server, pushaway in player code
-
-	COLLISION_GROUP_NPC_ACTOR,		// Used so NPCs in scripts ignore the player.
-	COLLISION_GROUP_NPC_SCRIPTED,	// USed for NPCs in scripts that should not collide with each other
-	COLLISION_GROUP_PLAYER_ZOMBIE, // Used for player zombies to filtrate them properly from each other.
-	COLLISION_GROUP_NPC_ZOMBIE, // Used for zombie npcs to separated them to nocollide with other zombies and player zombies.
-	COLLISION_GROUP_NPC_ZOMBIE_BOSS, // Used for zombie npc bosses, bosses will be allowed to go through normal zombie npcs.
-	COLLISION_GROUP_NPC_MILITARY, // Used for human friendly npcs (to players) to separate them to nocollide with other friendly military and player humans.
-	COLLISION_GROUP_NPC_MERCENARY, // Used for humanoid enemy npcs.
-	COLLISION_GROUP_NPC_ZOMBIE_SPAWNING, // Used for spawning zombies, non-bosses of course.
-	COLLISION_GROUP_PLAYER_REALITY_PHASE, // Used when reality phase is active... (perk)
-	COLLISION_GROUP_NPC_ZOMBIE_CRAWLER, // A crawling zombo, let's not get cock blocked by this guy.
-	COLLISION_GROUP_NPC_CROW,
 
 	LAST_SHARED_COLLISION_GROUP
 };

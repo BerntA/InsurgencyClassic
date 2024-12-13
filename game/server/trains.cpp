@@ -1636,7 +1636,7 @@ void CFuncTrackTrain::SoundUpdate( void )
 	}
 
 	// In multiplayer, only update the sound once a second
-	if ( g_pGameRules->IsMultiplayer() && m_bSoundPlaying )
+	if ( m_bSoundPlaying )
 	{
 		if ( m_flNextMPSoundTime > gpGlobals->curtime )
 			return;
@@ -1708,15 +1708,7 @@ void CFuncTrackTrain::SoundUpdate( void )
 			ep.m_nFlags = SND_CHANGE_PITCH;
 			ep.m_pOrigin = &vecWorldSpaceCenter;
 
-			// In multiplayer, don't make this reliable
-			if ( g_pGameRules->IsMultiplayer() )
-			{
-				EmitSound( filter, entindex(), ep );
-			}
-			else
-			{
-				EmitSound( filterReliable, entindex(), ep );
-			}
+			EmitSound(filter, entindex(), ep);
 		}
 
 		if ( ( m_iszSoundMovePing != NULL_STRING ) && ( gpGlobals->curtime > m_flNextMoveSoundTime ) )

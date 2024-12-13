@@ -13,7 +13,6 @@
 
 #include <utlqueue.h> // a vector based queue template to manage our VGUI menu queue
 #include <vgui_controls/Frame.h>
-#include "vguitextwindow.h"
 #include "vgui/ISurface.h"
 #include <igameevents.h>
 
@@ -35,7 +34,9 @@ public:
 	virtual IViewPortPanel* CreatePanelByName(const char *szPanelName);
 	virtual IViewPortPanel* FindPanelByName(const char *szPanelName);
 	virtual IViewPortPanel* GetActivePanel( void );
-	virtual void RemoveAllPanels( void);
+	virtual void RemoveAllPanels(void);
+	virtual void HideAllPanels(void);
+	virtual void ResetAllPanels(void);
 
 	virtual void ShowPanel( const char *pName, bool state );
 	virtual void ShowPanel( IViewPortPanel* pPanel, bool state );
@@ -55,8 +56,6 @@ public:
 	virtual AnimationController *GetAnimationController() { return m_pAnimController; }
 
 	virtual void ShowBackGround(bool bShow) { }
-
-	virtual int GetDeathMessageStartHeight( void );	
 
 public: // IGameEventListener:
 	virtual void FireGameEvent( IGameEvent * event);

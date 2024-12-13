@@ -16,17 +16,8 @@
 #include "imovehelper.h"
 #include "checksum_crc.h"
 
-
 class bf_read;
 class bf_write;
-
-class CEntityGroundContact
-{
-public:
-	int					entindex;
-	float				minheight;
-	float				maxheight;
-};
 
 class CUserCmd
 {
@@ -47,7 +38,6 @@ public:
 		sidemove = 0.0f;
 		upmove = 0.0f;
 		buttons = 0;
-		impulse = 0;
 		weaponselect = 0;
 		random_seed = 0;
 #ifdef GAME_DLL
@@ -56,10 +46,10 @@ public:
 		mousedx = 0;
 		mousedy = 0;
 
+		vmuzzle.Init();
+		amuzzle.Init();
+
 		hasbeenpredicted = false;
-#if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
-		entitygroundcontact.RemoveAll();
-#endif
 	}
 
 	CUserCmd& operator =( const CUserCmd& src )
@@ -74,7 +64,6 @@ public:
 		sidemove			= src.sidemove;
 		upmove				= src.upmove;
 		buttons				= src.buttons;
-		impulse				= src.impulse;
 		weaponselect		= src.weaponselect;
 		random_seed			= src.random_seed;
 #ifdef GAME_DLL
@@ -83,11 +72,10 @@ public:
 		mousedx				= src.mousedx;
 		mousedy				= src.mousedy;
 
-		hasbeenpredicted	= src.hasbeenpredicted;
+		amuzzle = src.amuzzle;
+		vmuzzle = src.vmuzzle;
 
-#if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
-		entitygroundcontact			= src.entitygroundcontact;
-#endif
+		hasbeenpredicted	= src.hasbeenpredicted;
 
 		return *this;
 	}
@@ -108,12 +96,13 @@ public:
 		CRC32_ProcessBuffer( &crc, &forwardmove, sizeof( forwardmove ) );   
 		CRC32_ProcessBuffer( &crc, &sidemove, sizeof( sidemove ) );      
 		CRC32_ProcessBuffer( &crc, &upmove, sizeof( upmove ) );         
-		CRC32_ProcessBuffer( &crc, &buttons, sizeof( buttons ) );		
-		CRC32_ProcessBuffer( &crc, &impulse, sizeof( impulse ) );        
+		CRC32_ProcessBuffer( &crc, &buttons, sizeof( buttons ) );
 		CRC32_ProcessBuffer( &crc, &weaponselect, sizeof( weaponselect ) );	
 		CRC32_ProcessBuffer( &crc, &random_seed, sizeof( random_seed ) );
 		CRC32_ProcessBuffer( &crc, &mousedx, sizeof( mousedx ) );
 		CRC32_ProcessBuffer( &crc, &mousedy, sizeof( mousedy ) );
+		CRC32_ProcessBuffer(&crc, &amuzzle, sizeof(amuzzle));
+		CRC32_ProcessBuffer(&crc, &vmuzzle, sizeof(vmuzzle));
 		CRC32_Final( &crc );
 
 		return crc;
@@ -127,7 +116,6 @@ public:
 		sidemove = 0.f;
 		upmove = 0.f;
 		buttons = 0;
-		impulse = 0;
 	}
 
 	// For matching server and client commands for debugging
@@ -146,9 +134,7 @@ public:
 	//  upward velocity.
 	float	upmove;         
 	// Attack button states
-	int		buttons;		
-	// Impulse command issued.
-	byte    impulse;        
+	int		buttons;
 	// Current weapon id
 	int		weaponselect;
 
@@ -160,14 +146,11 @@ public:
 	short	mousedx;		// mouse accum in x from create move
 	short	mousedy;		// mouse accum in y from create move
 
+	QAngle amuzzle;
+	Vector vmuzzle;
+
 	// Client only, tracks whether we've predicted this command at least once
 	bool	hasbeenpredicted;
-
-	// Back channel to communicate IK state
-#if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
-	CUtlVector< CEntityGroundContact > entitygroundcontact;
-#endif
-
 };
 
 void ReadUsercmd( bf_read *buf, CUserCmd *move, CUserCmd *from );

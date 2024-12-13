@@ -18,6 +18,8 @@
 #include "fx_quad.h"
 #include "fx_line.h"
 #include "fx_water.h"
+#include "c_impact_effects.h"
+#include "decals.h"
 #include "GameBase_Shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -255,6 +257,26 @@ void C_BaseExplosionEffect::CreateCore( void )
 	// Rescale to a character range
 	luminosity *= 255;
 
+	// do collision around explosion
+	Vector vecEffectDir = m_vecDirection * 8.0f;
+	Vector color;
+	bool bLargeDust = false;
+
+	trace_t tr;
+	UTIL_TraceLine(m_vecOrigin + vecEffectDir, m_vecOrigin - vecEffectDir, MASK_SOLID_BRUSHONLY, NULL, COLLISION_GROUP_NONE, &tr);
+
+	if (tr.DidHitWorld() && physprops)
+	{
+		GetColorForSurface(&tr, &color);
+
+		surfacedata_t* pData = physprops->GetSurfaceData(tr.surface.surfaceProps);
+
+		bLargeDust = (pData != NULL) && (pData->game.material == CHAR_TEX_CONCRETE ||
+			pData->game.material == CHAR_TEX_DIRT ||
+			pData->game.material == CHAR_TEX_WOOD ||
+			pData->game.material == CHAR_TEX_SAND);
+	}
+
 	if ( (m_fFlags & TE_EXPLFLAG_NOFIREBALLSMOKE) == 0 )
 	{
 		//
@@ -291,10 +313,20 @@ void C_BaseExplosionEffect::CreateCore( void )
 				debugoverlay->AddLineOverlay( m_vecOrigin, m_vecOrigin + pParticle->m_vecVelocity, 255, 0, 0, false, 3 );
 				#endif
 
-				int nColor = random->RandomInt( luminosity*0.5f, luminosity );
-				pParticle->m_uchColor[0] = ( worldLight[0] * nColor );
-				pParticle->m_uchColor[1] = ( worldLight[1] * nColor );
-				pParticle->m_uchColor[2] = ( worldLight[2] * nColor );
+				if (bLargeDust)
+				{
+					int nColor = min(255, random->RandomInt(luminosity, luminosity * 1.25f));
+					pParticle->m_uchColor[0] = color[0] * nColor;
+					pParticle->m_uchColor[1] = color[1] * nColor;
+					pParticle->m_uchColor[2] = color[2] * nColor;
+				}
+				else
+				{
+					int nColor = random->RandomInt(luminosity * 0.5f, luminosity);
+					pParticle->m_uchColor[0] = (worldLight[0] * nColor);
+					pParticle->m_uchColor[1] = (worldLight[1] * nColor);
+					pParticle->m_uchColor[2] = (worldLight[2] * nColor);
+				}
 				
 				pParticle->m_uchStartSize	= 72;
 				pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 2;
@@ -325,31 +357,41 @@ void C_BaseExplosionEffect::CreateCore( void )
 			{
 				pParticle->m_flLifetime = 0.0f;
 
-				pParticle->m_flDieTime = random->RandomFloat(0.5f, 1.0f);
+				pParticle->m_flDieTime = (bLargeDust ? random->RandomFloat(2.0f, 3.0f) : random->RandomFloat(1.5f, 2.0f));
 
-				pParticle->m_vecVelocity.Random( -spread, spread );
-				pParticle->m_vecVelocity += ( m_vecDirection * random->RandomFloat( 1.0f, 6.0f ) );
-				
-				VectorNormalize( pParticle->m_vecVelocity );
+				pParticle->m_vecVelocity.Random(-spread, spread);
+				pParticle->m_vecVelocity += (m_vecDirection * random->RandomFloat(1.0f, 6.0f));
 
-				float	fForce = random->RandomFloat( 1, 2000 ) * force;
+				VectorNormalize(pParticle->m_vecVelocity);
+
+				float	fForce = random->RandomFloat(1, 2000) * force;
 
 				//Scale the force down as we fall away from our main direction
-				ScaleForceByDeviation( pParticle->m_vecVelocity, m_vecDirection, spread, &fForce );
+				ScaleForceByDeviation(pParticle->m_vecVelocity, m_vecDirection, spread, &fForce);
 
 				pParticle->m_vecVelocity *= fForce;
-				
-				#if __EXPLOSION_DEBUG
-				debugoverlay->AddLineOverlay( m_vecOrigin, m_vecOrigin + pParticle->m_vecVelocity, 255, 0, 0, false, 3 );
-				#endif
 
-				int nColor = random->RandomInt( luminosity*0.5f, luminosity );
-				pParticle->m_uchColor[0] = ( worldLight[0] * nColor );
-				pParticle->m_uchColor[1] = ( worldLight[1] * nColor );
-				pParticle->m_uchColor[2] = ( worldLight[2] * nColor );
-						
-				pParticle->m_uchStartSize	= random->RandomInt( 32, 64 );
-				pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 2;
+#if __EXPLOSION_DEBUG
+				debugoverlay->AddLineOverlay(m_vecOrigin, m_vecOrigin + pParticle->m_vecVelocity, 255, 0, 0, false, 3);
+#endif
+
+				if (bLargeDust)
+				{
+					int nColor = min(255, random->RandomInt(luminosity, luminosity * 1.25f));
+					pParticle->m_uchColor[0] = color[0] * nColor;
+					pParticle->m_uchColor[1] = color[1] * nColor;
+					pParticle->m_uchColor[2] = color[2] * nColor;
+				}
+				else
+				{
+					int nColor = random->RandomInt(luminosity * 0.5f, luminosity);
+					pParticle->m_uchColor[0] = (worldLight[0] * nColor);
+					pParticle->m_uchColor[1] = (worldLight[1] * nColor);
+					pParticle->m_uchColor[2] = (worldLight[2] * nColor);
+				}
+
+				pParticle->m_uchStartSize = random->RandomInt(32, 64);
+				pParticle->m_uchEndSize = pParticle->m_uchStartSize * 2;
 
 				pParticle->m_uchStartAlpha	= random->RandomFloat( 128, 255 );
 				pParticle->m_uchEndAlpha	= 0;
@@ -370,7 +412,7 @@ void C_BaseExplosionEffect::CreateCore( void )
 		Vector	forward;
 
 #ifndef _XBOX 
-		int	numRingSprites = 32;
+		int	numRingSprites = bLargeDust ? 48 : 32;
 #else
 		int	numRingSprites = 8;
 #endif
@@ -391,7 +433,7 @@ void C_BaseExplosionEffect::CreateCore( void )
 			if ( pParticle != NULL )
 			{
 				pParticle->m_flLifetime = 0.0f;
-				pParticle->m_flDieTime	= random->RandomFloat( 0.5f, 1.5f );
+				pParticle->m_flDieTime = (bLargeDust ? random->RandomFloat(6.0f, 8.0f) : random->RandomFloat(0.5f, 1.5f));
 
 				pParticle->m_vecVelocity = forward;
 			
@@ -406,12 +448,23 @@ void C_BaseExplosionEffect::CreateCore( void )
 				debugoverlay->AddLineOverlay( m_vecOrigin, m_vecOrigin + pParticle->m_vecVelocity, 255, 0, 0, false, 3 );
 				#endif
 
-				int nColor = random->RandomInt( luminosity*0.5f, luminosity );
-				pParticle->m_uchColor[0] = ( worldLight[0] * nColor );
-				pParticle->m_uchColor[1] = ( worldLight[1] * nColor );
-				pParticle->m_uchColor[2] = ( worldLight[2] * nColor );
+				if (bLargeDust)
+				{
+					int nColor = min(255, random->RandomInt(luminosity, luminosity * 1.25f));
+					pParticle->m_uchColor[0] = color[0] * nColor;
+					pParticle->m_uchColor[1] = color[1] * nColor;
+					pParticle->m_uchColor[2] = color[2] * nColor;
+					pParticle->m_uchStartSize = random->RandomInt(32, 64);
+				}
+				else
+				{
+					int nColor = random->RandomInt(luminosity * 0.5f, luminosity);
+					pParticle->m_uchColor[0] = (worldLight[0] * nColor);
+					pParticle->m_uchColor[1] = (worldLight[1] * nColor);
+					pParticle->m_uchColor[2] = (worldLight[2] * nColor);
+					pParticle->m_uchStartSize = random->RandomInt(16, 32);
+				}
 
-				pParticle->m_uchStartSize	= random->RandomInt( 16, 32 );
 				pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 4;
 
 				pParticle->m_uchStartAlpha	= random->RandomFloat( 16, 32 );

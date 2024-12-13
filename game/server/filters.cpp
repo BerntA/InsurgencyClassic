@@ -300,7 +300,9 @@ public:
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
-	 	return ( pEntity->GetTeamNumber() == m_iFilterTeam );
+		if (!pEntity->IsPlayer() && !pEntity->IsNPC())
+			return false;
+		return (pEntity->GetTeamNumber() == m_iFilterTeam);
 	}
 };
 

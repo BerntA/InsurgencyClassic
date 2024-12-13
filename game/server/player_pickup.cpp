@@ -50,17 +50,6 @@ void Pickup_OnPhysGunPickup( CBaseEntity *pPickedUpObject, CBasePlayer *pPlayer,
 	{
 		pPickup->OnPhysGunPickup( pPlayer, reason );
 	}
-
-	// send phys gun pickup item event, but only in single player
-	if ( !g_pGameRules->IsMultiplayer() )
-	{
-		IGameEvent *event = gameeventmanager->CreateEvent( "physgun_pickup" );
-		if ( event )
-		{
-			event->SetInt( "entindex", pPickedUpObject->entindex() );
-			gameeventmanager->FireEvent( event );
-		}
-	}
 }
 
 bool Pickup_OnAttemptPhysGunPickup( CBaseEntity *pPickedUpObject, CBasePlayer *pPlayer, PhysGunPickup_t reason )
@@ -175,4 +164,3 @@ bool Pickup_ShouldPuntUseLaunchForces( CBaseEntity *pObject, PhysGunForce_t reas
 	}
 	return false;
 }
-

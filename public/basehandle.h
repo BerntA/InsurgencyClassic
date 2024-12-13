@@ -173,5 +173,31 @@ inline const CBaseHandle& CBaseHandle::Set( const IHandleEntity *pEntity )
 	return *this;
 }
 
+inline int HandleToInt(CBaseHandle* pHandle)
+{
+	if (pHandle && pHandle->Get())
+	{
+		int iSerialNum = pHandle->GetSerialNumber() & (1 << NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS) - 1;
+		return pHandle->GetEntryIndex() | (iSerialNum << MAX_EDICT_BITS);
+	}
+	else
+	{
+		return INVALID_NETWORKED_EHANDLE_VALUE;
+	}
+}
+
+inline void IntToHandle(CBaseHandle* pHandle, int iData)
+{
+	if (iData == INVALID_NETWORKED_EHANDLE_VALUE)
+	{
+		*pHandle = INVALID_EHANDLE_INDEX;
+	}
+	else
+	{
+		int iEntity = iData & ((1 << MAX_EDICT_BITS) - 1);
+		int iSerialNum = iData >> MAX_EDICT_BITS;
+		pHandle->Init(iEntity, iSerialNum);
+	}
+}
 
 #endif // BASEHANDLE_H

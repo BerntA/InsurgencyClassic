@@ -74,60 +74,6 @@ Vector GetTracerOrigin( const CEffectData &data )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void TracerCallback( const CEffectData &data )
-{
-	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
-	if ( !player )
-		return;
-
-	if ( !r_drawtracers.GetBool() )
-		return;
-
-	if ( !r_drawtracers_firstperson.GetBool() )
-	{
-		C_BasePlayer *pPlayer = dynamic_cast<C_BasePlayer*>( data.GetEntity() );
-
-		if ( pPlayer && !pPlayer->ShouldDrawThisPlayer() )
-			return;
-	}
-
-	// Grab the data
-	Vector vecStart = GetTracerOrigin( data );
-	float flVelocity = data.m_flScale;
-	bool bWhiz = (data.m_fFlags & TRACER_FLAG_WHIZ);
-	int iEntIndex = data.entindex();
-
-	if ( iEntIndex && iEntIndex == player->index )
-	{
-		Vector	foo = data.m_vStart;
-		QAngle	vangles;
-		Vector	vforward, vright, vup;
-
-		engine->GetViewAngles( vangles );
-		AngleVectors( vangles, &vforward, &vright, &vup );
-
-		VectorMA( data.m_vStart, 4, vright, foo );
-		foo[2] -= 0.5f;
-
-		FX_PlayerTracer( foo, (Vector&)data.m_vOrigin );
-		return;
-	}
-	
-	// Use default velocity if none specified
-	if ( !flVelocity )
-	{
-		flVelocity = TRACER_SPEED;
-	}
-
-	// Do tracer effect
-	FX_Tracer( (Vector&)vecStart, (Vector&)data.m_vOrigin, flVelocity, bWhiz );
-}
-
-DECLARE_CLIENT_EFFECT( "Tracer", TracerCallback );
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void ParticleTracerCallback( const CEffectData &data )
 {
 	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
@@ -177,18 +123,3 @@ void ParticleTracerCallback( const CEffectData &data )
 }
 
 DECLARE_CLIENT_EFFECT( "ParticleTracer", ParticleTracerCallback );
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void TracerSoundCallback( const CEffectData &data )
-{
-	// Grab the data
-	Vector vecStart = GetTracerOrigin( data );
-	
-	// Do tracer effect
-	FX_TracerSound( vecStart, (Vector&)data.m_vOrigin, data.m_fFlags );
-}
-
-DECLARE_CLIENT_EFFECT( "TracerSound", TracerSoundCallback );
-

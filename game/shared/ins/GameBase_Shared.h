@@ -13,21 +13,15 @@
 #include "KeyValues.h"
 #include "filesystem.h"
 #include "GameDefinitions_Shared.h"
-#include "skills_shareddefs.h"
 #include "GameDefinitions_MapData.h"
 
 #ifdef CLIENT_DLL
-#include "c_hl2mp_player.h"
-#include "music_system.h"
+#include "c_baseplayer.h"
 #else
-#include "hl2mp_player.h"
+#include "player.h"
 #include "achievement_manager.h"
 #include "GameDefinitions_Workshop.h"
-#include "player_loadout_handler.h"
 #endif
-
-#define DELAYED_USE_TIME 1.5f
-#define MAX_MELEE_LAGCOMP_DIST 300.0f
 
 // Time Definitions in hours.
 #define TIME_STRING_YEAR 8760
@@ -38,16 +32,6 @@
 #ifdef CLIENT_DLL
 #define CGameBaseShared C_GameBaseShared
 #endif
-
-enum
-{
-	GROUPID_IS_DEVELOPER = 0x001,
-
-	GROUPID_IS_TESTER = 0x002,
-	GROUPID_IS_DONATOR = 0x004,
-
-	MAX_GROUPID_BITS = 3
-};
 
 enum
 {
@@ -93,9 +77,6 @@ public:
 	// Misc
 	const char* GetTimeString(int iHoursPlayed);
 	void GetFileContent(const char* path, char* buf, int size);
-	float GetDropOffDamage(const Vector& vecStart, const Vector& vecEnd, float damage, float minDist);
-	float GetSequenceDuration(CStudioHdr* ptr, int sequence);
-	float GetPlaybackSpeedThirdperson(CHL2MP_Player* pClient, int viewmodelActivity, int thirdpersonActivity);
 
 	// Bleeding Dispatches
 	void DispatchBleedout(const Vector& vPos);
@@ -103,34 +84,17 @@ public:
 #ifdef CLIENT_DLL
 #else
 	// Achievement Checks
-	void EntityKilledByPlayer(CBaseEntity* pKiller, CBaseEntity* pVictim, CBaseEntity* pInflictor, int forcedWeaponID = WEAPON_ID_NONE);
-	void OnGameOver(float timeLeft, int iWinner);
+	void EntityKilledByPlayer(CBaseEntity* pKiller, CBaseEntity* pVictim, CBaseEntity* pInflictor, int forcedWeaponID = -1);
 
 	// Workshop Handler:
 	CGameDefinitionsWorkshop* GetServerWorkshopData(void) { return m_pServerWorkshopData; }
-
-	// Loadout Handler:
-	CPlayerLoadoutHandler* GetPlayerLoadoutHandler(void) { return m_pPlayerLoadoutHandler; }
-
-	// Server Commands and Client Commands checks.
-	bool ClientCommand(const CCommand& args);
-
-	// Events
-	void NewPlayerConnection(bool bState, int index);
-
-	// Misc
-	void ComputePlayerWeight(CHL2MP_Player* pPlayer);
 #endif
 
 private:
 
 #ifdef CLIENT_DLL
-	CMusicSystem* m_pMusicSystem;
 #else
-	// Server Workshop Handler:
 	CGameDefinitionsWorkshop* m_pServerWorkshopData;
-	// Server Loadout Handler:
-	CPlayerLoadoutHandler* m_pPlayerLoadoutHandler;
 #endif
 
 	// Shared Game Data Info

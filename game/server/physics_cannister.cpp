@@ -150,7 +150,7 @@ int CPhysicsCannister::OnTakeDamage( const CTakeDamageInfo &info )
 			// explosions that don't destroy will activate
 			// 50% of the time blunt damage will activate as well
 			if ( (info.GetDamageType() & DMG_BLAST) ||
-				((info.GetDamageType() & (DMG_CLUB | DMG_SLASH | DMG_CRUSH | DMG_ZOMBIE)) && random->RandomInt(1, 100) < 50))
+				((info.GetDamageType() & (DMG_CLUB | DMG_SLASH | DMG_CRUSH)) && random->RandomInt(1, 100) < 50))
 			{
 				CannisterActivate( info.GetAttacker(), g_vecAttackDir );
 			}
@@ -170,7 +170,7 @@ int CPhysicsCannister::OnTakeDamage( const CTakeDamageInfo &info )
 }
 
 
-void CPhysicsCannister::TraceAttack( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr, CDmgAccumulator *pAccumulator )
+void CPhysicsCannister::TraceAttack( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr )
 {
 	if ( !m_active && ptr->hitgroup != 0 )
 	{
@@ -179,7 +179,7 @@ void CPhysicsCannister::TraceAttack( const CTakeDamageInfo &info, const Vector &
 		VectorNormalize( direction );
 		CannisterActivate( info.GetAttacker(), direction );
 	}
-	BaseClass::TraceAttack( info, dir, ptr, pAccumulator );
+	BaseClass::TraceAttack( info, dir, ptr );
 }
 
 

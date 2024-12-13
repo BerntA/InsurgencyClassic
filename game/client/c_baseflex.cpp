@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "filesystem.h"
 #include "sentence.h"
-#include "hud_closecaption.h"
 #include "engine/ivmodelinfo.h"
 #include "engine/ivdebugoverlay.h"
 #include "bone_setup.h"

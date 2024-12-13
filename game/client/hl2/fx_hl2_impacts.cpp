@@ -9,6 +9,7 @@
 #include "decals.h"
 #include "fx_quad.h"
 #include "fx_sparks.h"
+#include "engine/ienginesound.h"
 
 #include "tier0/vprof.h"
 
@@ -98,15 +99,24 @@ void ImpactCallback( const CEffectData &data )
 		// This happens for impacts that occur on an object that's then destroyed.
 		// Clear out the fraction so it uses the server's data
 		tr.fraction = 1.0;
-		PlayImpactSound( pEntity, tr, vecOrigin, nSurfaceProp );
+		PlayImpactSound( pEntity, tr, vecOrigin, nSurfaceProp ); // INS remove?
 		return;
 	}
 
 	// If we hit, perform our custom effects and play the sound
-	if ( Impact( vecOrigin, vecStart, iMaterial, iDamageType, iHitbox, pEntity, tr ) )
+	if (Impact(vecOrigin, vecStart, iMaterial, iDamageType, iHitbox, pEntity, tr))
 	{
-		// Check for custom effects based on the Decal index
-		PerformCustomEffects( vecOrigin, tr, vecShotDir, iMaterial, 1.0 );
+		bool bIsRicochet = (data.m_nDamageType & DMG_RICOCHET);
+
+		// check for custom effects based on the decal index
+		PerformCustomEffects(vecOrigin, tr, vecShotDir, iMaterial, bIsRicochet ? 0.75f : 1.0f, 0);
+
+		//Play a ricochet sound some of the time
+		if ((iDamageType == DMG_BULLET) && (bIsRicochet || (random->RandomInt(1, 10) <= 3)))
+		{
+			CLocalPlayerFilter filter;
+			C_BaseEntity::EmitSound(filter, SOUND_FROM_WORLD, "Bounce.Shrapnel", &vecOrigin);
+		}
 	}
 
 	PlayImpactSound( pEntity, tr, vecOrigin, nSurfaceProp );
