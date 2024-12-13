@@ -169,7 +169,7 @@ enum TeamList_t
 //This is ok since MAX_PLAYERS is used for code specific things like arrays and loops, but it doesn't really means that this is the max number of players allowed
 //Since this is decided by the gamerules (and it can be whatever number as long as its less than MAX_PLAYERS).
 
-#define MAX_PLAYERS				65  // Absolute max players supported
+#define MAX_PLAYERS				32  // Absolute max players supported
 
 #define MAX_FOV						90
 #define MAX_PLACE_NAME_LENGTH	18
