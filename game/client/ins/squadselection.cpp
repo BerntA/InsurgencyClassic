@@ -15,14 +15,10 @@
 #include <vgui_controls/sectionedlistpanel.h>
 #include <vgui_controls/menu.h>
 #include "vguicenterprint.h"
-
 #include "igameresources.h"
-
 #include "insvgui.h"
 #include "ins_gamerules.h"
 #include "ins_player_shared.h"
-#include "play_team_shared.h"
-#include "insvgui.h"
 #include "play_team_shared.h"
 #include "ins_squad_shared.h"
 

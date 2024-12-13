@@ -49,7 +49,7 @@ ITexture* CBaseClientRenderTargets::CreateScopeTexture(IMaterialSystem* pMateria
 {
 	return pMaterialSystem->CreateNamedRenderTargetTextureEx2(
 		"_rt_Scope",
-		1024, 1024, RT_SIZE_OFFSCREEN,
+		128, 128, RT_SIZE_OFFSCREEN,
 		pMaterialSystem->GetBackBufferFormat(),
 		MATERIAL_RT_DEPTH_SHARED,
 		TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT,
