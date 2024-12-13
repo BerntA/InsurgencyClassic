@@ -50,9 +50,6 @@ protected:
 	// Used for monitors
 	CTextureReference		m_CameraTexture;
 
-	// Used for scopes
-	CTextureReference		m_ScopeTexture;
-
 	// Used for the HUD in stereo and head tracking mode
 	CTextureReference		m_UITexture;
 
@@ -60,7 +57,6 @@ protected:
 	ITexture* CreateWaterReflectionTexture(IMaterialSystem* pMaterialSystem, int iSize = 1024);
 	ITexture* CreateWaterRefractionTexture(IMaterialSystem* pMaterialSystem, int iSize = 1024);
 	ITexture* CreateCameraTexture(IMaterialSystem* pMaterialSystem, int iSize = 256);
-	ITexture* CreateScopeTexture(IMaterialSystem* pMaterialSystem);
 };
 
 #endif // CLIENTRENDERTARTETS_H_

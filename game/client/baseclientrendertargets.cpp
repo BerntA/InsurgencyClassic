@@ -45,17 +45,6 @@ ITexture* CBaseClientRenderTargets::CreateCameraTexture(IMaterialSystem* pMateri
 		CREATERENDERTARGETFLAGS_HDR);
 }
 
-ITexture* CBaseClientRenderTargets::CreateScopeTexture(IMaterialSystem* pMaterialSystem)
-{
-	return pMaterialSystem->CreateNamedRenderTargetTextureEx2(
-		"_rt_Scope",
-		128, 128, RT_SIZE_OFFSCREEN,
-		pMaterialSystem->GetBackBufferFormat(),
-		MATERIAL_RT_DEPTH_SHARED,
-		TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT,
-		CREATERENDERTARGETFLAGS_HDR);
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Called by the engine in material system init and shutdown.
 //			Clients should override this in their inherited version, but the base
@@ -71,9 +60,6 @@ void CBaseClientRenderTargets::InitClientRenderTargets(IMaterialSystem* pMateria
 
 	// Monitors
 	m_CameraTexture.Init(CreateCameraTexture(pMaterialSystem, iCameraTextureSize));
-
-	// Scopes
-	m_ScopeTexture.Init(CreateScopeTexture(pMaterialSystem));
 }
 
 //-----------------------------------------------------------------------------
@@ -89,7 +75,60 @@ void CBaseClientRenderTargets::ShutdownClientRenderTargets()
 
 	// Monitors
 	m_CameraTexture.Shutdown();
-
-	// Scopes
-	m_ScopeTexture.Shutdown();
 }
+
+class CTNERenderTargets : public CBaseClientRenderTargets
+{
+	DECLARE_CLASS_GAMEROOT(CTNERenderTargets, CBaseClientRenderTargets);
+
+public:
+	virtual void InitClientRenderTargets(IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* pHardwareConfig);
+	virtual void ShutdownClientRenderTargets();
+
+	ITexture* CreateScopeTexture(IMaterialSystem* pMaterialSystem);
+
+private:
+	CTextureReference               m_ScopeTexture;
+};
+
+ITexture* CTNERenderTargets::CreateScopeTexture(IMaterialSystem* pMaterialSystem)
+{
+	return pMaterialSystem->CreateNamedRenderTargetTextureEx2(
+		"_rt_Scope",
+		1024, 1024, RT_SIZE_OFFSCREEN,
+		pMaterialSystem->GetBackBufferFormat(),
+		MATERIAL_RT_DEPTH_SHARED,
+		TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT,
+		CREATERENDERTARGETFLAGS_HDR);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Called by the engine in material system init and shutdown.
+//                      Clients should override this in their inherited version, but the base
+//                      is to init all standard render targets for use.
+// Input  : pMaterialSystem - the engine's material system (our singleton is not yet inited at the time this is called)
+//                      pHardwareConfig - the user hardware config, useful for conditional render target setup
+//-----------------------------------------------------------------------------
+void CTNERenderTargets::InitClientRenderTargets(IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* pHardwareConfig)
+{
+	m_ScopeTexture.Init(CreateScopeTexture(pMaterialSystem));
+
+	// Water effects & camera from the base class (standard HL2 targets) 
+	BaseClass::InitClientRenderTargets(pMaterialSystem, pHardwareConfig);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Shut down each CTextureReference we created in InitClientRenderTargets.
+//                      Called by the engine in material system shutdown.
+// Input  :  - 
+//-----------------------------------------------------------------------------
+void CTNERenderTargets::ShutdownClientRenderTargets()
+{
+	m_ScopeTexture.Shutdown();
+
+	// Clean up standard HL2 RTs (camera and water) 
+	BaseClass::ShutdownClientRenderTargets();
+}
+
+static CTNERenderTargets g_TNERenderTargets;
+EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CTNERenderTargets, IClientRenderTargets, CLIENTRENDERTARGETS_INTERFACE_VERSION, g_TNERenderTargets);

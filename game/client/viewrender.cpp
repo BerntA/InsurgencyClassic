@@ -1929,15 +1929,6 @@ void CViewRender::DrawScope(const CViewSetup& zoomedView)
 
 	ViewDrawScene(false, SKYBOX_3DSKYBOX_VISIBLE, monitorView, VIEW_CLEAR_DEPTH, VIEW_MONITOR);
 
-	// TODO: the m4 needs the viewmodel drawn, but only the sights :(
-	// DrawViewModels( monitorView, true );
-
-	// draw mask
-	IMaterial* mMask = materials->FindMaterial("models/weapons/lense/lenseMask", TEXTURE_GROUP_OTHER);
-
-	CMatRenderContextPtr pRenderContext(materials);
-	pRenderContext->DrawScreenSpaceQuad(mMask);
-
 	render->PopView(GetFrustum());
 }
 
@@ -2097,11 +2088,6 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 
 		// Draw lightsources if enabled
 		render->DrawLights();
-
-		if (g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 70)
-		{
-			DrawScope(view);
-		}
 
 		RenderPlayerSprites();
 
@@ -2354,6 +2340,11 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 	if ( IsPC() )
 	{
 		CDebugViewRender::GenerateOverdrawForTesting();
+	}
+
+	if (g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 70)
+	{
+		DrawScope(view);
 	}
 
 	render->PopView( GetFrustum() );
